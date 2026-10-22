@@ -40,10 +40,10 @@ a{color:var(--blue)}
   <div id="m1"></div>
 </section>
 <section class="panel" id="s2">
-  <h2><span class="step">2</span>메일 속 링크 붙여넣기</h2>
+  <h2><span class="step">2</span>메일 속 링크 누르기</h2>
   <ol>
-    <li>받은 메일에서 <b>Reset Password</b> 링크를 <b>길게 눌러 "링크 주소 복사"</b></li>
-    <li>링크를 누르지 말고, 아래 칸에 붙여넣기</li>
+    <li>받은 메일에서 <b>Reset Password</b>를 누르면 이 화면으로 돌아와 <b>3단계</b>가 열립니다</li>
+    <li>3단계가 안 열리면: 링크를 <b>길게 눌러 복사</b> → 아래 칸에 붙여넣기</li>
   </ol>
   <label>복사한 링크<textarea id="lk" spellcheck="false" placeholder="https://ettopqmqnjzktdfygtuz.supabase.co/auth/v1/verify?token=..."></textarea></label>
   <button class="btn" id="b2" type="button">링크 확인</button>
@@ -78,7 +78,7 @@ $("#b1").onclick=async()=>{
   const e=$("#em").value.trim(); if(!e.includes("@")) return say($("#m1"),"err","이메일을 입력하세요");
   $("#b1").disabled=true;
   try{ await call("/auth/v1/recover","POST",{email:e}); say($("#m1"),"ok","메일을 보냈습니다. 받은편지함(없으면 스팸함)을 확인하세요."); }
-  catch(err){ say($("#m1"),"err","보내기 실패: "+err.message+" (잠시 후 다시 시도)"); }
+  catch(err){ say($("#m1"),"err",/rate limit/i.test(err.message)?"메일 발송 한도(시간당 횟수)를 넘었습니다. 1시간 뒤 다시 누르세요. 이미 받은 최신 메일이 있으면 그 링크를 쓰세요.":"보내기 실패: "+err.message+" (잠시 후 다시 시도)"); }
   $("#b1").disabled=false;
 };
 $("#b2").onclick=async()=>{
