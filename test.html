@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://ettopqmqnjzktdfygtuz.supabase.co; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0F172A">
+<title>엠솔루션 QMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* 개념: 도면 표제란 + 검사성적서. 배경은 제도용 모눈, 화면마다 흰 '성적서 시트'. 강조는 판정 스탬프 한 곳에만. */
+:root{
+  --ink:#0F172A; --ink2:#1E293B; --paper:#EDF1F6; --sheet:#FFFFFF; --rule:#D5DCE6; --grid:#DCE3EC; --grid2:#C9D3DF;
+  --fg:#0F172A; --muted:#5B6B80; --blue:#1D4ED8; --blue-soft:#E3EBFB; --orange:#E2580B;
+  --ok:#157F3B; --ok-soft:#E3F4E8; --ng:#B42318; --ng-soft:#FCE8E6; --wait:#9A5B00; --wait-soft:#FDF1DC; --test:#4338CA; --test-soft:#E8E7FB;
+  --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{position:relative;isolation:isolate;min-height:100vh;font:15px/1.55 var(--sans);color:var(--fg);padding-bottom:calc(76px + env(safe-area-inset-bottom,0px));
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid2) 1px,transparent 1px),linear-gradient(90deg,var(--grid2) 1px,transparent 1px),
+    linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:80px 80px,80px 80px,16px 16px,16px 16px;background-attachment:fixed}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.16;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 520%22 fill=%22none%22 stroke=%22%232B4A7E%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cg stroke-width=%220.8%22 opacity=%22.5%22 stroke-dasharray=%2214 6 3 6%22%3E%3Cpath d=%22M300 110V480M930 110V480M10 360H1190%22/%3E%3C/g%3E%3Cg stroke-width=%220.7%22 opacity=%22.4%22%3E%3Cpath d=%22M20 422H1180M40 250L1160 238M120 130L1080 480M600 60L560 480%22/%3E%3C/g%3E%3Cpath d=%22M420 368L460 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M434 368L474 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M448 368L488 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M462 368L502 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M476 368L516 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M490 368L530 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M504 368L544 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M518 368L558 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M532 368L572 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M546 368L586 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M560 368L600 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M574 368L614 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M588 368L628 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M602 368L642 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M616 368L656 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M630 368L670 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M644 368L684 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M658 368L698 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M672 368L712 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M686 368L726 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M700 368L740 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M714 368L754 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M728 368L768 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M742 368L782 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M756 368L796 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M770 368L810 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M784 368L824 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M798 368L838 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M812 368L852 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M826 368L866 330%22 stroke-width=%220.7%22 opacity=%22.35%22/%3E%3Cpath d=%22M 91.8 333.6 C 88.2 301.5 112.0 280.8 161.5 273.0 L 331.4 249.9 C 383.5 198.5 469.9 151.4 561.5 140.7 L 762.2 139.5 C 842.1 140.9 902.6 189.5 952.4 239.7 L 1069.6 261.5 C 1111.8 270.4 1127.6 296.1 1121.2 335.8 L 1118.1 351.5%22 stroke-width=%222.0%22/%3E %3Cpath d=%22M 89.8 332.5 C 88.9 301.6 111.1 281.4 161.8 272.0 L 333.5 251.0 C 382.7 199.4 470.1 152.9 563.1 139.9 L 764.4 137.1 C 841.6 142.3 900.3 189.9 949.7 240.8 L 1071.3 262.4 C 1113.9 269.1 1129.0 296.5 1121.4 335.8 L 1119.7 354.2%22 stroke-width=%220.90%22 opacity=%220.55%22/%3E %3Cpath d=%22M 91.8 335.4 C 84.2 303.7 113.3 285.2 164.8 271.1 L 331.0 251.5 C 379.9 198.7 467.1 147.7 558.2 143.3 L 758.8 136.8 C 841.1 144.2 898.4 189.6 952.4 243.3 L 1072.7 265.1 C 1110.1 269.3 1126.8 299.3 1124.9 333.0 L 1115.2 349.7%22 stroke-width=%220.75%22 opacity=%220.43%22/%3E %3Cpath d=%22M 88.7 333.8 C 89.1 299.1 105.9 280.0 160.4 273.8 L 337.5 252.3 C 384.2 200.4 472.1 145.6 566.9 144.4 L 766.6 142.6 C 840.7 139.8 897.2 191.6 946.7 234.7 L 1066.4 257.9 C 1110.0 264.5 1121.9 291.7 1116.1 334.3 L 1112.2 356.6%22 stroke-width=%220.60%22 opacity=%220.31%22/%3E %3Cpath d=%22M 92.1 333.6 C 91.7 345.8 97.8 351.5 112.4 354.6 L 226.0 356.0 M 375.5 355.5 L 855.8 355.7 M 1006.4 355.6 L 1109.4 354.5%22 stroke-width=%222.0%22/%3E %3Cpath d=%22M 92.1 332.2 C 92.2 343.6 98.1 354.4 113.8 355.0 L 224.8 355.3 M 374.3 357.4 L 856.2 357.4 M 1005.1 354.6 L 1111.6 356.4%22 stroke-width=%220.90%22 opacity=%220.55%22/%3E %3Cpath d=%22M 95.0 336.6 C 94.7 348.1 95.6 352.2 110.8 349.9 L 221.9 354.1 M 373.9 357.7 L 859.9 355.5 M 1009.8 360.2 L 1113.9 352.8%22 stroke-width=%220.75%22 opacity=%220.43%22/%3E %3Cpath d=%22M 88.6 330.7 C 88.3 342.4 99.5 356.9 116.2 353.7 L 227.9 359.7 M 370.9 358.0 L 861.0 359.4 M 1009.1 355.7 L 1106.1 357.5%22 stroke-width=%220.60%22 opacity=%220.31%22/%3E %3Cpath d=%22M 403.8 240.4 C 452.6 190.9 511.9 167.5 572.3 160.6 L 751.6 158.6 C 804.5 163.4 851.6 200.4 890.6 240.2 Z%22 stroke-width=%222.0%22/%3E %3Cpath d=%22M 403.3 240.2 C 450.2 188.6 514.4 167.7 572.1 163.2 L 751.7 160.9 C 805.6 161.6 850.8 199.0 888.7 240.4 Z%22 stroke-width=%220.90%22 opacity=%220.55%22/%3E %3Cpath d=%22M 401.9 239.3 C 448.8 194.5 510.7 166.6 572.7 164.5 L 751.3 162.6 C 804.0 163.3 852.2 195.9 889.5 237.3 Z%22 stroke-width=%220.75%22 opacity=%220.43%22/%3E %3Cpath d=%22M 397.9 243.6 C 448.0 190.7 514.7 167.7 569.9 161.2 L 752.7 162.5 C 799.2 163.7 848.9 197.3 893.3 240.1 Z%22 stroke-width=%220.60%22 opacity=%220.31%22/%3E %3Cpath d=%22M 650.1 160.3 L 644.5 239.9 M 330.1 256.0 L 960.0 252.2 M 179.9 300.0 L 1100.0 296.5%22 stroke-width=%222.0%22/%3E %3Cpath d=%22M 651.0 161.9 L 646.2 238.8 M 330.3 258.2 L 961.7 250.2 M 178.1 299.7 L 1097.9 294.7%22 stroke-width=%220.90%22 opacity=%220.55%22/%3E %3Cpath d=%22M 646.3 161.5 L 646.4 243.4 M 327.0 257.9 L 961.4 248.9 M 183.3 304.0 L 1097.6 299.9%22 stroke-width=%220.75%22 opacity=%220.43%22/%3E %3Cpath d=%22M 648.8 159.8 L 650.0 244.1 M 325.9 255.2 L 960.2 250.0 M 176.3 297.8 L 1102.7 290.1%22 stroke-width=%220.60%22 opacity=%220.31%22/%3E %3Cpath d=%22M 226.1 355.9 C 229.4 309.8 262.1 286.0 299.5 286.6 C 338.3 286.6 369.5 309.7 375.4 356.3 M 855.7 355.6 C 859.9 310.5 892.4 285.7 929.6 286.5 C 968.1 286.2 999.5 309.5 1006.2 355.9%22 stroke-width=%222.0%22/%3E %3Cpath d=%22M 223.9 358.2 C 230.7 311.5 259.9 287.8 297.8 287.8 C 337.8 285.2 370.3 312.1 374.8 354.1 M 856.1 354.7 C 858.0 308.3 889.8 284.5 929.1 285.0 C 969.3 284.9 1000.0 308.4 1005.2 353.6%22 stroke-width=%220.90%22 opacity=%220.55%22/%3E %3Cpath d=%22M 223.9 351.8 C 232.0 310.4 259.3 285.8 303.7 282.6 C 340.7 285.4 370.0 312.9 375.1 356.1 M 857.6 360.1 C 858.6 312.9 893.8 287.2 929.2 284.7 C 964.2 282.8 996.3 312.1 1003.9 353.1%22 stroke-width=%220.75%22 opacity=%220.43%22/%3E %3Cpath d=%22M 220.9 360.2 C 234.5 312.1 259.3 282.9 297.5 285.5 C 333.8 285.3 367.1 315.6 381.8 356.6 M 852.9 361.7 C 857.7 308.3 885.9 284.6 929.7 286.0 C 964.4 286.1 994.0 307.1 1001.0 354.8%22 stroke-width=%220.60%22 opacity=%220.31%22/%3E %3Cpath d=%22M 1059.5 265.4 C 1079.8 267.7 1100.1 278.0 1108.3 292.2 L 1080.3 292.5 Z M 117.9 299.8 L 170.6 295.6%22 stroke-width=%222.0%22/%3E %3Cpath d=%22M 1061.1 266.7 C 1077.7 269.7 1102.0 278.6 1109.2 293.6 L 1078.2 292.1 Z M 118.0 301.7 L 171.5 297.6%22 stroke-width=%220.90%22 opacity=%220.55%22/%3E %3Cpath d=%22M 1060.7 269.4 C 1081.6 269.7 1097.7 274.0 1104.8 290.8 L 1076.6 294.9 Z M 118.5 301.1 L 171.1 297.6%22 stroke-width=%220.75%22 opacity=%220.43%22/%3E %3Cpath d=%22M 1059.9 259.9 C 1083.6 271.0 1100.0 278.4 1109.9 286.7 L 1082.9 289.0 Z M 112.8 297.1 L 172.8 292.4%22 stroke-width=%220.60%22 opacity=%220.31%22/%3E%3Ccircle cx=%22300.2%22 cy=%22360.5%22 r=%2258.0%22 stroke-width=%222.0%22 opacity=%221.00%22/%3E %3Ccircle cx=%22299.2%22 cy=%22359.8%22 r=%2259.3%22 stroke-width=%220.8%22 opacity=%220.40%22/%3E %3Ccircle cx=%22302.8%22 cy=%22361.2%22 r=%2259.5%22 stroke-width=%220.8%22 opacity=%220.30%22/%3E %3Ccircle cx=%22294.3%22 cy=%22355.2%22 r=%2254.7%22 stroke-width=%220.8%22 opacity=%220.20%22/%3E %3Ccircle cx=%22300.2%22 cy=%22359.8%22 r=%2238.1%22 stroke-width=%222.0%22 opacity=%221.00%22/%3E %3Ccircle cx=%22296.5%22 cy=%22356.8%22 r=%2236.3%22 stroke-width=%220.8%22 opacity=%220.40%22/%3E %3Ccircle cx=%22301.8%22 cy=%22362.0%22 r=%2239.8%22 stroke-width=%220.8%22 opacity=%220.30%22/%3E %3Ccircle cx=%22297.2%22 cy=%22360.2%22 r=%2237.5%22 stroke-width=%220.8%22 opacity=%220.20%22/%3E %3Ccircle cx=%22930.0%22 cy=%22359.6%22 r=%2258.4%22 stroke-width=%222.0%22 opacity=%221.00%22/%3E %3Ccircle cx=%22927.8%22 cy=%22363.4%22 r=%2261.1%22 stroke-width=%220.8%22 opacity=%220.40%22/%3E %3Ccircle cx=%22925.0%22 cy=%22359.6%22 r=%2261.3%22 stroke-width=%220.8%22 opacity=%220.30%22/%3E %3Ccircle cx=%22936.4%22 cy=%22359.3%22 r=%2254.9%22 stroke-width=%220.8%22 opacity=%220.20%22/%3E %3Ccircle cx=%22929.7%22 cy=%22360.4%22 r=%2237.7%22 stroke-width=%222.0%22 opacity=%221.00%22/%3E %3Ccircle cx=%22930.6%22 cy=%22357.4%22 r=%2238.2%22 stroke-width=%220.8%22 opacity=%220.40%22/%3E %3Ccircle cx=%22934.7%22 cy=%22356.2%22 r=%2241.3%22 stroke-width=%220.8%22 opacity=%220.30%22/%3E %3Ccircle cx=%22930.1%22 cy=%22365.3%22 r=%2240.8%22 stroke-width=%220.8%22 opacity=%220.20%22/%3E%3Cg stroke-width=%221%22 opacity=%22.75%22%3E%3Cpath d=%22M300 470H930M300 460V480M930 460V480M300 470l14-5v10zM930 470l-14-5v10z%22/%3E%3C/g%3E%3Ctext x=%22590%22 y=%22496%22 fill=%22%232B4A7E%22 stroke=%22none%22 font-family=%22sans-serif%22 font-size=%2218%22 opacity=%22.8%22%3EWB 2,850%3C/text%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 520 380%22 fill=%22none%22 stroke=%22%232B4A7E%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M 69.9 90.1 L 450.5 70.0 C 470.0 69.1 479.6 80.0 478.2 98.4 L 461.5 269.8 C 459.5 290.4 448.2 299.5 428.6 301.6 L 96.2 310.1 C 75.6 310.4 64.0 299.5 62.6 279.7 L 51.4 110.0 C 50.9 98.4 58.0 91.2 70.0 90.2 Z%22 stroke-width=%221.8%22/%3E %3Cpath d=%22M 69.8 88.9 L 452.5 72.5 C 471.7 70.0 479.1 78.6 476.9 95.9 L 463.3 269.5 C 461.7 289.4 450.3 301.7 425.5 299.5 L 98.1 309.8 C 78.4 310.5 61.9 300.6 64.4 278.8 L 49.9 109.2 C 53.3 99.3 56.1 89.7 68.0 87.8 Z%22 stroke-width=%220.90%22 opacity=%220.55%22/%3E %3Cpath d=%22M 72.6 87.2 L 450.5 69.5 C 467.3 71.0 476.8 81.2 474.7 97.3 L 459.5 268.0 C 464.0 292.6 446.3 303.3 425.5 300.1 L 99.0 311.2 C 72.6 315.2 61.5 297.9 65.3 278.5 L 50.2 106.3 C 47.5 98.7 55.8 91.9 68.9 89.6 Z%22 stroke-width=%220.75%22 opacity=%220.43%22/%3E %3Cpath d=%22M 96.6 120.0 L 430.1 104.4 L 417.6 261.6 L 110.5 272.4 Z%22 stroke-width=%221.8%22/%3E %3Cpath d=%22M 94.7 118.4 L 431.2 106.2 L 416.5 264.3 L 111.9 272.5 Z%22 stroke-width=%220.90%22 opacity=%220.55%22/%3E %3Cpath d=%22M 95.3 116.6 L 426.0 108.0 L 415.8 263.8 L 107.9 274.8 Z%22 stroke-width=%220.75%22 opacity=%220.43%22/%3E%3Ccircle cx=%22120.1%22 cy=%22139.8%22 r=%228.7%22 stroke-width=%222.0%22 opacity=%221.00%22/%3E %3Ccircle cx=%22121.6%22 cy=%22136.9%22 r=%227.0%22 stroke-width=%220.8%22 opacity=%220.40%22/%3E %3Ccircle cx=%22400.1%22 cy=%22128.4%22 r=%229.1%22 stroke-width=%222.0%22 opacity=%221.00%22/%3E %3Ccircle cx=%22398.4%22 cy=%22131.0%22 r=%226.9%22 stroke-width=%220.8%22 opacity=%220.40%22/%3E %3Ccircle cx=%22129.5%22 cy=%22249.8%22 r=%228.9%22 stroke-width=%222.0%22 opacity=%221.00%22/%3E %3Ccircle cx=%22126.8%22 cy=%22247.7%22 r=%228.1%22 stroke-width=%220.8%22 opacity=%220.40%22/%3E %3Ccircle cx=%22392.1%22 cy=%22241.6%22 r=%228.9%22 stroke-width=%222.0%22 opacity=%221.00%22/%3E %3Ccircle cx=%22394.8%22 cy=%22245.5%22 r=%2210.1%22 stroke-width=%220.8%22 opacity=%220.40%22/%3E%3Cg stroke-width=%221%22 opacity=%22.8%22 stroke-dasharray=%2210 4 2 4%22%3E%3Cpath d=%22M24 190H504M262 34V346%22/%3E%3C/g%3E%3Cg stroke-width=%221.6%22%3E%3Cpath d=%22M40 330l14-24 14 24z%22/%3E%3Cpath d=%22M486 120l14-24 14 24z%22/%3E%3Cpath d=%22M262 352l12-20 12 20z%22/%3E%3C/g%3E%3Cg fill=%22%232B4A7E%22 stroke=%22none%22 font-size=%2214%22 font-weight=%22700%22 font-family=%22sans-serif%22%3E%3Ctext x=%2248%22 y=%22326%22%3EA%3C/text%3E%3Ctext x=%22494%22 y=%22116%22%3EB%3C/text%3E%3Ctext x=%22268%22 y=%22348%22%3EC%3C/text%3E%3C/g%3E%3Cg stroke-width=%221.4%22%3E%3Crect x=%2220%22 y=%2270%22 width=%2222%22 height=%2222%22/%3E%3Cpath d=%22M20 70l22 22M42 70L20 92%22/%3E%3Crect x=%22478%22 y=%22290%22 width=%2222%22 height=%2222%22/%3E%3Cpath d=%22M478 290l22 22M500 290l-22 22%22/%3E%3C/g%3E%3Cg stroke-width=%221%22 opacity=%22.85%22%3E%3Cpath d=%22M70 30H450M70 22V38M450 22V38M70 30l12-4v8zM450 30l-12-4v8z%22/%3E%3C/g%3E%3Ctext x=%22232%22 y=%2222%22 fill=%22%232B4A7E%22 stroke=%22none%22 font-size=%2214%22 font-family=%22sans-serif%22%3E380 %C2%B10.5%3C/text%3E%3Ctext x=%22300%22 y=%22372%22 fill=%22%232B4A7E%22 stroke=%22none%22 font-size=%2212%22 opacity=%22.8%22 font-family=%22sans-serif%22%3EG/BOX CHECKING FIXTURE%3C/text%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-size:min(1100px,150vw) auto,min(420px,70vw) auto;
+  background-position:left -4vw bottom 70px,right 2vw top 110px}
+body.is-login::after{opacity:.32}
+[hidden]{display:none!important}
+header{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;border-bottom:3px solid var(--orange);
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px))}
+.hbar{max-width:960px;margin:0 auto;display:flex;align-items:stretch;gap:12px}
+.brand{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.brand b{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.brand span{font-size:12px;color:#93A3B8}
+.tblock{display:grid;grid-template-columns:auto auto;border:1px solid #334155;font-size:11.5px;line-height:1.3}
+.tblock div{padding:4px 8px;border-bottom:1px solid #334155}
+.tblock div:nth-child(odd){color:#93A3B8;border-right:1px solid #334155}
+.tblock div:nth-last-child(-n+2){border-bottom:0}
+.tblock div:nth-child(even){font-weight:600}
+#btnLogout{align-self:center;background:transparent;color:#CBD5E1;border:1px solid #475569;border-radius:4px;padding:8px 10px;font:inherit;font-size:12.5px;min-height:40px}
+main{max-width:960px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right,0px)) 18px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.panel{background:var(--sheet);border:1px solid var(--rule);border-top:3px solid var(--ink);border-radius:2px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0;box-shadow:0 1px 0 rgba(15,23,42,.04)}
+.phead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--rule)}
+.phead small{color:var(--muted);font-size:12.5px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted);font-weight:500;min-width:0}
+input,select,textarea{font:inherit;font-size:16px;color:var(--fg);background:#fff;border:1px solid #B9C4D2;border-radius:4px;padding:11px 12px;width:100%;min-width:0;min-height:48px}
+input[readonly]{background:#F3F6F9;color:var(--muted)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--blue);outline-offset:0;border-color:var(--blue)}
+button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+textarea{min-height:72px;resize:vertical}
+.btn{font:inherit;font-weight:600;border:0;border-radius:4px;padding:12px 18px;min-height:48px;background:var(--ink2);color:#fff;cursor:pointer}
+.btn.primary{background:var(--blue)}
+.btn.accent{background:var(--orange)}
+.btn.ghost{background:#E7ECF2;color:var(--fg)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.msg{border-radius:3px;padding:10px 12px;font-size:14px;border-left:4px solid}
+.msg.ok{background:var(--ok-soft);color:#0F4D25;border-color:var(--ok)}
+.msg.err{background:var(--ng-soft);color:#7A1A12;border-color:var(--ng)}
+.msg.info{background:var(--blue-soft);color:#1E3A8A;border-color:var(--blue)}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--ink);display:flex;justify-content:center;gap:2px;
+  padding:4px max(6px,env(safe-area-inset-right,0px)) calc(4px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px));overflow-x:auto}
+nav.tabs button{flex:1 1 0;max-width:120px;min-width:58px;background:transparent;border:0;color:#8C9BB0;font:inherit;font-size:11.5px;font-weight:600;padding:7px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;border-top:3px solid transparent}
+nav.tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs button.on{color:#fff;border-top-color:var(--orange)}
+.results{border:1px solid var(--rule);border-radius:3px;max-height:300px;overflow:auto;background:#fff}
+.results button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--rule);background:#fff;padding:11px 12px;font:inherit;font-size:14px;cursor:pointer;min-height:52px}
+.results button:hover{background:#F3F6F9}
+.code{font-family:var(--mono);font-size:13px;letter-spacing:-.01em}
+.sel{background:var(--blue-soft);border:1px solid #C7D5F5;border-radius:3px;padding:10px 12px;font-size:14px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.defects{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px}
+.def{display:flex;align-items:center;justify-content:space-between;gap:6px;border:1px solid var(--rule);border-radius:3px;padding:4px 4px 4px 10px;font-size:13px;background:#FAFBFC}
+.def input{width:66px;min-height:40px;padding:6px;text-align:right;font-size:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;border:1px solid var(--rule);background:var(--sheet)}
+.kpi{padding:12px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.kpi .k{font-size:12.5px;color:var(--muted)}
+.kpi .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi.hl{background:var(--ink);color:#fff}
+.kpi.hl .k{color:#93A3B8}
+.tablewrap{overflow-x:auto;border:1px solid var(--rule)}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th{background:var(--ink2);color:#fff;font-weight:600;text-align:left;padding:9px 10px;white-space:nowrap;font-size:13px}
+td{padding:9px 10px;border-top:1px solid var(--rule);white-space:nowrap}
+tbody tr:nth-child(even):not(.total) td{background:#FAFBFD}
+td.n,th.n{text-align:right}
+tr.total td{background:#E4E9F0!important;font-weight:700;border-top:2px solid var(--ink2)}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--blue-soft)!important}
+.pill{display:inline-block;font-size:12px;font-weight:600;border-radius:3px;padding:2px 7px;border:1px solid transparent}
+.pill.ok{background:var(--ok-soft);color:var(--ok);border-color:#B7E0C3}.pill.ng{background:var(--ng-soft);color:var(--ng);border-color:#F3C2BD}
+.pill.wait{background:var(--wait-soft);color:var(--wait);border-color:#F1D39E}.pill.test{background:var(--test-soft);color:var(--test);border-color:#C9C6F3}
+.badge-internal{background:#FFF4EC;color:#8A3307;border:1px dashed #F0A877;padding:8px 12px;font-size:13px;font-weight:600}
+.muted{color:var(--muted);font-size:13px}
+.check{flex-direction:row;align-items:center;gap:10px;color:var(--fg);min-height:44px}
+.check input{width:22px;height:22px;min-height:0}
+/* 판정 스탬프: 저장 결과 */
+.stampcard{display:flex;gap:14px;align-items:center;background:var(--sheet);border:1px solid var(--rule);padding:12px 14px}
+.stamp{flex:none;width:76px;height:76px;border-radius:50%;border:3px double currentColor;display:grid;place-items:center;transform:rotate(-8deg);font-weight:700;font-size:22px;line-height:1;text-align:center}
+.stamp small{display:block;font-size:10px;font-weight:600;margin-top:3px}
+.stamp.ok{color:var(--ok)}.stamp.ng{color:var(--ng)}.stamp.wait{color:var(--wait)}
+.stampcard .txt{min-width:0;font-size:14px}
+@media (prefers-reduced-motion:no-preference){.stamp{animation:press .35s cubic-bezier(.2,1.6,.4,1)}@keyframes press{from{transform:rotate(-8deg) scale(1.6);opacity:0}to{transform:rotate(-8deg) scale(1);opacity:1}}}
+/* 로그인 */
+.login{max-width:400px;width:100%;margin:6vh auto 0}
+.login .tb{display:grid;grid-template-columns:1fr auto;border:1px solid var(--rule);font-size:12px;margin-top:4px}
+.login .tb div{padding:6px 10px;border-right:1px solid var(--rule)}
+.login .tb div:last-child{border-right:0;color:var(--muted)}
+.panel>h2{padding-bottom:10px;border-bottom:1px solid var(--rule)}
+.wordsketch{display:block;width:100%;max-width:400px;height:auto;margin:3vh auto 0;color:var(--ink)}
+.wordsketch text{font-family:var(--sans);font-weight:700}
+.wordsketch .ln{fill:none}
+.wordsketch .fl{fill:#DCE6F5}
+.chart{width:100%;height:auto}
+@media (max-width:560px){.hide-sm{display:none}.tblock{display:none}}
+/* 간편접수 */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{min-height:44px;padding:8px 12px;border:1px solid #CBD5E1;border-radius:8px;background:#fff;font:inherit;font-size:15px;color:#0F172A}
+.chips button.on{background:#1E293B;border-color:#1E293B;color:#fff}
+.thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.thumbs .t{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#E2E8F0}
+.thumbs .t img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.thumbs .t button{position:absolute;top:4px;right:4px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(15,23,42,.75);color:#fff;font-size:16px;line-height:28px;padding:0}
+.addph{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border:2px dashed #94A3B8;border-radius:8px;color:#475569;font-size:13px;text-align:center;cursor:pointer;background:#F8FAFC}
+.rep{border:1px solid #E2E8F0;border-radius:10px;padding:12px;margin-bottom:10px;background:#fff}
+.rep .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:#475569}
+.rep .bd{margin:8px 0;white-space:pre-wrap;word-break:break-word;font-size:15px;color:#0F172A}
+.rep .rv{display:grid;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed #CBD5E1}
+#lightbox{position:fixed;inset:0;background:rgba(15,23,42,.92);display:flex;align-items:center;justify-content:center;z-index:99}
+#lightbox img{max-width:96vw;max-height:92vh}
+</style>
+</head>
+<body>
+<header><div class="hbar">
+  <div class="brand"><b>(주)엠솔루션</b><span id="whoami">품질관리 시스템</span></div>
+  <div class="tblock" id="tblock" hidden></div>
+  <button id="btnLogout" hidden>로그아웃</button>
+</div></header>
+<main id="app"></main>
+<nav class="tabs" id="tabs" hidden></nav>
+
+<script>
+"use strict";
+const SB_URL = "https://ettopqmqnjzktdfygtuz.supabase.co";
+const SB_KEY = "sb_publishable_2XOscbG2JvfZyCGKiwyj9g_8_4k5G-P";
+const LOGIN_DOMAIN = "msolution.local";
+const DEFECT_TYPES = ["스크래치","찍힘","긁힘","컬러이색","가스불량","오염","누락","이종","미성형","조립불량(핀삽입불량)","변형","기타"];
+const LINES = ["KA4 G/BOX","CE1/CT1 G/BOX","SV1 G/BOX","SV1 UPR","GN7 G/BOX","SP3k G/BOX","밀링스코어링","SP3k PAB융착"];
+const ROLE_KO = {admin:"관리자",quality:"품질",production:"생관",materials:"자재"};
+const REPORT_CATS = ["불량","설비이상","변동점(4M)","자재이상","기타"];
+const STATUS_KO = {draft:"검토대기",confirmed:"확정",void:"무효"};
+const TABS = [
+  {id:"report", label:"간편접수", roles:["admin","quality","production"], ic:'<path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/>'},
+  {id:"inbox", label:"접수함", roles:["admin","quality","production"], ic:'<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5 5h14l2 8v6H3v-6z"/>'},
+  {id:"material", label:"자재", roles:["admin","quality","production","materials"], ic:'<rect x="3" y="7" width="18" height="13" rx="1"/><path d="M3 11h18M9 7V4h6v3"/>'},
+  {id:"incoming", label:"수입검사", roles:["admin","quality"], ic:'<path d="M9 4h6v3H9z"/><path d="M8 5H5v16h14V5h-3"/><path d="m9 14 2 2 4-5"/>'},
+  {id:"inlist", label:"검사조회", roles:["admin","quality","materials"], ic:'<path d="M4 6h16M4 12h16M4 18h10"/>'},
+  {id:"ppm", label:"공식PPM", roles:["admin","quality"], ic:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'},
+  {id:"line", label:"공정불량", roles:["admin","quality","production"], ic:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/>'},
+  {id:"users", label:"사용자", roles:["admin"], ic:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>'},
+];
+const $ = (s, r=document) => r.querySelector(s);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const n0 = v => (v===null||v===undefined||v==="") ? "-" : Number(v).toLocaleString("ko-KR");
+const n1 = v => (v===null||v===undefined) ? "-" : Number(v).toLocaleString("ko-KR",{maximumFractionDigits:1});
+const today = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const monthRange = ym => { const [y,m]=ym.split("-").map(Number); const last=new Date(y,m,0).getDate(); return [`${ym}-01`,`${ym}-${String(last).padStart(2,"0")}`]; };
+
+const WORD_SKETCH = `<svg class="wordsketch" viewBox="0 0 400 130" fill="none" stroke="currentColor" stroke-linecap="round" aria-label="엠솔루션" role="img">
+  <g stroke="#2B4A7E" stroke-width=".7" opacity=".55"><path d="M4 92H396M10 40H392M2 66H398" stroke-dasharray="12 5 2 5"/><path d="M38 20V112M362 18V114" stroke-dasharray="3 4"/></g>
+  <g stroke="#2B4A7E" stroke-width=".6" opacity=".35"><path d="M0 104L400 86M20 118L380 22"/></g>
+  <text class="fl" x="200" y="91" text-anchor="middle" font-size="60" stroke-width=".9">엠솔루션</text>
+  <text class="ln" x="202.2" y="92.4" text-anchor="middle" font-size="60" stroke-width=".45" opacity=".45" transform="rotate(-1.4 200 70)">엠솔루션</text>
+  <text class="ln" x="201" y="91.6" text-anchor="middle" font-size="60" stroke-width=".45" opacity=".55" transform="rotate(-.6 200 70)">엠솔루션</text>
+  <text class="ln" x="198.4" y="89.8" text-anchor="middle" font-size="60" stroke-width=".5" opacity=".6" transform="rotate(1 200 70)">엠솔루션</text>
+  <g stroke="#E2580B" stroke-width="2.2"><path d="M60 102C140 98 260 99 342 101"/><path d="M66 106C150 103 250 104 330 105" stroke-width="1" opacity=".6"/></g>
+  <text x="38" y="124" font-size="10" fill="#2B4A7E" stroke="none" font-weight="600" letter-spacing=".08em">M-SOLUTION · AUTOMOTIVE INTERIOR</text>
+  <text x="362" y="124" font-size="10" fill="#2B4A7E" stroke="none" text-anchor="end">SKETCH No.01</text>
+</svg>`;
+/* ---------- 세션/인증 ---------- */
+let session = null, me = null, current = null;
+function loadSession(){ try{ session = JSON.parse(localStorage.getItem("qms_session")||"null"); }catch(e){ session=null; } }
+function saveSession(s){ session=s; try{ s ? localStorage.setItem("qms_session",JSON.stringify(s)) : localStorage.removeItem("qms_session"); }catch(e){} }
+async function authCall(grant, body){
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=${grant}`, {method:"POST", headers:{apikey:SB_KEY,"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error_description==="Invalid login credentials" ? "아이디 또는 비밀번호가 맞지 않습니다" : (j.error_description||j.msg||"로그인 실패"));
+  return {access_token:j.access_token, refresh_token:j.refresh_token, expires_at:Math.floor(Date.now()/1000)+(j.expires_in||3600)};
+}
+async function token(){
+  if(!session) throw new Error("로그인이 필요합니다");
+  if(session.expires_at - Date.now()/1000 < 60){
+    try{ saveSession(await authCall("refresh_token",{refresh_token:session.refresh_token})); }
+    catch(e){ saveSession(null); showLogin("세션이 만료되었습니다. 다시 로그인하세요."); throw e; }
+  }
+  return session.access_token;
+}
+const ERR_KO = {"Unauthorized":"이 기능을 사용할 권한이 없습니다","login required":"로그인이 필요합니다","not authorized":"이 기능을 사용할 권한이 없습니다"};
+async function rpc(name, args={}){
+  let r;
+  try{
+    r = await fetch(`${SB_URL}/rest/v1/rpc/${name}`, {method:"POST", headers:{apikey:SB_KEY, Authorization:`Bearer ${await token()}`, "Content-Type":"application/json"}, body:JSON.stringify(args)});
+  }catch(e){ throw new Error("서버에 연결할 수 없습니다. 인터넷 연결을 확인하세요."); }
+  const j = await r.json().catch(()=>null);
+  if(!r.ok){ const m = j?.message || `오류 ${r.status}`; throw new Error(ERR_KO[m] || m); }
+  return j;
+}
+async function adminFn(body){
+  const r = await fetch(`${SB_URL}/functions/v1/qms-admin-users`, {method:"POST", headers:{apikey:SB_KEY, Authorization:`Bearer ${await token()}`, "Content-Type":"application/json"}, body:JSON.stringify(body)});
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error || `오류 ${r.status}`);
+  return j;
+}
+function stampCard(el, r){
+  const kind = r.ppm_status!=="확정" ? "wait" : (r.reject_qty>0 ? "ng" : "ok");
+  const word = kind==="wait" ? "대기" : kind==="ng" ? "NG" : "OK";
+  el.innerHTML = `<div class="stampcard" role="status"><div class="stamp ${kind}"><div>${word}<small>${kind==="wait"?"입고수량":"수입검사"}</small></div></div>
+    <div class="txt"><b>저장 완료 #${r.id}</b>${r.record_kind==="TEST"?' <span class="pill test">시험</span>':""}<div class="code">${esc(r.material_code)}</div>
+    <div class="muted">${esc(r.material_name)} · ${esc(r.supplier)}</div>
+    <div>검사 ${n0(r.inspected_qty)}개 · 불량 ${n0(r.reject_qty)}개 · ${r.ppm!==null?`<b>${n1(r.ppm)} PPM</b>`:"입고수량 입력 후 PPM 확정"}</div></div></div>`;
+}
+function msg(el, type, text){ el.innerHTML = text ? `<div class="msg ${type}">${esc(text)}</div>` : ""; }
+
+/* ---------- 로그인 ---------- */
+function showLogin(note){
+  me=null; $("#tabs").hidden=true; $("#btnLogout").hidden=true; $("#tblock").hidden=true; document.body.classList.add("is-login"); $("#whoami").textContent="품질관리 시스템";
+  $("#app").innerHTML = `${WORD_SKETCH}<form class="panel login" id="fLogin" style="margin-top:12px">
+    <div><h2 style="border:0;padding:0;font-size:22px">품질관리 시스템</h2>
+    <div class="tb"><div>수입검사 · 공식 PPM · 공정불량</div><div>IATF 16949</div></div></div>
+    <div id="lm">${note?`<div class="msg info">${esc(note)}</div>`:""}</div>
+    <label>아이디 (또는 이메일)<input id="lid" autocomplete="username" autocapitalize="none" required></label>
+    <label>비밀번호<input id="lpw" type="password" autocomplete="current-password" required></label>
+    <button class="btn primary" id="lbtn">로그인</button>
+    <div class="muted">계정은 관리자가 개인별로 발급합니다.</div></form>`;
+  $("#fLogin").onsubmit = async e => {
+    e.preventDefault(); const b=$("#lbtn"); b.disabled=true; msg($("#lm"),"","");
+    let id = $("#lid").value.trim(); if(!id.includes("@")) id = `${id.toLowerCase()}@${LOGIN_DOMAIN}`;
+    try{ saveSession(await authCall("password",{email:id,password:$("#lpw").value})); await boot(); }
+    catch(err){ msg($("#lm"),"err",err.message); b.disabled=false; }
+  };
+}
+$("#btnLogout").onclick = async () => {
+  try{ await fetch(`${SB_URL}/auth/v1/logout`,{method:"POST",headers:{apikey:SB_KEY,Authorization:`Bearer ${session?.access_token}`}}); }catch(e){}
+  saveSession(null); showLogin("로그아웃되었습니다.");
+};
+async function boot(){
+  loadSession(); if(!session) return showLogin();
+  try{ me = await rpc("qms_me"); }catch(e){ saveSession(null); return showLogin(e.message); }
+  if(!me.active){ $("#app").innerHTML=`<div class="panel"><div class="msg err">계정이 아직 승인되지 않았습니다. 관리자에게 권한 등록을 요청하세요.</div></div>`; $("#btnLogout").hidden=false; return; }
+  const uname=(me.email||"").replace("@"+LOGIN_DOMAIN,"");
+  $("#whoami").textContent = `품질관리 시스템 · ${ROLE_KO[me.role]||me.role}`;
+  $("#tblock").innerHTML = `<div>사용자</div><div>${esc(uname)}</div><div>권한</div><div>${esc(ROLE_KO[me.role]||me.role)}</div><div>일자</div><div>${today()}</div>`;
+  $("#tblock").hidden=false; $("#btnLogout").hidden=false; document.body.classList.remove("is-login");
+  const mine = TABS.filter(t=>t.roles.includes(me.role));
+  $("#tabs").innerHTML = mine.map(t=>`<button data-t="${t.id}"><svg viewBox="0 0 24 24" aria-hidden="true">${t.ic}</svg>${t.label}</button>`).join("");
+  $("#tabs").hidden=false;
+  $("#tabs").onclick = e => { const b=e.target.closest("button"); if(b) go(b.dataset.t); };
+  let saved=null; try{ saved=localStorage.getItem("qms_tab"); }catch(e){}
+  go(mine.some(t=>t.id===saved) ? saved : mine[0].id);
+}
+function go(id, arg){
+  current=id; try{ localStorage.setItem("qms_tab",id); }catch(e){}
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===id));
+  ({report:viewReport, inbox:viewInbox, material:viewMaterial, incoming:viewIncoming, inlist:viewInList, ppm:viewPpm, line:viewLine, users:viewUsers})[id](arg);
+  window.scrollTo(0,0);
+}
+
+/* ---------- 자재 선택 컴포넌트 ---------- */
+function materialPicker(host, onPick, initial){
+  host.innerHTML = `<label>자재 (품번·품명·차종·업체 검색)<input class="mq" placeholder="예: N1000, 글로브, GN7, 니프코" autocomplete="off"></label>
+    <div class="sel" hidden></div><div class="results" hidden></div>`;
+  const q=$(".mq",host), sel=$(".sel",host), res=$(".results",host); let t=null, last=[];
+  const show = m => { sel.hidden=false; sel.innerHTML=`<div><b class="code">${esc(m.material_code)}</b> ${esc(m.material_name)}<div class="muted">${esc(m.vehicle)} · ${esc(m.supplier)} ${m.color_code?"· "+esc(m.color_code):""}</div></div><button type="button" class="btn ghost">변경</button>`;
+    $("button",sel).onclick=()=>{ sel.hidden=true; q.parentElement.hidden=false; onPick(null); q.focus(); }; q.parentElement.hidden=true; res.hidden=true; };
+  q.oninput = () => { clearTimeout(t); t=setTimeout(async()=>{
+    const v=q.value.trim(); if(!v){res.hidden=true;return;}
+    try{ last = await rpc("qms_material_search",{p_q:v,p_limit:30}); }catch(e){ res.hidden=false; res.innerHTML=`<div class="msg err">${esc(e.message)}</div>`; return; }
+    res.hidden=false;
+    res.innerHTML = last.length ? last.map((m,i)=>`<button type="button" data-i="${i}"><b class="code">${esc(m.material_code)}</b> ${esc(m.material_name)}<div class="muted">${esc(m.vehicle)} · ${esc(m.supplier)}</div></button>`).join("") : `<div class="muted" style="padding:10px">검색 결과가 없습니다</div>`;
+  },250); };
+  res.onclick = e => { const b=e.target.closest("button[data-i]"); if(!b) return; const m=last[b.dataset.i]; show(m); onPick(m); };
+  if(initial) show(initial);
+}
+
+/* ---------- 자재 조회 ---------- */
+async function viewMaterial(){
+  $("#app").innerHTML = `<section class="panel"><h2>자재 마스터</h2>
+    <label>검색<input id="mq" placeholder="품번·품명·차종·업체" autocomplete="off"></label>
+    <div id="mm"></div><div class="tablewrap"><table><thead><tr><th>차종</th><th>품번</th><th>품명</th><th>업체</th><th class="hide-sm">품목</th></tr></thead><tbody id="mt"></tbody></table></div>
+    <div class="muted" id="mc"></div></section>`;
+  let t=null;
+  const load = async () => {
+    try{ const rows = await rpc("qms_material_search",{p_q:$("#mq").value.trim(),p_limit:300});
+      $("#mt").innerHTML = rows.map(m=>`<tr><td>${esc(m.vehicle)}</td><td class="code">${esc(m.material_code)}</td><td>${esc(m.material_name)}</td><td>${esc(m.supplier)}</td><td class="hide-sm">${esc(m.item)}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">결과 없음</td></tr>`;
+      $("#mc").textContent = `${n0(rows.length)}건 표시`;
+    }catch(e){ msg($("#mm"),"err",e.message); }
+  };
+  $("#mq").oninput = ()=>{ clearTimeout(t); t=setTimeout(load,250); };
+  load();
+}
+
+/* ---------- 수입검사 등록/수정 ---------- */
+function viewIncoming(edit){
+  let mat = edit ? {id:edit.material_id, material_code:edit.material_code, material_name:edit.material_name, vehicle:edit.vehicle, supplier:edit.supplier, color_code:edit.color_code} : null;
+  const dq = {}; (edit?.defects_json||[]).forEach(d=>dq[d.type]=d.qty);
+  $("#app").innerHTML = `<form class="panel" id="fIn" novalidate>
+    <h2>${edit?`수입검사 수정 <span class="muted">#${edit.id}</span>`:"수입검사 등록"}</h2>
+    <div id="im"></div>
+    <div id="pick"></div>
+    <div class="row">
+      <label>검사일자<input type="date" id="wd" value="${esc(edit?.work_date||today())}"></label>
+      <label>LOT<input id="lot" value="${esc(edit?.lot||"")}" maxlength="100"></label>
+      <label>검사방식<select id="meth"><option value="">선택</option>${["유무검사","전수검사","샘플검사"].map(m=>`<option ${edit?.inspection_method===m?"selected":""}>${m}</option>`).join("")}</select></label>
+    </div>
+    <div class="row">
+      <label>검사수량 (개)<input type="number" inputmode="numeric" min="1" id="iq" value="${esc(edit?.inspected_qty??"")}"></label>
+      <label>불량수량 (개, 자동합계)<input type="number" id="jq" value="${esc(edit?.reject_qty??0)}" readonly></label>
+      <label>입고수량 (개, 모르면 비움)<input type="number" inputmode="numeric" min="0" id="rq" value="${esc(edit?.received_qty||"")}"></label>
+    </div>
+    <div><div class="muted" style="margin-bottom:6px">불량유형별 수량</div>
+      <div class="defects">${DEFECT_TYPES.map((t,i)=>`<div class="def"><span>${esc(t)}</span><input type="number" inputmode="numeric" min="0" data-t="${esc(t)}" id="d${i}" value="${esc(dq[t]||"")}" placeholder="0"></div>`).join("")}</div></div>
+    <label>비고<textarea id="note" maxlength="1000">${esc(edit?.note||"")}</textarea></label>
+    <label class="check"><input type="checkbox" id="test" ${edit?.record_kind==="TEST"?"checked":""}> 시험용 기록 (공식 PPM 집계에서 제외)</label>
+    ${edit?`<label>수정 사유 (필수, 이력에 남습니다)<input id="reason" maxlength="200"></label>`:""}
+    <div class="btns"><button class="btn primary" id="sv">${edit?"수정 저장":"저장"}</button>${edit?`<button type="button" class="btn ghost" id="cancel">취소</button>`:""}</div>
+    <div class="muted">입고수량을 입력하면 PPM이 확정되고, 비우면 '입고수량 대기'로 저장되어 공식 PPM에서 빠집니다.</div>
+  </form>`;
+  materialPicker($("#pick"), m=>mat=m, mat?.id?mat:null);
+  const sum = () => { let s=0; document.querySelectorAll(".def input").forEach(i=>s+=Math.max(0,parseInt(i.value||0))); $("#jq").value=s; };
+  document.querySelectorAll(".def input").forEach(i=>i.oninput=sum);
+  if(edit) $("#cancel").onclick=()=>go("inlist");
+  $("#fIn").onsubmit = async e => {
+    e.preventDefault(); const im=$("#im");
+    const iq=parseInt($("#iq").value), jq=parseInt($("#jq").value||0), rq=parseInt($("#rq").value||0);
+    const errs=[];
+    if(!mat?.id) errs.push("자재를 선택하세요");
+    if(!$("#meth").value) errs.push("검사방식을 선택하세요");
+    if(!(iq>0)) errs.push("검사수량은 1 이상");
+    if(jq>iq) errs.push("불량수량이 검사수량보다 많습니다");
+    if(rq>0 && rq<iq) errs.push("입고수량은 검사수량 이상이어야 합니다");
+    if(edit && !$("#reason").value.trim()) errs.push("수정 사유를 입력하세요");
+    if(errs.length) return msg(im,"err",errs.join(" / "));
+    const defects = [...document.querySelectorAll(".def input")].map(i=>({type:i.dataset.t, qty:parseInt(i.value||0)})).filter(d=>d.qty>0);
+    const p = {work_date:$("#wd").value, material_id:mat.id, lot:$("#lot").value, inspection_method:$("#meth").value,
+      inspected_qty:iq, reject_qty:jq, received_qty:rq||0, defects_json:defects, note:$("#note").value, record_kind:$("#test").checked?"TEST":"NORMAL"};
+    $("#sv").disabled=true;
+    try{
+      const r = await rpc("qms_incoming_save",{p_id:edit?.id??null, p, p_reason:edit?$("#reason").value:null});
+      const head = `${edit?"수정":"저장"} 완료 #${r.id} · ${r.material_code} · 검사 ${n0(r.inspected_qty)}개 / 불량 ${n0(r.reject_qty)}개 · ${r.ppm_status}${r.ppm!==null?` · ${n1(r.ppm)} PPM`:""}${r.record_kind==="TEST"?" · 시험용":""}`;
+      if(edit){ go("inlist"); setTimeout(()=>msg($("#lm2"),"ok",head),0); }
+      else { viewIncoming(); stampCard($("#im"), r); }
+    }catch(err){ msg(im,"err","저장 실패: "+err.message); $("#sv").disabled=false; }
+  };
+}
+
+/* ---------- 수입검사 조회 + 입고수량 후입력 ---------- */
+async function viewInList(){
+  const canEdit = ["admin","quality"].includes(me.role);
+  const ym = today().slice(0,7);
+  $("#app").innerHTML = `<section class="panel"><h2>입고수량 대기</h2><div class="muted">검사는 끝났고 입고수량이 없어 PPM이 확정되지 않은 건입니다.</div><div id="pm"></div><div id="pend"></div></section>
+   <section class="panel"><h2>수입검사 조회</h2><div id="lm2"></div>
+    <div class="row"><label>시작<input type="date" id="f" value="${ym}-01"></label><label>종료<input type="date" id="t" value="${today()}"></label></div>
+    <label class="check"><input type="checkbox" id="it"> 시험용 기록 포함</label>
+    <div class="btns"><button class="btn" id="q">조회</button><button class="btn ghost" id="csv">CSV 내보내기</button></div>
+    <div class="tablewrap"><table><thead><tr><th>일자</th><th>차종</th><th>품번</th><th>업체</th><th>LOT</th><th class="n">입고</th><th class="n">검사</th><th class="n">불량</th><th class="n">PPM</th><th>상태</th></tr></thead><tbody id="lt"></tbody></table></div>
+    ${canEdit?`<div class="muted">행을 누르면 수정 화면으로 이동합니다.</div>`:""}</section>`;
+  let rows=[];
+  const loadPend = async () => {
+    try{ const p = await rpc("qms_incoming_pending_received",{p_limit:100});
+      $("#pend").innerHTML = p.length ? p.map(x=>`<div class="sel" style="flex-wrap:wrap"><div style="min-width:0;flex:1"><b>${esc(x.work_date)}</b> <span class="code">${esc(x.material_code)}</span><div class="muted">${esc(x.vehicle)} · ${esc(x.supplier)} · 검사 ${n0(x.inspected_qty)} / 불량 ${n0(x.reject_qty)}</div></div>
+        <div class="btns" style="flex-wrap:nowrap"><input type="number" inputmode="numeric" min="${x.inspected_qty}" placeholder="입고수량" style="width:120px" id="rq${x.id}"><button class="btn accent" data-id="${x.id}">확정</button></div></div>`).join("") : `<div class="muted">대기 건이 없습니다.</div>`;
+    }catch(e){ msg($("#pm"),"err",e.message); }
+  };
+  $("#pend").onclick = async e => { const b=e.target.closest("button[data-id]"); if(!b) return; const v=parseInt($("#rq"+b.dataset.id).value);
+    if(!(v>0)) return msg($("#pm"),"err","입고수량을 입력하세요");
+    b.disabled=true;
+    try{ const r=await rpc("qms_incoming_set_received_qty",{p_inspection_id:Number(b.dataset.id),p_received_qty:v}); msg($("#pm"),"ok",`#${r.id} 확정 · 입고 ${n0(r.received_qty)}개 · ${n1(r.ppm)} PPM`); loadPend(); load(); }
+    catch(err){ msg($("#pm"),"err",err.message); b.disabled=false; } };
+  const load = async () => {
+    try{ rows = await rpc("qms_incoming_list",{p_from:$("#f").value,p_to:$("#t").value,p_include_test:$("#it").checked,p_limit:1000});
+      let si=0,sj=0,sr=0;
+      $("#lt").innerHTML = rows.map((r,i)=>{ si+=r.inspected_qty; sj+=r.reject_qty; sr+=r.received_qty;
+        const st = r.record_kind==="TEST"?`<span class="pill test">시험</span>`: r.ppm_status==="확정"?`<span class="pill ${r.reject_qty>0?"ng":"ok"}">확정</span>`:`<span class="pill wait">입고대기</span>`;
+        return `<tr class="${canEdit?"click":""}" data-i="${i}"><td>${esc(r.work_date)}</td><td>${esc(r.vehicle)}</td><td class="code">${esc(r.material_code)}</td><td>${esc(r.supplier)}</td><td>${esc(r.lot)}</td><td class="n">${n0(r.received_qty)}</td><td class="n">${n0(r.inspected_qty)}</td><td class="n">${n0(r.reject_qty)}</td><td class="n">${n1(r.ppm)}</td><td>${st}</td></tr>`; }).join("")
+        + `<tr class="total"><td colspan="5">합계 ${n0(rows.length)}건</td><td class="n">${n0(sr)}</td><td class="n">${n0(si)}</td><td class="n">${n0(sj)}</td><td class="n">${si?n1(sj*1e6/si):"-"}</td><td></td></tr>`;
+    }catch(e){ msg($("#lm2"),"err",e.message); }
+  };
+  if(canEdit) $("#lt").onclick = e => { const tr=e.target.closest("tr[data-i]"); if(tr) go("incoming", rows[tr.dataset.i]); };
+  $("#q").onclick = load;
+  $("#csv").onclick = () => downloadCsv(`수입검사_${$("#f").value}_${$("#t").value}.csv`,
+    ["일자","차종","업체","품번","품명","LOT","검사방식","입고수량","검사수량","불량수량","PPM","상태","구분","불량상세","비고"],
+    rows.map(r=>[r.work_date,r.vehicle,r.supplier,r.material_code,r.material_name,r.lot,r.inspection_method,r.received_qty,r.inspected_qty,r.reject_qty,r.ppm,r.ppm_status,r.record_kind,(r.defects_json||[]).filter(d=>d.qty>0).map(d=>`${d.type} ${d.qty}`).join("; "),r.note]));
+  loadPend(); load();
+}
+function downloadCsv(name, head, rows){
+  const c = v => { const s=String(v??""); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; };
+  const blob = new Blob(["﻿"+[head,...rows].map(r=>r.map(c).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------- 공식 PPM ---------- */
+async function viewPpm(){
+  const ym = today().slice(0,7);
+  $("#app").innerHTML = `<section class="panel"><h2>공식 수입검사 PPM</h2>
+    <div class="muted">기준: 수입검사 실적 중 입고수량 확정 건만 집계 · 시험용 기록과 라인 공정불량은 제외 · PPM = 불량수량 ÷ 검사수량 × 1,000,000</div>
+    <div class="row"><label>월<input type="month" id="ym" value="${ym}"></label><label>또는 시작<input type="date" id="pf"></label><label>종료<input type="date" id="pt"></label></div>
+    <div class="btns"><button class="btn" id="pq">집계</button><button class="btn ghost" id="pcsv">CSV 내보내기</button></div><div id="pmsg"></div></section>
+    <div class="kpis" id="kpi"></div>
+    <section class="panel"><h2>업체별 PPM</h2><div id="chart"></div>
+    <div class="tablewrap"><table><thead><tr><th>업체</th><th class="n">검사</th><th class="n">불량</th><th class="n">PPM</th></tr></thead><tbody id="pt2"></tbody></table></div></section>`;
+  let data=null;
+  const run = async () => {
+    let f=$("#pf").value, t=$("#pt").value; if(!f||!t) [f,t]=monthRange($("#ym").value);
+    try{ data = await rpc("qms_incoming_ppm_summary",{p_from:f,p_to:t}); }catch(e){ return msg($("#pmsg"),"err",e.message); }
+    msg($("#pmsg"),"info",`조회기간 ${f} ~ ${t}`);
+    $("#kpi").innerHTML = [["공식 PPM",n1(data.ppm)+(data.ppm!==null?" PPM":""),1],["검사수량",n0(data.total_inspected)+" 개"],["불량수량",n0(data.total_reject)+" 개"],["검사건수",n0(data.inspection_count)+" 건"]]
+      .map(([k,v,h])=>`<div class="kpi ${h?"hl":""}"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+    const s = (data.suppliers||[]).slice().sort((a,b)=>(b.ppm||0)-(a.ppm||0));
+    $("#pt2").innerHTML = s.map((x,i)=>`<tr><td>${i+1}. ${esc(x.supplier)}${i===0&&x.reject>0?' <span class="pill ng">워스트</span>':""}</td><td class="n">${n0(x.inspected)}</td><td class="n">${n0(x.reject)}</td><td class="n">${n1(x.ppm)}</td></tr>`).join("")
+      + `<tr class="total"><td>합계</td><td class="n">${n0(data.total_inspected)}</td><td class="n">${n0(data.total_reject)}</td><td class="n">${n1(data.ppm)}</td></tr>`;
+    $("#chart").innerHTML = s.length ? barChart(s.slice(0,10)) : `<div class="muted">해당 기간 확정된 수입검사 실적이 없습니다.</div>`;
+  };
+  $("#pq").onclick=run;
+  $("#pcsv").onclick=()=>{ if(!data) return; downloadCsv(`공식PPM_${data.from}_${data.to}.csv`,["업체","검사수량","불량수량","PPM"],(data.suppliers||[]).map(x=>[x.supplier,x.inspected,x.reject,x.ppm])); };
+  run();
+}
+function barChart(s){
+  const W=640, rowH=30, padL=120, padR=70, H=s.length*rowH+10, max=Math.max(...s.map(x=>x.ppm||0),1);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="업체별 PPM">${s.map((x,i)=>{ const w=((x.ppm||0)/max)*(W-padL-padR), y=i*rowH+5;
+    return `<text x="${padL-8}" y="${y+18}" text-anchor="end" font-size="13" fill="#334155">${esc(x.supplier).slice(0,12)}</text>
+    <rect x="${padL}" y="${y+4}" width="${Math.max(w,1)}" height="20" rx="3" fill="${i===0&&x.reject>0?"#EA580C":"#2563EB"}"></rect>
+    <text x="${padL+Math.max(w,1)+6}" y="${y+18}" font-size="12" fill="#0F172A">${n1(x.ppm)}</text>`; }).join("")}</svg>`;
+}
+
+/* ---------- 내부 공정불량 ---------- */
+function viewLine(){
+  let mat=null; const ym=today().slice(0,7);
+  $("#app").innerHTML = `<div class="badge-internal">내부 관리 전용 · 공식 PPM 및 고객사 대응 자료에 포함되지 않습니다</div>
+  <form class="panel" id="fL" novalidate><h2>공정불량 등록</h2><div id="lmsg"></div>
+    <div class="row"><label>발생일시<input type="datetime-local" id="oa"></label>
+      <label>라인<select id="ln"><option value="">선택</option>${LINES.map(l=>`<option>${esc(l)}</option>`).join("")}</select></label>
+      <label>공정<input id="pr" maxlength="100" placeholder="예: 진동융착"></label></div>
+    <div id="lpick"></div>
+    <div class="row"><label>불량유형<select id="dt"><option value="">선택</option>${DEFECT_TYPES.map(t=>`<option>${esc(t)}</option>`).join("")}</select></label>
+      <label>수량 (개)<input type="number" inputmode="numeric" min="1" id="dq"></label></div>
+    <label class="check"><input type="checkbox" id="sf"> 업체 귀책 (내부 통계로 별도 누적)</label>
+    <label>조치 내용<textarea id="ac" maxlength="2000"></textarea></label>
+    <label class="check"><input type="checkbox" id="lt2"> 시험용 기록</label>
+    <button class="btn accent" id="lsv">저장</button></form>
+  <section class="panel"><h2>공정불량 조회</h2>
+    <div class="row"><label>시작<input type="date" id="lf" value="${ym}-01"></label><label>종료<input type="date" id="ltt" value="${today()}"></label></div>
+    <label class="check"><input type="checkbox" id="lit"> 시험용 기록 포함</label>
+    <div class="btns"><button class="btn" type="button" id="lq">조회</button></div><div id="lsum"></div>
+    <div class="tablewrap"><table><thead><tr><th>발생</th><th>라인</th><th>품번</th><th>업체</th><th>유형</th><th class="n">수량</th><th>귀책</th></tr></thead><tbody id="lbody"></tbody></table></div></section>`;
+  const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); $("#oa").value=d.toISOString().slice(0,16);
+  materialPicker($("#lpick"), m=>mat=m);
+  const load = async () => {
+    try{ const r = await rpc("qms_line_defect_list",{p_from:$("#lf").value,p_to:$("#ltt").value,p_include_test:$("#lit").checked});
+      $("#lsum").innerHTML = `<div class="kpis"><div class="kpi"><div class="k">불량 합계</div><div class="v">${n0(r.total_qty)} 개</div></div><div class="kpi"><div class="k">업체 귀책</div><div class="v">${n0(r.supplier_fault_qty)} 개</div></div></div>`;
+      $("#lbody").innerHTML = r.rows.map(x=>`<tr><td>${esc(new Date(x.occurred_at).toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}))}</td><td>${esc(x.line_name)}</td><td class="code">${esc(x.material_code)}</td><td>${esc(x.supplier)}</td><td>${esc(x.defect_type)}${x.record_kind==="TEST"?' <span class="pill test">시험</span>':""}</td><td class="n">${n0(x.defect_qty)}</td><td>${x.supplier_fault?'<span class="pill ng">업체</span>':""}</td></tr>`).join("")
+        + `<tr class="total"><td colspan="5">합계 ${n0(r.rows.length)}건</td><td class="n">${n0(r.total_qty)}</td><td></td></tr>`;
+    }catch(e){ msg($("#lsum"),"err",e.message); }
+  };
+  $("#lq").onclick=load;
+  $("#fL").onsubmit = async e => {
+    e.preventDefault(); const q=parseInt($("#dq").value);
+    if(!$("#ln").value || !$("#dt").value || !(q>0)) return msg($("#lmsg"),"err","라인, 불량유형, 수량(1 이상)을 입력하세요");
+    $("#lsv").disabled=true;
+    try{ const r = await rpc("qms_line_defect_create",{p:{occurred_at:new Date($("#oa").value).toISOString(),line_name:$("#ln").value,process_name:$("#pr").value,
+        material_id:mat?.id??null,defect_type:$("#dt").value,defect_qty:q,supplier_fault:$("#sf").checked,action_taken:$("#ac").value,record_kind:$("#lt2").checked?"TEST":"NORMAL"}});
+      viewLine(); msg($("#lmsg"),"ok",`저장 완료 #${r.id} · ${r.line_name} · ${r.defect_type} ${n0(r.defect_qty)}개${r.supplier_fault?" · 업체 귀책":""}`);
+    }catch(err){ msg($("#lmsg"),"err","저장 실패: "+err.message); $("#lsv").disabled=false; }
+  };
+  load();
+}
+
+/* ---------- 사용자 관리 ---------- */
+async function viewUsers(){
+  $("#app").innerHTML = `<form class="panel" id="fU" novalidate><h2>계정 발급</h2><div id="um"></div>
+    <div class="row"><label>이름<input id="un" maxlength="30"></label><label>아이디 (영문/숫자)<input id="ul" autocapitalize="none" maxlength="30"></label></div>
+    <div class="row"><label>초기 비밀번호 (8자 이상)<input id="up" type="text" autocomplete="new-password"></label>
+      <label>권한<select id="ur"><option value="quality">품질</option><option value="production">생관</option><option value="materials">자재</option></select></label></div>
+    <button class="btn primary" id="ubtn">발급</button>
+    <div class="muted">관리자 권한은 이 화면에서 발급할 수 없습니다 (관리자 2명 제한).</div></form>
+  <section class="panel"><h2>사용자 목록</h2><div id="ul2"></div></section>`;
+  const list = async () => {
+    try{ const {users} = await adminFn({action:"list"});
+      $("#ul2").innerHTML = `<div class="tablewrap"><table><thead><tr><th>이름</th><th>아이디</th><th>권한</th><th>상태</th><th></th></tr></thead><tbody>${users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.login)}</td><td>${esc(ROLE_KO[u.role]||u.role)}</td><td>${u.active?'<span class="pill ok">사용</span>':'<span class="pill">중지</span>'}</td><td>${u.role==="admin"?"":`<button class="btn ghost" data-u="${esc(u.user_id)}" data-a="${u.active?0:1}">${u.active?"중지":"사용"}</button>`}</td></tr>`).join("")}</tbody></table></div>`;
+    }catch(e){ msg($("#ul2"),"err",e.message); }
+  };
+  $("#ul2").onclick = async e => { const b=e.target.closest("button[data-u]"); if(!b) return; b.disabled=true;
+    try{ await adminFn({action:"set_active",user_id:b.dataset.u,active:b.dataset.a==="1"}); list(); }catch(err){ msg($("#um"),"err",err.message); b.disabled=false; } };
+  $("#fU").onsubmit = async e => { e.preventDefault(); $("#ubtn").disabled=true;
+    try{ const r = await adminFn({action:"create",name:$("#un").value,login:$("#ul").value,password:$("#up").value,role:$("#ur").value});
+      $("#fU").reset(); msg($("#um"),"ok",`발급 완료: 아이디 ${r.login} (${ROLE_KO[r.role]}). 초기 비밀번호는 본인에게 직접 전달하세요.`); list(); }
+    catch(err){ msg($("#um"),"err",err.message); } $("#ubtn").disabled=false; };
+  list();
+}
+
+/* ---------- 사진: 자동 축소 · 업로드 · 열람 ---------- */
+const BUCKET = "quality-evidence";
+function shrinkImage(file, maxSide=1600, quality=0.8){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, maxSide/Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth*s); c.height = Math.round(img.naturalHeight*s);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      c.toBlob(b => b ? resolve(b) : reject(new Error("사진 변환 실패")), "image/jpeg", quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`이 사진 형식은 열 수 없습니다 (${file.name}). 카메라 설정을 '호환성 우선'으로 하거나 다시 촬영하세요.`)); };
+    img.src = url;
+  });
+}
+async function uploadPhoto(path, blob){
+  const r = await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${path}`, {method:"POST", headers:{apikey:SB_KEY, Authorization:`Bearer ${await token()}`, "Content-Type":"image/jpeg", "x-upsert":"false"}, body:blob});
+  if(!r.ok){ const j = await r.json().catch(()=>({})); throw new Error(j.message || `사진 업로드 오류 ${r.status}`); }
+}
+const signCache = {};
+async function signedUrl(path){
+  const c = signCache[path]; if(c && c.exp > Date.now()) return c.url;
+  const r = await fetch(`${SB_URL}/storage/v1/object/sign/${BUCKET}/${path}`, {method:"POST", headers:{apikey:SB_KEY, Authorization:`Bearer ${await token()}`, "Content-Type":"application/json"}, body:JSON.stringify({expiresIn:1800})});
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok || !j.signedURL) throw new Error(j.message || "사진 열람 권한 없음");
+  const url = `${SB_URL}/storage/v1${j.signedURL}`; signCache[path] = {url, exp: Date.now()+25*60*1000}; return url;
+}
+function lightbox(src){ const d=document.createElement("div"); d.id="lightbox"; d.innerHTML=`<img src="${esc(src)}" alt="증빙사진">`; d.onclick=()=>d.remove(); document.body.appendChild(d); }
+async function fillPhotos(host){
+  for(const img of host.querySelectorAll("img[data-path]")){
+    try{ img.src = await signedUrl(img.dataset.path); img.onclick=()=>lightbox(img.src); }
+    catch(e){ img.replaceWith(Object.assign(document.createElement("div"),{className:"muted",style:"padding:6px;font-size:12px",textContent:"열람 불가"})); }
+  }
+}
+const nowLocal = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
+const fmtDT = v => new Date(v).toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+
+/* ---------- 간편접수 (휴대폰) ---------- */
+function viewReport(){
+  let line = null, cat = null; const photos = []; // {blob, url}
+  let lastLine = null; try{ lastLine = localStorage.getItem("qms_last_line"); }catch(e){}
+  $("#app").innerHTML = `<form class="panel" id="fR" novalidate><h2>현장 간편접수</h2><div id="rm"></div>
+    <div><div class="muted" style="margin-bottom:6px">라인 (필수)</div><div class="chips" id="rl">${LINES.map(l=>`<button type="button" data-v="${esc(l)}">${esc(l)}</button>`).join("")}</div></div>
+    <div><div class="muted" style="margin-bottom:6px">구분</div><div class="chips" id="rc">${REPORT_CATS.map(c=>`<button type="button" data-v="${esc(c)}">${esc(c)}</button>`).join("")}</div></div>
+    <label>내용 (필수 · 말하듯 적으면 품질담당이 정리합니다)<textarea id="rt" maxlength="2000" rows="4" placeholder="예: GN7 우측 클립부 긁힘 3개 발견, 선별 중"></textarea></label>
+    <div><div class="muted" style="margin-bottom:6px">사진 (최대 4장 · 자동 축소)</div><div class="thumbs" id="rp"></div>
+      <input type="file" id="rf" accept="image/*" multiple hidden></div>
+    <div class="row"><label>발생시각<input type="datetime-local" id="ro" value="${nowLocal()}"></label><label>수량 (개, 선택)<input type="number" inputmode="numeric" min="0" id="rq"></label></div>
+    <label class="check"><input type="checkbox" id="rtest"> 시험용 기록</label>
+    <button class="btn primary" id="rs">접수</button></form>
+    <section class="panel"><h2>내 최근 접수</h2><div id="mine"></div></section>`;
+  const pick = (box, v, set) => { box.querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===v)); set(v); };
+  $("#rl").onclick = e => { const b=e.target.closest("button"); if(b) pick($("#rl"), b.dataset.v, v=>line=v); };
+  $("#rc").onclick = e => { const b=e.target.closest("button"); if(b) pick($("#rc"), cat===b.dataset.v?null:b.dataset.v, v=>cat=v); };
+  if(lastLine && LINES.includes(lastLine)) pick($("#rl"), lastLine, v=>line=v);
+  const drawThumbs = () => {
+    $("#rp").innerHTML = photos.map((p,i)=>`<div class="t"><img src="${p.url}" alt="사진 ${i+1}"><button type="button" data-i="${i}" aria-label="삭제">×</button></div>`).join("")
+      + (photos.length<4 ? `<label class="addph" for="rf">+ 사진<br>${photos.length}/4</label>` : "");
+  };
+  $("#rp").onclick = e => { const b=e.target.closest("button[data-i]"); if(!b) return; const [p]=photos.splice(+b.dataset.i,1); URL.revokeObjectURL(p.url); drawThumbs(); };
+  $("#rf").onchange = async e => {
+    const files=[...e.target.files].slice(0, 4-photos.length); e.target.value="";
+    for(const f of files){ try{ const blob=await shrinkImage(f); photos.push({blob, url:URL.createObjectURL(blob)}); }catch(err){ msg($("#rm"),"err",err.message); } }
+    drawThumbs();
+  };
+  drawThumbs();
+  const loadMine = async () => {
+    const from = new Date(Date.now()-14*864e5); from.setMinutes(from.getMinutes()-from.getTimezoneOffset());
+    try{ const all = await rpc("qms_field_report_list",{p_from:from.toISOString().slice(0,10),p_to:today(),p_include_test:true,p_limit:200});
+      const rows = all.filter(r=>r.reporter===(me.email||"").split("@")[0]).slice(0,10);
+      $("#mine").innerHTML = rows.length ? rows.map(r=>`<div class="rep"><div class="hd"><b>#${r.id}</b>${fmtDT(r.occurred_at)} · ${esc(r.line_name)} <span class="pill ${r.status==="confirmed"?"ok":r.status==="void"?"":"wait"}">${STATUS_KO[r.status]}</span>${r.record_kind==="TEST"?'<span class="pill test">시험</span>':""} · 사진 ${r.photos.length}장</div><div class="bd">${esc(r.raw_text)}</div></div>`).join("") : `<div class="muted">최근 2주 접수 내역이 없습니다.</div>`;
+    }catch(e){ msg($("#mine"),"err",e.message); }
+  };
+  $("#fR").onsubmit = async e => {
+    e.preventDefault(); const rm=$("#rm"); const text=$("#rt").value.trim();
+    const errs=[]; if(!line) errs.push("라인을 선택하세요"); if(text.length<2) errs.push("내용을 입력하세요");
+    if(errs.length) return msg(rm,"err",errs.join(" / "));
+    if(!confirm(`${line} · ${cat||"미분류"}\n사진 ${photos.length}장\n\n이대로 접수할까요?`)) return;
+    const b=$("#rs"); b.disabled=true; b.textContent="저장 중…";
+    let id=null;
+    try{
+      const r = await rpc("qms_field_report_create",{p:{line_name:line,event_category:cat,raw_text:text,occurred_at:new Date($("#ro").value).toISOString(),defect_qty:$("#rq").value,record_kind:$("#rtest").checked?"TEST":"NORMAL"}});
+      id = r.id; const paths=[];
+      for(let i=0;i<photos.length;i++){ b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`; const path=`${r.uid}/sf/${id}/${Date.now()}_${i+1}.jpg`; await uploadPhoto(path, photos[i].blob); paths.push(path); }
+      const n = paths.length ? await rpc("qms_field_report_attach",{p_event_id:id,p_paths:paths}) : 0;
+      try{ localStorage.setItem("qms_last_line", line); }catch(e2){}
+      photos.forEach(p=>URL.revokeObjectURL(p.url));
+      viewReport(); msg($("#rm"),"ok",`접수 완료 #${id} · ${line} · 사진 ${n}장 저장됨`);
+    }catch(err){
+      msg(rm,"err", id ? `접수 #${id}은 저장됐지만 사진 저장 실패: ${err.message} — 품질담당에게 사진을 따로 전달하세요.` : "접수 실패: "+err.message);
+      b.disabled=false; b.textContent="접수";
+    }
+  };
+  loadMine();
+}
+
+/* ---------- 접수함 (PC) ---------- */
+function viewInbox(){
+  const canReview = ["admin","quality"].includes(me.role);
+  const from = new Date(Date.now()-30*864e5); from.setMinutes(from.getMinutes()-from.getTimezoneOffset());
+  $("#app").innerHTML = `<section class="panel"><h2>${canReview?"현장 접수함":"내 접수 내역"}</h2><div id="xm"></div>
+    <div class="row"><label>시작<input type="date" id="xf" value="${from.toISOString().slice(0,10)}"></label><label>종료<input type="date" id="xt" value="${today()}"></label>
+      <label>라인<select id="xl"><option value="">전체</option>${LINES.map(l=>`<option>${esc(l)}</option>`).join("")}</select></label>
+      <label>상태<select id="xs"><option value="">전체</option><option value="draft" selected>검토대기</option><option value="confirmed">확정</option><option value="void">무효</option></select></label></div>
+    <label>검색 (내용·제목·접수자)<input id="xq" placeholder="예: 긁힘, GN7"></label>
+    <label class="check"><input type="checkbox" id="xit"> 시험용 기록 포함</label>
+    <div class="btns"><button class="btn" id="xgo">조회</button><button class="btn ghost" id="xcsv">CSV 내보내기</button></div></section>
+    <div class="kpis" id="xk"></div><div id="xlist"></div>`;
+  let rows=[];
+  const filtered = () => { const q=$("#xq").value.trim().toLowerCase(); return q ? rows.filter(r=>[r.raw_text,r.normalized_title,r.reporter,r.line_name,r.event_category].join(" ").toLowerCase().includes(q)) : rows; };
+  const render = () => {
+    const v = filtered();
+    $("#xk").innerHTML = [["조회",v.length],["검토대기",v.filter(r=>r.status==="draft").length],["확정",v.filter(r=>r.status==="confirmed").length],["사진",v.reduce((s,r)=>s+r.photos.length,0)]]
+      .map(([k,n],i)=>`<div class="kpi ${i===1&&n>0?"hl":""}"><div class="k">${k}</div><div class="v">${n0(n)} ${k==="사진"?"장":"건"}</div></div>`).join("");
+    $("#xlist").innerHTML = v.length ? v.map(r=>`<div class="rep" data-id="${r.id}">
+      <div class="hd"><b>#${r.id}</b>${fmtDT(r.occurred_at)} · <b>${esc(r.line_name)}</b> · ${esc(r.event_category)} · 접수 ${esc(r.reporter)}${r.defect_qty!==null?` · ${n0(r.defect_qty)}개`:""}
+        <span class="pill ${r.status==="confirmed"?"ok":r.status==="void"?"":"wait"}">${STATUS_KO[r.status]}</span>${r.record_kind==="TEST"?'<span class="pill test">시험</span>':""}</div>
+      ${r.normalized_title?`<div style="margin-top:6px;font-weight:700">${esc(r.normalized_title)}</div>`:""}
+      <div class="bd">${esc(r.raw_text)}</div>
+      ${r.photos.length?`<div class="thumbs">${r.photos.map((p,i)=>`<div class="t"><img data-path="${esc(p)}" alt="증빙 ${i+1}"></div>`).join("")}</div>`:`<div class="muted">사진 없음</div>`}
+      ${r.action_taken?`<div class="muted" style="margin-top:6px">조치: ${esc(r.action_taken)}</div>`:""}
+      ${canReview?`<div class="btns" style="margin-top:8px"><button class="btn ghost" data-act="rv">검토·확정</button><button class="btn ghost" data-act="hist">이력</button></div><div class="slot"></div>`:""}
+    </div>`).join("") : `<div class="panel muted">조회 결과가 없습니다.</div>`;
+    fillPhotos($("#xlist"));
+  };
+  const load = async () => {
+    msg($("#xm"),"","");
+    try{ rows = await rpc("qms_field_report_list",{p_from:$("#xf").value,p_to:$("#xt").value,p_line:$("#xl").value||null,p_status:$("#xs").value||null,p_include_test:$("#xit").checked,p_limit:500}); render(); }
+    catch(e){ msg($("#xm"),"err",e.message); }
+  };
+  $("#xgo").onclick = load; $("#xq").oninput = render;
+  $("#xcsv").onclick = () => downloadCsv(`현장접수_${$("#xf").value}_${$("#xt").value}.csv`,
+    ["번호","발생시각","라인","구분","차종","수량","상태","제목","원문","조치","접수자","사진수","구분(시험)"],
+    filtered().map(r=>[r.id,new Date(r.occurred_at).toLocaleString("ko-KR"),r.line_name,r.event_category,r.vehicle,r.defect_qty,STATUS_KO[r.status],r.normalized_title,r.raw_text,r.action_taken,r.reporter,r.photos.length,r.record_kind]));
+  $("#xlist").onclick = async e => {
+    const b=e.target.closest("button[data-act]"); if(!b) return; const card=b.closest(".rep"), slot=$(".slot",card), r=rows.find(x=>x.id==card.dataset.id);
+    if(b.dataset.act==="hist"){
+      try{ const h=await rpc("qms_field_report_history",{p_id:r.id});
+        slot.innerHTML = `<div class="rv">${h.length?h.map(x=>`<div class="muted">${fmtDT(x.changed_at)} · ${esc(x.by)} · ${STATUS_KO[x.status]||x.status} · ${esc(x.reason||"")}${x.title?` · ${esc(x.title)}`:""}</div>`).join(""):'<div class="muted">변경 이력 없음 (원문 그대로)</div>'}</div>`;
+      }catch(err){ msg(slot,"err",err.message); } return;
+    }
+    const locked = r.status!=="draft";
+    slot.innerHTML = `<form class="rv"><div class="msg info">원문은 수정되지 않습니다. 아래 정리 내용만 저장되고 변경 이력이 남습니다.</div><div class="em"></div>
+      <label>제목 (확정 시 필수)<input name="t" maxlength="200" value="${esc(r.normalized_title||"")}"></label>
+      <div class="row"><label>구분<select name="c">${REPORT_CATS.concat(["미분류"]).map(c=>`<option ${c===r.event_category?"selected":""}>${esc(c)}</option>`).join("")}</select></label>
+        <label>라인<select name="l">${LINES.map(l=>`<option ${l===r.line_name?"selected":""}>${esc(l)}</option>`).join("")}</select></label>
+        <label>차종<input name="v" maxlength="100" value="${esc(r.vehicle||"")}"></label><label>수량 (개)<input name="q" type="number" min="0" value="${esc(r.defect_qty??"")}"></label></div>
+      <label>조치 내용<textarea name="a" maxlength="2000">${esc(r.action_taken||"")}</textarea></label>
+      <label>사유 ${locked?"(필수 · 확정/무효 건 수정)":"(무효 처리 시 필수)"}<input name="why" maxlength="200"></label>
+      <div class="btns"><button class="btn primary" type="button" data-st="confirmed">확정 저장</button><button class="btn" type="button" data-st="draft" ${locked?"hidden":""}>임시 저장</button><button class="btn ghost" type="button" data-st="void">무효</button></div></form>`;
+    $("form",slot).onclick = async ev => {
+      const sb=ev.target.closest("button[data-st]"); if(!sb) return; const f=$("form",slot);
+      const st=sb.dataset.st, t=f.t.value.trim();
+      if(st==="confirmed" && !t) return msg($(".em",f),"err","확정하려면 제목을 입력하세요");
+      if(!confirm(`#${r.id}을(를) '${STATUS_KO[st]}'(으)로 저장할까요?`)) return;
+      sb.disabled=true;
+      try{ await rpc("qms_field_report_review",{p_id:r.id,p:{normalized_title:t,event_category:f.c.value,line_name:f.l.value,vehicle:f.v.value,defect_qty:f.q.value,action_taken:f.a.value,status:st},p_reason:f.why.value||null});
+        await load(); msg($("#xm"),"ok",`#${r.id} ${STATUS_KO[st]} 저장 완료`); window.scrollTo(0,0);
+      }catch(err){ msg($(".em",f),"err",err.message); sb.disabled=false; }
+    };
+  };
+  load();
+}
+
+boot();
+</script>
+</body>
+</html>
