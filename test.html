@@ -191,7 +191,8 @@ function saveSession(s){ session=s; try{ s ? localStorage.setItem("qms_session",
 async function authCall(grant, body){
   const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=${grant}`, {method:"POST", headers:{apikey:SB_KEY,"Content-Type":"application/json"}, body:JSON.stringify(body)});
   const j = await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(j.error_description==="Invalid login credentials" ? "아이디 또는 비밀번호가 맞지 않습니다" : (j.error_description||j.msg||"로그인 실패"));
+  if(!r.ok){ const m = j.error_description||j.msg||j.message||"";
+    throw new Error((j.error_code==="invalid_credentials" || /invalid login credentials/i.test(m)) ? "아이디 또는 비밀번호가 맞지 않습니다 (계정이 아직 발급되지 않았을 수 있습니다)" : (m||"로그인 실패")); }
   return {access_token:j.access_token, refresh_token:j.refresh_token, expires_at:Math.floor(Date.now()/1000)+(j.expires_in||3600)};
 }
 async function token(){
