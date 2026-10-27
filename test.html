@@ -164,7 +164,7 @@ const ROLE_KO = {admin:"관리자",quality:"품질",production:"생관",material
 const REPORT_CATS = ["불량","설비이상","변동점(4M)","자재이상","기타"];
 const STATUS_KO = {draft:"검토대기",confirmed:"확정",void:"무효"};
 const TABS = [
-  {id:"report", label:"간편접수", roles:["admin","quality","production"], ic:'<path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/>'},
+  {id:"report", label:"수시기록", roles:["admin","quality","production"], ic:'<path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/>'},
   {id:"notice", label:"업체통보", roles:["admin","quality","production"], ic:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>'},
   {id:"inbox", label:"접수함", roles:["admin","quality","production"], ic:'<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5 5h14l2 8v6H3v-6z"/>'},
   {id:"nlist", label:"통보이력", roles:["admin","quality","production"], ic:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/><circle cx="16" cy="6" r="2"/>'},
@@ -529,16 +529,16 @@ function shrinkImage(file, maxSide=1600, quality=0.8){
     img.src = url;
   });
 }
-async function uploadPhoto(path, blob){
-  const r = await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${path}`, {method:"POST", headers:{apikey:SB_KEY, Authorization:`Bearer ${await token()}`, "Content-Type":"image/jpeg", "x-upsert":"false"}, body:blob});
-  if(!r.ok){ const j = await r.json().catch(()=>({})); throw new Error(j.message || `사진 업로드 오류 ${r.status}`); }
+async function uploadPhoto(path, blob, type="image/jpeg"){
+  const r = await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${path}`, {method:"POST", headers:{apikey:SB_KEY, Authorization:`Bearer ${await token()}`, "Content-Type":type, "x-upsert":"false"}, body:blob});
+  if(!r.ok){ const j = await r.json().catch(()=>({})); throw new Error(j.message || `업로드 오류 ${r.status}`); }
 }
 const photoCache = {};
 // 로그인 토큰으로 직접 내려받아 화면에 표시 (서버 주소를 이미지에 직접 넣으면 일부 브라우저가 차단함)
 async function signedUrl(path){
   if(photoCache[path]) return photoCache[path];
   const r = await fetch(`${SB_URL}/storage/v1/object/authenticated/${BUCKET}/${path}`, {headers:{apikey:SB_KEY, Authorization:`Bearer ${await token()}`}});
-  if(!r.ok){ const j = await r.json().catch(()=>({})); throw new Error(j.message || "사진 열람 권한 없음"); }
+  if(!r.ok){ const j = await r.json().catch(()=>({})); throw new Error(j.message || "열람 권한 없음"); }
   const url = URL.createObjectURL(await r.blob()); photoCache[path] = url; return url;
 }
 function lightbox(src){ const d=document.createElement("div"); d.id="lightbox"; d.innerHTML=`<img src="${esc(src)}" alt="증빙사진">`; d.onclick=()=>d.remove(); document.body.appendChild(d); }
@@ -547,107 +547,157 @@ async function fillPhotos(host){
     try{ img.src = await signedUrl(img.dataset.path); img.onclick=()=>lightbox(img.src); }
     catch(e){ img.replaceWith(Object.assign(document.createElement("div"),{className:"muted",style:"padding:6px;font-size:12px",textContent:"열람 불가"})); }
   }
+  for(const au of host.querySelectorAll("audio[data-path]")){
+    try{ au.src = await signedUrl(au.dataset.path); }catch(e){ au.replaceWith(Object.assign(document.createElement("div"),{className:"muted",textContent:"음성 열람 불가"})); }
+  }
 }
 const nowLocal = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
 const fmtDT = v => new Date(v).toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+const AUDIO_EXT = {"audio/webm":"webm","audio/mp4":"m4a","audio/aac":"aac","audio/ogg":"ogg","audio/mpeg":"mp3","audio/x-m4a":"m4a"};
+function mediaHtml(r){
+  const media = r.media && r.media.length ? r.media : (r.photos||[]).map(p=>({path:p,mime:"image/jpeg"}));
+  const imgs = media.filter(m=>!String(m.mime||"").startsWith("audio")), auds = media.filter(m=>String(m.mime||"").startsWith("audio"));
+  return (imgs.length?`<div class="thumbs">${imgs.map((m,i)=>`<div class="t"><img data-path="${esc(m.path)}" alt="증빙 ${i+1}"></div>`).join("")}</div>`:"")
+    + auds.map(m=>`<div style="margin-top:6px"><span class="muted">🎤 음성</span><audio controls preload="none" data-path="${esc(m.path)}" style="width:100%;height:40px"></audio></div>`).join("")
+    + (!media.length?`<div class="muted">첨부 없음</div>`:"");
+}
 
-/* ---------- 간편접수 (휴대폰) ---------- */
+/* ---------- 수시기록 (2층 · 휴대폰 10초 기록) ---------- */
 function viewReport(){
-  let line = null, cat = null; const photos = []; // {blob, url}
-  let lastLine = null; try{ lastLine = localStorage.getItem("qms_last_line"); }catch(e){}
-  $("#app").innerHTML = `<form class="panel" id="fR" novalidate><h2>현장 간편접수</h2><div id="rm"></div>
-    <div><div class="muted" style="margin-bottom:6px">라인 (필수)</div><div class="chips" id="rl">${LINES.map(l=>`<button type="button" data-v="${esc(l)}">${esc(l)}</button>`).join("")}</div></div>
-    <div><div class="muted" style="margin-bottom:6px">구분</div><div class="chips" id="rc">${REPORT_CATS.map(c=>`<button type="button" data-v="${esc(c)}">${esc(c)}</button>`).join("")}</div></div>
-    <label>내용 (필수 · 말하듯 적으면 품질담당이 정리합니다)<textarea id="rt" maxlength="2000" rows="4" placeholder="예: GN7 우측 클립부 긁힘 3개 발견, 선별 중"></textarea></label>
-    <div><div class="muted" style="margin-bottom:6px">사진 (최대 4장 · 자동 축소)</div><div class="thumbs" id="rp"></div>
-      <input type="file" id="rf" accept="image/*" multiple hidden></div>
-    <div class="row"><label>발생시각<input type="datetime-local" id="ro" value="${nowLocal()}"></label><label>수량 (개, 선택)<input type="number" inputmode="numeric" min="0" id="rq"></label></div>
-    <label class="check"><input type="checkbox" id="rtest"> 시험용 기록</label>
-    <button class="btn primary" id="rs">접수</button></form>
-    <section class="panel"><h2>내 최근 접수</h2><div id="mine"></div></section>`;
-  const pick = (box, v, set) => { box.querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===v)); set(v); };
-  $("#rl").onclick = e => { const b=e.target.closest("button"); if(b) pick($("#rl"), b.dataset.v, v=>line=v); };
-  $("#rc").onclick = e => { const b=e.target.closest("button"); if(b) pick($("#rc"), cat===b.dataset.v?null:b.dataset.v, v=>cat=v); };
-  if(lastLine && LINES.includes(lastLine)) pick($("#rl"), lastLine, v=>line=v);
-  const drawThumbs = () => {
-    $("#rp").innerHTML = photos.map((p,i)=>`<div class="t"><img src="${p.url}" alt="사진 ${i+1}"><button type="button" data-i="${i}" aria-label="삭제">×</button></div>`).join("")
-      + (photos.length<4 ? `<label class="addph" for="rf">+ 사진<br>${photos.length}/4</label>` : "");
+  let line=null, supplier=null, defect=null, qty=1; const photos=[]; let audio=null, rec=null, recTimer=null;
+  let lastLine=null; try{ lastLine=localStorage.getItem("qms_last_line"); }catch(e){}
+  $("#app").innerHTML = `<form class="panel" id="fR" novalidate><h2>수시 기록 <span class="muted" style="font-size:13px;font-weight:400">사진·음성만으로 10초 기록</span></h2><div id="rm"></div>
+    <div><div class="muted" style="margin-bottom:6px">라인</div><div class="chips" id="rl">${LINES.map(l=>`<button type="button" data-v="${esc(l)}">${esc(l)}</button>`).join("")}</div></div>
+    <div class="row" style="grid-template-columns:1fr 1fr">
+      <label class="btn accent" for="rf" style="display:flex;align-items:center;justify-content:center;min-height:64px;font-size:17px">📷 사진</label>
+      <button type="button" class="btn" id="rrec" style="min-height:64px;font-size:17px">🎤 녹음</button></div>
+    <input type="file" id="rf" accept="image/*" capture="environment" hidden>
+    <div class="thumbs" id="rp"></div><div id="raud"></div>
+    <details id="rmore"><summary class="muted" style="padding:6px 0">업체·불량유형·수량·메모 (알면 선택)</summary>
+      <label>업체<select id="rsup"><option value="">모름 · 나중에 분류</option></select></label>
+      <div><div class="muted" style="margin:8px 0 6px">불량유형</div><div class="chips" id="rd">${NOTICE_DEFECTS.map(d=>`<button type="button" data-v="${esc(d)}">${esc(d)}</button>`).join("")}</div></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px"><span class="muted">수량</span><button type="button" class="btn ghost" id="rqm">−</button><b id="rqv" style="min-width:40px;text-align:center;font-size:20px">1</b><button type="button" class="btn ghost" id="rqp">+</button><span class="muted">EA</span></div>
+      <label>메모<textarea id="rt" maxlength="2000" rows="2" placeholder="예: GN7 클립부 긁힘"></textarea></label>
+      <label class="check"><input type="checkbox" id="rtest"> 시험용 기록</label></details>
+    <button class="btn primary" id="rs" style="min-height:58px;font-size:18px">저장</button></form>
+    <section class="panel"><h2>내 최근 기록</h2><div id="mine"></div></section>`;
+  const pick=(box,v)=>box.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  const loadSup = async () => {
+    const veh=(line||"").split(" ")[0].split("/")[0];
+    try{ const list=await rpc("qms_supplier_options",{p_vehicle:veh}); $("#rsup").innerHTML=`<option value="">모름 · 나중에 분류</option>`+list.map(s=>`<option>${esc(s)}</option>`).join(""); supplier=null; }catch(e){}
   };
-  $("#rp").onclick = e => { const b=e.target.closest("button[data-i]"); if(!b) return; const [p]=photos.splice(+b.dataset.i,1); URL.revokeObjectURL(p.url); drawThumbs(); };
-  $("#rf").onchange = async e => {
-    const files=[...e.target.files].slice(0, 4-photos.length); e.target.value="";
-    for(const f of files){ try{ const blob=await shrinkImage(f); photos.push({blob, url:URL.createObjectURL(blob)}); }catch(err){ msg($("#rm"),"err",err.message); } }
-    drawThumbs();
+  $("#rl").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; line=b.dataset.v; pick($("#rl"),line); try{ localStorage.setItem("qms_last_line",line); }catch(e2){} loadSup(); };
+  $("#rsup").onchange=()=>supplier=$("#rsup").value||null;
+  $("#rd").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; defect = defect===b.dataset.v?null:b.dataset.v; pick($("#rd"),defect); };
+  $("#rqm").onclick=()=>{ qty=Math.max(1,qty-1); $("#rqv").textContent=qty; }; $("#rqp").onclick=()=>{ qty=Math.min(9999,qty+1); $("#rqv").textContent=qty; };
+  if(lastLine && LINES.includes(lastLine)){ line=lastLine; pick($("#rl"),line); loadSup(); }
+  const drawThumbs=()=>{ $("#rp").innerHTML = photos.map((p,i)=>`<div class="t"><img src="${p.url}" alt="사진 ${i+1}"><button type="button" data-i="${i}" aria-label="삭제">×</button></div>`).join("")
+      + (photos.length?`<div class="muted" style="align-self:center">${photos.length}/4</div>`:""); };
+  $("#rp").onclick=e=>{ const b=e.target.closest("button[data-i]"); if(!b) return; const [p]=photos.splice(+b.dataset.i,1); URL.revokeObjectURL(p.url); drawThumbs(); };
+  $("#rf").onchange=async e=>{ const fs=[...e.target.files].slice(0,4-photos.length); e.target.value="";
+    if(photos.length>=4) return msg($("#rm"),"err","사진은 4장까지");
+    for(const f of fs){ try{ const blob=await shrinkImage(f); photos.push({blob,url:URL.createObjectURL(blob)}); }catch(err){ msg($("#rm"),"err",err.message); } } drawThumbs(); };
+  const drawAudio=()=>{ $("#raud").innerHTML = audio ? `<div class="sel"><audio controls src="${audio.url}" style="flex:1;height:40px"></audio><button type="button" class="btn ghost" id="radel">삭제</button></div>` : "";
+    if(audio) $("#radel").onclick=()=>{ URL.revokeObjectURL(audio.url); audio=null; drawAudio(); }; };
+  $("#rrec").onclick = async () => {
+    const b=$("#rrec");
+    if(rec && rec.state==="recording"){ rec.stop(); return; }
+    if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return msg($("#rm"),"err","이 휴대폰 브라우저는 녹음을 지원하지 않습니다. 사진이나 메모로 남겨주세요.");
+    let stream; try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }catch(e){ return msg($("#rm"),"err","마이크 사용이 허용되지 않았습니다. 브라우저 설정에서 마이크를 허용하세요."); }
+    const type=["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/aac"].find(t=>MediaRecorder.isTypeSupported(t))||"";
+    const chunks=[]; rec = new MediaRecorder(stream, type?{mimeType:type,audioBitsPerSecond:32000}:undefined); const t0=Date.now();
+    rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+    rec.onstop=()=>{ clearInterval(recTimer); stream.getTracks().forEach(t=>t.stop()); const mt=(rec.mimeType||type||"audio/webm").split(";")[0];
+      if(audio) URL.revokeObjectURL(audio.url); const blob=new Blob(chunks,{type:mt}); audio={blob,mime:mt,url:URL.createObjectURL(blob),sec:Math.round((Date.now()-t0)/1000)};
+      b.textContent="🎤 다시 녹음"; b.classList.remove("accent"); drawAudio(); };
+    rec.start(); b.classList.add("accent");
+    recTimer=setInterval(()=>{ const s=Math.round((Date.now()-t0)/1000); b.textContent=`⏹ 녹음 중 ${s}초 (누르면 끝)`; if(s>=60) rec.stop(); },250);
   };
   drawThumbs();
   const loadMine = async () => {
-    const from = new Date(Date.now()-14*864e5); from.setMinutes(from.getMinutes()-from.getTimezoneOffset());
-    try{ const all = await rpc("qms_field_report_list",{p_from:from.toISOString().slice(0,10),p_to:today(),p_include_test:true,p_limit:200});
-      const rows = all.filter(r=>r.reporter===(me.email||"").split("@")[0]).slice(0,10);
-      $("#mine").innerHTML = rows.length ? rows.map(r=>`<div class="rep"><div class="hd"><b>#${r.id}</b>${fmtDT(r.occurred_at)} · ${esc(r.line_name)} <span class="pill ${r.status==="confirmed"?"ok":r.status==="void"?"":"wait"}">${STATUS_KO[r.status]}</span>${r.record_kind==="TEST"?'<span class="pill test">시험</span>':""} · 사진 ${r.photos.length}장</div><div class="bd">${esc(r.raw_text)}</div></div>`).join("") : `<div class="muted">최근 2주 접수 내역이 없습니다.</div>`;
+    const from=new Date(Date.now()-3*864e5); from.setMinutes(from.getMinutes()-from.getTimezoneOffset());
+    try{ const all=await rpc("qms_field_report_list",{p_from:from.toISOString().slice(0,10),p_to:today(),p_include_test:true,p_limit:200});
+      const rows=all.filter(r=>r.reporter===(me.email||"").split("@")[0]).slice(0,8);
+      $("#mine").innerHTML = rows.length ? rows.map(r=>`<div class="rep"><div class="hd"><b>#${r.id}</b>${fmtDT(r.occurred_at)} · ${esc(r.line_name)} · ${r.supplier?esc(r.supplier):'<span class="pill wait">업체 미지정</span>'}${r.defect_type?` · ${esc(r.defect_type)}`:""} · 첨부 ${r.media.length}${r.record_kind==="TEST"?' <span class="pill test">시험</span>':""}</div></div>`).join("") : `<div class="muted">최근 3일 기록이 없습니다.</div>`;
     }catch(e){ msg($("#mine"),"err",e.message); }
   };
   $("#fR").onsubmit = async e => {
     e.preventDefault(); const rm=$("#rm"); const text=$("#rt").value.trim();
-    const errs=[]; if(!line) errs.push("라인을 선택하세요"); if(text.length<2) errs.push("내용을 입력하세요");
-    if(errs.length) return msg(rm,"err",errs.join(" / "));
-    if(!confirm(`${line} · ${cat||"미분류"}\n사진 ${photos.length}장\n\n이대로 접수할까요?`)) return;
-    const b=$("#rs"); b.disabled=true; b.textContent="저장 중…";
-    let id=null;
+    if(rec && rec.state==="recording") return msg(rm,"err","녹음을 먼저 끝내세요");
+    if(!line) return msg(rm,"err","라인을 선택하세요");
+    if(!photos.length && !audio && text.length<2) return msg(rm,"err","사진, 녹음, 메모 중 하나는 남겨주세요");
+    const b=$("#rs"); b.disabled=true; b.textContent="저장 중…"; let id=null;
     try{
-      const r = await rpc("qms_field_report_create",{p:{line_name:line,event_category:cat,raw_text:text,occurred_at:new Date($("#ro").value).toISOString(),defect_qty:$("#rq").value,record_kind:$("#rtest").checked?"TEST":"NORMAL"}});
-      id = r.id; const paths=[];
-      for(let i=0;i<photos.length;i++){ b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`; const path=`${r.uid}/sf/${id}/${Date.now()}_${i+1}.jpg`; await uploadPhoto(path, photos[i].blob); paths.push(path); }
-      const n = paths.length ? await rpc("qms_field_report_attach",{p_event_id:id,p_paths:paths}) : 0;
-      try{ localStorage.setItem("qms_last_line", line); }catch(e2){}
-      photos.forEach(p=>URL.revokeObjectURL(p.url));
-      viewReport(); msg($("#rm"),"ok",`접수 완료 #${id} · ${line} · 사진 ${n}장 저장됨`);
-    }catch(err){
-      msg(rm,"err", id ? `접수 #${id}은 저장됐지만 사진 저장 실패: ${err.message} — 품질담당에게 사진을 따로 전달하세요.` : "접수 실패: "+err.message);
-      b.disabled=false; b.textContent="접수";
-    }
+      const r = await rpc("qms_field_report_create",{p:{line_name:line,event_category:"불량",raw_text:text,supplier,defect_type:defect,defect_qty:qty,
+        has_photo:photos.length>0,has_audio:!!audio,record_kind:$("#rtest").checked?"TEST":"NORMAL"}});
+      id=r.id; const paths=[];
+      for(let i=0;i<photos.length;i++){ b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`; const path=`${r.uid}/sf/${id}/${Date.now()}_${i+1}.jpg`; await uploadPhoto(path,photos[i].blob); paths.push(path); }
+      if(audio){ b.textContent="음성 올리는 중"; const path=`${r.uid}/sf/${id}/${Date.now()}_voice.${AUDIO_EXT[audio.mime]||"webm"}`; await uploadPhoto(path,audio.blob,audio.mime); paths.push(path); }
+      if(paths.length) await rpc("qms_field_report_attach",{p_event_id:id,p_paths:paths});
+      photos.forEach(p=>URL.revokeObjectURL(p.url)); if(audio) URL.revokeObjectURL(audio.url);
+      viewReport(); msg($("#rm"),"ok",`저장 #${id} · ${line}${supplier?" · "+supplier:""} · 사진 ${photos.length}${audio?" · 음성 1":""}`);
+    }catch(err){ msg(rm,"err", id?`기록 #${id}은 저장됐지만 첨부 저장 실패: ${err.message}`:"저장 실패: "+err.message); b.disabled=false; b.textContent="저장"; }
   };
   loadMine();
 }
 
-/* ---------- 접수함 (PC) ---------- */
+/* ---------- 접수함 (PC) · 묶음 분류 ---------- */
 function viewInbox(){
   const canReview = ["admin","quality"].includes(me.role);
   const from = new Date(Date.now()-30*864e5); from.setMinutes(from.getMinutes()-from.getTimezoneOffset());
-  $("#app").innerHTML = `<section class="panel"><h2>${canReview?"현장 접수함":"내 접수 내역"}</h2><div id="xm"></div>
+  $("#app").innerHTML = `<section class="panel"><h2>${canReview?"수시 기록 접수함":"내 기록"}</h2><div id="xm"></div>
     <div class="row"><label>시작<input type="date" id="xf" value="${from.toISOString().slice(0,10)}"></label><label>종료<input type="date" id="xt" value="${today()}"></label>
       <label>라인<select id="xl"><option value="">전체</option>${LINES.map(l=>`<option>${esc(l)}</option>`).join("")}</select></label>
-      <label>상태<select id="xs"><option value="">전체</option><option value="draft" selected>검토대기</option><option value="confirmed">확정</option><option value="void">무효</option></select></label></div>
-    <label>검색 (내용·제목·접수자)<input id="xq" placeholder="예: 긁힘, GN7"></label>
+      <label>상태<select id="xs"><option value="" selected>전체</option><option value="draft">검토대기</option><option value="confirmed">확정</option><option value="void">무효</option></select></label></div>
+    <label>검색 (내용·업체·유형·접수자)<input id="xq" placeholder="예: 긁힘, 아성"></label>
+    <label class="check"><input type="checkbox" id="xun"> 업체 미지정만</label>
     <label class="check"><input type="checkbox" id="xit"> 시험용 기록 포함</label>
     <div class="btns"><button class="btn" id="xgo">조회</button><button class="btn ghost" id="xcsv">CSV 내보내기</button></div></section>
+    ${canReview?`<section class="panel" id="xbar" style="position:sticky;top:0;z-index:5"><div class="row">
+      <label>선택 <b id="xcnt">0</b>건 → 업체<select id="xsup"><option value="">선택</option></select></label>
+      <label>불량유형<select id="xdef"><option value="">그대로</option>${NOTICE_DEFECTS.map(d=>`<option>${esc(d)}</option>`).join("")}</select></label></div>
+      <div class="btns"><button class="btn primary" id="xapply">일괄 지정</button><button class="btn ghost" id="xall">보이는 것 전체 선택</button><button class="btn ghost" id="xnone">선택 해제</button></div><div id="xbm"></div></section>`:""}
     <div class="kpis" id="xk"></div><div id="xlist"></div>`;
-  let rows=[];
-  const filtered = () => { const q=$("#xq").value.trim().toLowerCase(); return q ? rows.filter(r=>[r.raw_text,r.normalized_title,r.reporter,r.line_name,r.event_category].join(" ").toLowerCase().includes(q)) : rows; };
+  let rows=[]; const sel=new Set();
+  if(canReview) rpc("qms_supplier_options",{p_vehicle:null}).then(l=>{ $("#xsup").innerHTML=`<option value="">선택</option>`+l.map(s=>`<option>${esc(s)}</option>`).join(""); }).catch(()=>{});
+  const filtered = () => { const q=$("#xq").value.trim().toLowerCase(); let v = $("#xun").checked ? rows.filter(r=>!r.supplier) : rows;
+    return q ? v.filter(r=>[r.raw_text,r.normalized_title,r.reporter,r.line_name,r.event_category,r.supplier,r.defect_type].join(" ").toLowerCase().includes(q)) : v; };
+  const updCnt=()=>{ if($("#xcnt")) $("#xcnt").textContent=sel.size; };
   const render = () => {
     const v = filtered();
-    $("#xk").innerHTML = [["조회",v.length],["검토대기",v.filter(r=>r.status==="draft").length],["확정",v.filter(r=>r.status==="confirmed").length],["사진",v.reduce((s,r)=>s+r.photos.length,0)]]
-      .map(([k,n],i)=>`<div class="kpi ${i===1&&n>0?"hl":""}"><div class="k">${k}</div><div class="v">${n0(n)} ${k==="사진"?"장":"건"}</div></div>`).join("");
+    $("#xk").innerHTML = [["조회",v.length,"건"],["업체 미지정",v.filter(r=>!r.supplier&&r.status!=="void").length,"건"],["공식 승격",v.filter(r=>r.promoted_notice_id).length,"건"],["첨부",v.reduce((s,r)=>s+r.media.length,0),"개"]]
+      .map(([k,n,u],i)=>`<div class="kpi ${i===1&&n>0?"hl":""}"><div class="k">${k}</div><div class="v">${n0(n)} ${u}</div></div>`).join("");
     $("#xlist").innerHTML = v.length ? v.map(r=>`<div class="rep" data-id="${r.id}">
-      <div class="hd"><b>#${r.id}</b>${fmtDT(r.occurred_at)} · <b>${esc(r.line_name)}</b> · ${esc(r.event_category)} · 접수 ${esc(r.reporter)}${r.defect_qty!==null?` · ${n0(r.defect_qty)}개`:""}
-        <span class="pill ${r.status==="confirmed"?"ok":r.status==="void"?"":"wait"}">${STATUS_KO[r.status]}</span>${r.record_kind==="TEST"?'<span class="pill test">시험</span>':""}</div>
+      <div class="hd">${canReview?`<input type="checkbox" class="xsel" data-id="${r.id}" ${sel.has(r.id)?"checked":""} style="width:22px;height:22px">`:""}<b>#${r.id}</b>${fmtDT(r.occurred_at)} · <b>${esc(r.line_name)}</b> · ${r.supplier?`<b>${esc(r.supplier)}</b>`:'<span class="pill wait">업체 미지정</span>'}${r.defect_type?` · ${esc(r.defect_type)}`:""}${r.defect_qty?` · ${n0(r.defect_qty)}EA`:""} · 접수 ${esc(r.reporter)}
+        ${r.promoted_notice_id?`<span class="pill ok">공식통보 #${r.promoted_notice_id}</span>`:""}<span class="pill ${r.status==="confirmed"?"ok":r.status==="void"?"":"wait"}">${STATUS_KO[r.status]}</span>${r.record_kind==="TEST"?'<span class="pill test">시험</span>':""}</div>
       ${r.normalized_title?`<div style="margin-top:6px;font-weight:700">${esc(r.normalized_title)}</div>`:""}
-      <div class="bd">${esc(r.raw_text)}</div>
-      ${r.photos.length?`<div class="thumbs">${r.photos.map((p,i)=>`<div class="t"><img data-path="${esc(p)}" alt="증빙 ${i+1}"></div>`).join("")}</div>`:`<div class="muted">사진 없음</div>`}
+      ${r.raw_text && r.raw_text!=="[사진·음성 기록]"?`<div class="bd">${esc(r.raw_text)}</div>`:""}
+      ${mediaHtml(r)}
       ${r.action_taken?`<div class="muted" style="margin-top:6px">조치: ${esc(r.action_taken)}</div>`:""}
       ${canReview?`<div class="btns" style="margin-top:8px"><button class="btn ghost" data-act="rv">검토·확정</button><button class="btn ghost" data-act="hist">이력</button></div><div class="slot"></div>`:""}
     </div>`).join("") : `<div class="panel muted">조회 결과가 없습니다.</div>`;
-    fillPhotos($("#xlist"));
+    fillPhotos($("#xlist")); updCnt();
   };
   const load = async () => {
     msg($("#xm"),"","");
-    try{ rows = await rpc("qms_field_report_list",{p_from:$("#xf").value,p_to:$("#xt").value,p_line:$("#xl").value||null,p_status:$("#xs").value||null,p_include_test:$("#xit").checked,p_limit:500}); render(); }
+    try{ rows = await rpc("qms_field_report_list",{p_from:$("#xf").value,p_to:$("#xt").value,p_line:$("#xl").value||null,p_status:$("#xs").value||null,p_include_test:$("#xit").checked,p_limit:500});
+      [...sel].forEach(id=>{ if(!rows.some(r=>r.id===id)) sel.delete(id); }); render(); }
     catch(e){ msg($("#xm"),"err",e.message); }
   };
-  $("#xgo").onclick = load; $("#xq").oninput = render;
-  $("#xcsv").onclick = () => downloadCsv(`현장접수_${$("#xf").value}_${$("#xt").value}.csv`,
-    ["번호","발생시각","라인","구분","차종","수량","상태","제목","원문","조치","접수자","사진수","구분(시험)"],
-    filtered().map(r=>[r.id,new Date(r.occurred_at).toLocaleString("ko-KR"),r.line_name,r.event_category,r.vehicle,r.defect_qty,STATUS_KO[r.status],r.normalized_title,r.raw_text,r.action_taken,r.reporter,r.photos.length,r.record_kind]));
+  $("#xgo").onclick = load; $("#xq").oninput = render; $("#xun").onchange = render;
+  if(canReview){
+    $("#xall").onclick=()=>{ filtered().forEach(r=>sel.add(r.id)); render(); };
+    $("#xnone").onclick=()=>{ sel.clear(); render(); };
+    $("#xapply").onclick=async()=>{
+      if(!sel.size) return msg($("#xbm"),"err","기록을 선택하세요"); if(!$("#xsup").value) return msg($("#xbm"),"err","업체를 선택하세요");
+      if(!confirm(`${sel.size}건을 '${$("#xsup").value}${$("#xdef").value?" · "+$("#xdef").value:""}'(으)로 지정할까요?\n(원문은 바뀌지 않고 변경이력이 남습니다)`)) return;
+      try{ const n=await rpc("qms_field_report_classify",{p_ids:[...sel],p_supplier:$("#xsup").value,p_defect_type:$("#xdef").value||null,p_category:"불량"});
+        sel.clear(); await load(); msg($("#xbm"),"ok",`${n}건 지정 완료`); }catch(err){ msg($("#xbm"),"err",err.message); } };
+  }
+  $("#xcsv").onclick = () => downloadCsv(`수시기록_${$("#xf").value}_${$("#xt").value}.csv`,
+    ["번호","발생시각","라인","업체","불량유형","수량","구분","상태","공식통보","제목","원문","조치","접수자","첨부수","구분(시험)"],
+    filtered().map(r=>[r.id,new Date(r.occurred_at).toLocaleString("ko-KR"),r.line_name,r.supplier,r.defect_type,r.defect_qty,r.event_category,STATUS_KO[r.status],r.promoted_notice_id,r.normalized_title,r.raw_text,r.action_taken,r.reporter,r.media.length,r.record_kind]));
+  $("#xlist").onchange = e => { const c=e.target.closest(".xsel"); if(!c) return; const id=Number(c.dataset.id); c.checked?sel.add(id):sel.delete(id); updCnt(); };
   $("#xlist").onclick = async e => {
     const b=e.target.closest("button[data-act]"); if(!b) return; const card=b.closest(".rep"), slot=$(".slot",card), r=rows.find(x=>x.id==card.dataset.id);
     if(b.dataset.act==="hist"){
@@ -738,10 +788,10 @@ function wordEdits(a, b){
 }
 
 /* ---------- 업체통보 작성 (휴대폰) ---------- */
-function viewNotice(){
+function viewNotice(pre){
   let line=null, supplier=null, defect=null, rules=[], drafted="", lastDraftKey="";
   const photos=[]; const ls=(k,v)=>{ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } };
-  $("#app").innerHTML = `<form class="panel" id="fN" novalidate><h2>업체 통보 작성</h2><div id="nm"></div>
+  $("#app").innerHTML = `<form class="panel" id="fN" novalidate><h2>업체 통보 작성</h2><div id="nm"></div>${pre?`<div class="msg info">수시 기록 ${pre.ids.length}건을 공식 통보 1건으로 묶습니다 (${esc(pre.supplier)} · ${esc(pre.defect)}). 저장하면 묶인 기록은 수시 집계에서 빠지고 이 통보로 합쳐집니다.</div>`:""}
     <div><div class="muted" style="margin-bottom:6px">라인 (필수)</div><div class="chips" id="nl">${LINES.map(l=>`<button type="button" data-v="${esc(l)}">${esc(l)}</button>`).join("")}</div></div>
     <label>업체 (필수 · 라인 차종 업체가 위에 나옵니다)<select id="ns"><option value="">라인을 먼저 선택</option></select></label>
     <div><div class="muted" style="margin-bottom:6px">불량유형 (필수)</div><div class="chips" id="nd">${NOTICE_DEFECTS.map(d=>`<button type="button" data-v="${esc(d)}">${esc(d)}</button>`).join("")}</div></div>
@@ -765,7 +815,8 @@ function viewNotice(){
     const veh=(line||"").split(" ")[0].split("/")[0];
     try{ const list=await rpc("qms_supplier_options",{p_vehicle:veh}); const last=ls("qms_notice_sup_"+line);
       $("#ns").innerHTML = `<option value="">선택</option>`+list.map(s=>`<option ${s===last?"selected":""}>${esc(s)}</option>`).join("");
-      supplier = last && list.includes(last) ? last : null; refreshRepeat();
+      const want = pre?.supplier || last; if(pre?.supplier && !list.includes(pre.supplier)) $("#ns").insertAdjacentHTML("beforeend",`<option>${esc(pre.supplier)}</option>`);
+      $("#ns").value = want || ""; supplier = $("#ns").value || null; refreshRepeat();
     }catch(e){ msg($("#nm"),"err",e.message); }
   };
   $("#nl").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; line=b.dataset.v; pick($("#nl"),line); ls("qms_last_line",line); loadSup(); };
@@ -780,7 +831,8 @@ function viewNotice(){
         : repeat===2 ? `<div class="msg info">${esc(supplier)} · ${esc(defect)} 이번 달 2회째</div>` : "";
     }catch(e){ repeat=1; }
   }
-  const lst = ls("qms_last_line"); if(lst && LINES.includes(lst)){ line=lst; pick($("#nl"),line); loadSup(); }
+  const lst = pre?.line || ls("qms_last_line"); if(lst && LINES.includes(lst)){ line=lst; pick($("#nl"),line); loadSup(); }
+  if(pre){ defect=pre.defect; pick($("#nd"),defect); $("#nq").value=pre.qty; $("#nmemo").value=pre.memo; }
   const toDate = t => { if(!t) return null; const base=new Date($("#no").value); const [h,m]=t.split(":").map(Number); base.setHours(h,m,0,0); return base; };
   $("#nbuild").onclick = () => {
     const q=parseInt($("#nq").value), errs=[];
@@ -807,7 +859,7 @@ function viewNotice(){
       const ds=$("#ndt").checked?toDate($("#nds").value):null, de=$("#ndt").checked?toDate($("#nde").value):null;
       const r = await rpc("qms_notice_create",{p:{line_name:line,supplier,defect_type:defect,defect_qty:$("#nq").value,occurred_at:new Date($("#no").value).toISOString(),
         downtime_start:ds?ds.toISOString():"",downtime_end:de?de.toISOString():"",raw_memo:$("#nmemo").value.trim(),draft_text:drafted,final_text:fin,
-        edits:wordEdits(drafted,fin),record_kind:$("#ntest").checked?"TEST":"NORMAL"}});
+        edits:wordEdits(drafted,fin),record_kind:$("#ntest").checked?"TEST":"NORMAL",promote_ids:pre?pre.ids:undefined}});
       id=r.id; const paths=[];
       for(let i=0;i<photos.length;i++){ b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`; const path=`${r.uid}/sn/${id}/${Date.now()}_${i+1}.jpg`; await uploadPhoto(path,photos[i].blob); paths.push(path); }
       if(paths.length) await rpc("qms_notice_attach",{p_id:id,p_paths:paths});
@@ -847,7 +899,9 @@ function viewNoticeList(){
     <label class="check"><input type="checkbox" id="tit"> 시험용 기록 포함</label>
     <div class="btns"><button class="btn" id="tgo">조회</button><button class="btn ghost" id="tcsv">CSV 내보내기</button></div></section>
     <div class="kpis" id="tk"></div>
-    ${canQ?`<section class="panel"><h2>패턴 분석</h2><div id="tpat"></div></section><section class="panel"><h2>표현 학습 제안</h2><div class="muted">사람이 같은 방식으로 2번 이상 고친 표현입니다. 승인하면 다음 초안부터 자동 반영됩니다.</div><div id="tlearn"></div><div id="trules"></div></section>`:""}
+    ${canQ?`<section class="panel"><h2>업체 불량 빙산 <span class="muted" style="font-size:13px;font-weight:400">진한색 공식 통보 · 연한색 수시 기록</span></h2><div id="tice"></div></section>
+      <section class="panel"><h2>공식 통보 승격 제안 <span class="muted" style="font-size:13px;font-weight:400">최근 7일 같은 업체·유형 수시 기록 5건 이상</span></h2><div id="tcand"></div></section>
+      <section class="panel"><h2>패턴 분석</h2><div id="tpat"></div></section><section class="panel"><h2>표현 학습 제안</h2><div class="muted">사람이 같은 방식으로 2번 이상 고친 표현입니다. 승인하면 다음 초안부터 자동 반영됩니다.</div><div id="tlearn"></div><div id="trules"></div></section>`:""}
     <div id="tlist"></div>`;
   let rows=[];
   const load = async () => {
@@ -877,7 +931,32 @@ function viewNoticeList(){
       if(canQ) loadStats();
     }catch(e){ msg($("#lm9"),"err",e.message); }
   };
+  const loadIce = async () => {
+    try{
+      const ice = await rpc("qms_supplier_iceberg",{p_from:$("#tf").value,p_to:$("#tt").value,p_include_test:$("#tit").checked});
+      const sup = ice.suppliers||[]; const max = Math.max(1,...sup.map(x=>x.official_qty+x.field_qty));
+      const to=sup.reduce((a,x)=>a+x.official_qty,0), tf=sup.reduce((a,x)=>a+x.field_qty,0);
+      $("#tice").innerHTML = `<div class="kpis" style="margin-bottom:10px"><div class="kpi"><div class="k">공식 통보</div><div class="v">${n0(to)} EA</div></div><div class="kpi"><div class="k">수시 기록</div><div class="v">${n0(tf)} EA</div></div>
+          <div class="kpi hl"><div class="k">표면화율</div><div class="v">${to+tf?Math.round(to*100/(to+tf)):"-"} %</div></div><div class="kpi"><div class="k">업체 미지정</div><div class="v">${n0(ice.unassigned)} 건</div></div></div>`
+        + (sup.length ? sup.map(x=>{ const t=x.official_qty+x.field_qty, rate=t?Math.round(x.official_qty*100/t):0;
+          return `<div style="display:grid;grid-template-columns:110px 1fr 150px;gap:8px;align-items:center;margin:6px 0;font-size:14px">
+            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(x.supplier)}</b></div>
+            <div style="display:flex;height:22px;background:#F1F5F9;border-radius:4px;overflow:hidden" title="공식 ${x.official_qty} / 수시 ${x.field_qty}">
+              <div style="width:${x.official_qty*100/max}%;background:#1E293B"></div><div style="width:${x.field_qty*100/max}%;background:#93C5FD"></div></div>
+            <div class="muted">공식 ${n0(x.official_qty)} · 수시 ${n0(x.field_qty)} · <b style="color:${rate<50?"#B91C1C":"#0F172A"}">${rate}%</b></div></div>`; }).join("")
+          : `<div class="muted">기간 내 업체 불량 기록이 없습니다.</div>`)
+        + `<div class="muted" style="margin-top:6px">수시 기록은 클레임 금액 근거가 아닌 참고 자료입니다. 표면화율이 낮을수록 드러나지 않은 불량이 많은 업체입니다.</div>`;
+      const cands = await rpc("qms_promotion_candidates",{p_min:5,p_days:7,p_include_test:$("#tit").checked});
+      $("#tcand").innerHTML = cands.length ? cands.map((c,i)=>`<div class="sel"><div><b>${esc(c.supplier)} · ${esc(c.defect_type)}</b> — 수시 ${c.cnt}건 · ${n0(c.qty)}EA (${c.dates.join(", ")}) · ${esc(c.lines.join(", "))}</div>
+          <button class="btn primary" data-c="${i}">공식 통보 만들기</button></div>`).join("") : `<div class="muted">승격 대상이 없습니다.</div>`;
+      $("#tcand").onclick = e => { const b=e.target.closest("button[data-c]"); if(!b) return; const c=cands[b.dataset.c];
+        const d1=new Date(c.first), d2=new Date(c.last), md=d=>`${d.getMonth()+1}/${d.getDate()}`;
+        go("notice",{ids:c.ids,supplier:c.supplier,defect:c.defect_type,qty:c.qty,line:c.lines[0],
+          memo:`${c.defect_type} 반복 발생 (현장 수시 확인 ${c.cnt}건 ${md(d1)}~${md(d2)})`}); };
+    }catch(e){ msg($("#tice"),"err",e.message); }
+  };
   const loadStats = async () => {
+    loadIce();
     try{
       const s = await rpc("qms_notice_stats",{p_from:$("#tf").value,p_to:$("#tt").value,p_include_test:$("#tit").checked});
       const g=s.quality_gaps||{}; const flags=(s.repeats||[]).filter(x=>x.cnt>=3);
