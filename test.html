@@ -135,6 +135,13 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--blue-soft)!important}
 .rep .rv{display:grid;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed #CBD5E1}
 #lightbox{position:fixed;inset:0;background:rgba(15,23,42,.92);display:flex;align-items:center;justify-content:center;z-index:99}
 #lightbox img{max-width:96vw;max-height:92vh}
+nav.tabs{overflow-x:auto;scrollbar-width:none}
+@media (max-width:620px){nav.tabs{justify-content:flex-start}}
+.notice-text{width:100%;min-height:260px;font:inherit;font-size:15px;line-height:1.55;padding:10px;border:1px solid #CBD5E1;border-radius:6px;white-space:pre-wrap}
+.flag8d{background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;border-radius:6px;padding:8px 10px;font-size:14px}
+.sharebar{display:grid;gap:8px}
+details.raw summary{cursor:pointer;color:#475569;font-size:13px}
+details.raw div{white-space:pre-wrap;font-size:13px;color:#334155;background:#F1F5F9;padding:8px;border-radius:6px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -158,7 +165,9 @@ const REPORT_CATS = ["불량","설비이상","변동점(4M)","자재이상","기
 const STATUS_KO = {draft:"검토대기",confirmed:"확정",void:"무효"};
 const TABS = [
   {id:"report", label:"간편접수", roles:["admin","quality","production"], ic:'<path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/>'},
+  {id:"notice", label:"업체통보", roles:["admin","quality","production"], ic:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>'},
   {id:"inbox", label:"접수함", roles:["admin","quality","production"], ic:'<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5 5h14l2 8v6H3v-6z"/>'},
+  {id:"nlist", label:"통보이력", roles:["admin","quality","production"], ic:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/><circle cx="16" cy="6" r="2"/>'},
   {id:"material", label:"자재", roles:["admin","quality","production","materials"], ic:'<rect x="3" y="7" width="18" height="13" rx="1"/><path d="M3 11h18M9 7V4h6v3"/>'},
   {id:"incoming", label:"수입검사", roles:["admin","quality"], ic:'<path d="M9 4h6v3H9z"/><path d="M8 5H5v16h14V5h-3"/><path d="m9 14 2 2 4-5"/>'},
   {id:"inlist", label:"검사조회", roles:["admin","quality","materials"], ic:'<path d="M4 6h16M4 12h16M4 18h10"/>'},
@@ -269,7 +278,7 @@ async function boot(){
 function go(id, arg){
   current=id; try{ localStorage.setItem("qms_tab",id); }catch(e){}
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===id));
-  ({report:viewReport, inbox:viewInbox, material:viewMaterial, incoming:viewIncoming, inlist:viewInList, ppm:viewPpm, line:viewLine, users:viewUsers})[id](arg);
+  ({report:viewReport, inbox:viewInbox, notice:viewNotice, nlist:viewNoticeList, material:viewMaterial, incoming:viewIncoming, inlist:viewInList, ppm:viewPpm, line:viewLine, users:viewUsers})[id](arg);
   window.scrollTo(0,0);
 }
 
@@ -666,6 +675,234 @@ function viewInbox(){
       }catch(err){ msg($(".em",f),"err",err.message); sb.disabled=false; }
     };
   };
+  load();
+}
+
+/* ---------- 업체통보: 규칙 기반 초안 (외부 AI 미사용) ---------- */
+const NOTICE_DEFECTS = ["가스","융착불량","터치업","스크류 누락","누락","돌출량","긁힘","찍힘","스크래치","이종","미성형","컬러이색","변형","오염","조립불량","기타"];
+const DEFAULT_REQUEST = "- 순성 사내재고 수정 및 선별 요청 드립니다.\n순성공장내 재고부터 대응 부탁드리며 시간 공유 부탁드립니다.";
+// 조치로 분류: 명확한 조치 단어가 있거나 '~중'으로 끝나는 문장. 그 외는 문제점.
+const ACTION_RE = /(격리|선별|교체|재작업|반송|폐기|보류|사용중지|조치|수정\s*$|수정중|수정\s*완료|진행중|대응중|대기중|비가동중|\S+중\s*$)/;
+const VEH_RE = /\b(KA4|CE1|CT1|SV1|GN7|SP3K|CV1|MV1|GL3)\b/i;
+const pad2 = n => String(n).padStart(2,"0");
+const hm = d => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+function applyRules(text, rules){
+  let t = text; (rules||[]).filter(r=>r.active).forEach(r=>{ t = t.split(r.from).join(r.to); }); return t;
+}
+function buildNoticeDraft(o){
+  // o: {line, memo, qty, defect, repeat, occurred(Date), dtStart(Date|null), dtEnd(Date|null), request, rules}
+  const memo = applyRules(String(o.memo||"").trim(), o.rules);
+  const segs = memo.split(/\n|[.。]\s|,|\s\/\s|·/).map(s=>s.replace(/^[-•\s]+/,"").trim()).filter(Boolean);
+  const problem = segs.filter(s=>!ACTION_RE.test(s)), action = segs.filter(s=>ACTION_RE.test(s));
+  const parts = String(o.line||"").split(" "); const lineVeh = (parts[0]||"").split("/")[0]; const item = parts.slice(1).join(" ");
+  const vm = memo.match(VEH_RE); const veh = vm ? vm[1].toUpperCase().replace("SP3K","SP3k") : lineVeh;
+  const d = o.occurred || new Date();
+  const out = [`${veh}${item?" "+item:""} (${d.getMonth()+1}월${d.getDate()}일)`, "", "1. 문제점 :"];
+  (problem.length ? problem : [o.defect||"불량 발생"]).forEach(s=>out.push("- "+s));
+  out.push(`- 불량수량 ${Number(o.qty||0).toLocaleString("ko-KR")}EA${o.repeat>=2?` (금월 동일유형 ${o.repeat}회째)`:""}`);
+  out.push("");
+  let act = action.join(", ") || "해당 불량 격리";
+  if(o.dtStart && o.dtEnd){ const m = Math.max(0, Math.round((o.dtEnd-o.dtStart)/60000)); act += ` (라인 비가동 ${hm(o.dtStart)}~${hm(o.dtEnd)} 총 ${m}분)`; }
+  else if(o.dtStart){ act += ` (라인 비가동 ${hm(o.dtStart)}~ 진행중)`; }
+  out.push("2. 조치사항 : "+act, "", "3. 요청사항 :", o.request || DEFAULT_REQUEST);
+  return out.join("\n");
+}
+// 사람이 고친 단어 치환 추출 (학습 기록용)
+function wordEdits(a, b){
+  const A=a.split(/\s+/).filter(Boolean), B=b.split(/\s+/).filter(Boolean); if(A.length*B.length>90000) return [];
+  const L=Array.from({length:A.length+1},()=>new Int16Array(B.length+1));
+  for(let i=A.length-1;i>=0;i--) for(let j=B.length-1;j>=0;j--) L[i][j]= A[i]===B[j] ? L[i+1][j+1]+1 : Math.max(L[i+1][j],L[i][j+1]);
+  // 1) 같음/삭제/추가 단위 작업열
+  const ops=[]; let i=0,j=0;
+  while(i<A.length||j<B.length){
+    if(i<A.length&&j<B.length&&A[i]===B[j]){ ops.push(["=",A[i],B[j]]); i++; j++; }
+    else if(j<B.length&&(i>=A.length||L[i][j+1]>=L[i+1][j])){ ops.push(["+",null,B[j++]]); }
+    else { ops.push(["-",A[i++],null]); }
+  }
+  // 2) 같은 단어 1개 이하를 사이에 둔 변경은 한 구절로 묶음 (예: "LBAN 케이스" → "CASE LBAN 사양")
+  const edits=[]; let k=0;
+  while(k<ops.length){
+    if(ops[k][0]==="="){ k++; continue; }
+    let s=k, e=k;
+    while(e+1<ops.length && (ops[e+1][0]!=="=" || (e+2<ops.length && ops[e+2][0]!=="=" && ops[e+1][0]==="="))) e++;
+    // 앞쪽 같은 단어 1개를 문맥으로 포함 (순수 추가만 있는 경우 위치를 잡기 위해)
+    let grp=ops.slice(s,e+1); const onlyIns=grp.every(o=>o[0]!=="-");
+    if(onlyIns && s>0 && ops[s-1][0]==="=") grp=[ops[s-1],...grp];
+    if(onlyIns && e+1<ops.length && ops[e+1][0]==="=") grp=[...grp,ops[e+1]];
+    const f=grp.filter(o=>o[1]!=null).map(o=>o[1]).join(" "), t=grp.filter(o=>o[2]!=null).map(o=>o[2]).join(" ");
+    const nA=grp.filter(o=>o[1]!=null).length, nB=grp.filter(o=>o[2]!=null).length;
+    if(f && f!==t && nA<=5 && nB<=6 && f.length<=80 && t.length<=80 && !/\d{2,}/.test(f)) edits.push({from:f,to:t});
+    k=e+1;
+  }
+  return edits.slice(0,50);
+}
+
+/* ---------- 업체통보 작성 (휴대폰) ---------- */
+function viewNotice(){
+  let line=null, supplier=null, defect=null, rules=[], drafted="", lastDraftKey="";
+  const photos=[]; const ls=(k,v)=>{ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } };
+  $("#app").innerHTML = `<form class="panel" id="fN" novalidate><h2>업체 통보 작성</h2><div id="nm"></div>
+    <div><div class="muted" style="margin-bottom:6px">라인 (필수)</div><div class="chips" id="nl">${LINES.map(l=>`<button type="button" data-v="${esc(l)}">${esc(l)}</button>`).join("")}</div></div>
+    <label>업체 (필수 · 라인 차종 업체가 위에 나옵니다)<select id="ns"><option value="">라인을 먼저 선택</option></select></label>
+    <div><div class="muted" style="margin-bottom:6px">불량유형 (필수)</div><div class="chips" id="nd">${NOTICE_DEFECTS.map(d=>`<button type="button" data-v="${esc(d)}">${esc(d)}</button>`).join("")}</div></div>
+    <div class="row"><label>불량수량 (EA, 필수)<input type="number" inputmode="numeric" min="1" id="nq"></label><label>발생시각<input type="datetime-local" id="no" value="${nowLocal()}"></label></div>
+    <label class="check"><input type="checkbox" id="ndt"> 라인 비가동 발생</label>
+    <div class="row" id="ndtr" hidden><label>비가동 시작<input type="time" id="nds"></label><label>비가동 종료 (진행중이면 비움)<input type="time" id="nde"></label></div>
+    <label>메모 (대충 써도 됩니다 · 문제와 조치를 쉼표로 구분하면 더 정확)<textarea id="nmemo" rows="3" maxlength="3000" placeholder="예: LBAN 케이스 PAB S/W부 융착불량, 가스 및 터치업, 격리하고 융착불량 수정"></textarea></label>
+    <details><summary class="muted">요청사항 기본 문구 바꾸기</summary><textarea id="nreq" rows="3" maxlength="500" style="width:100%;margin-top:6px">${esc(ls("qms_notice_req")||DEFAULT_REQUEST)}</textarea></details>
+    <button type="button" class="btn" id="nbuild">통보문 만들기</button>
+    <div id="nrep"></div>
+    <div id="nedit" hidden>
+      <label>통보문 (읽고 고칠 부분 고치세요 · 카톡 @멘션은 카톡에서 붙이세요)<textarea class="notice-text" id="nfinal" maxlength="5000"></textarea></label>
+      <div><div class="muted" style="margin:8px 0 6px">사진 (최대 4장 · 자동 축소)</div><div class="thumbs" id="np"></div><input type="file" id="nf" accept="image/*" multiple hidden></div>
+      <label class="check"><input type="checkbox" id="ntest"> 시험용 기록</label>
+      <button class="btn primary" id="nsave">저장</button>
+    </div></form>
+    <section class="panel" id="nshare" hidden></section>`;
+  rpc("qms_text_rules").then(r=>rules=r).catch(()=>{});
+  const pick=(box,v)=>box.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  const loadSup = async () => {
+    const veh=(line||"").split(" ")[0].split("/")[0];
+    try{ const list=await rpc("qms_supplier_options",{p_vehicle:veh}); const last=ls("qms_notice_sup_"+line);
+      $("#ns").innerHTML = `<option value="">선택</option>`+list.map(s=>`<option ${s===last?"selected":""}>${esc(s)}</option>`).join("");
+      supplier = last && list.includes(last) ? last : null; refreshRepeat();
+    }catch(e){ msg($("#nm"),"err",e.message); }
+  };
+  $("#nl").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; line=b.dataset.v; pick($("#nl"),line); ls("qms_last_line",line); loadSup(); };
+  $("#nd").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; defect=b.dataset.v; pick($("#nd"),defect); refreshRepeat(); };
+  $("#ns").onchange=()=>{ supplier=$("#ns").value||null; refreshRepeat(); };
+  $("#ndt").onchange=()=>{ $("#ndtr").hidden=!$("#ndt").checked; if($("#ndt").checked&&!$("#nds").value){ $("#nds").value=hm(new Date()); } };
+  let repeat=1;
+  async function refreshRepeat(){
+    if(!supplier||!defect){ $("#nrep").innerHTML=""; repeat=1; return; }
+    try{ repeat = await rpc("qms_notice_repeat",{p_supplier:supplier,p_defect_type:defect,p_at:new Date($("#no").value).toISOString()});
+      $("#nrep").innerHTML = repeat>=3 ? `<div class="flag8d">⚠ ${esc(supplier)} · ${esc(defect)} 이번 달 ${repeat}회째 — 대책서(8D) 요구 대상입니다</div>`
+        : repeat===2 ? `<div class="msg info">${esc(supplier)} · ${esc(defect)} 이번 달 2회째</div>` : "";
+    }catch(e){ repeat=1; }
+  }
+  const lst = ls("qms_last_line"); if(lst && LINES.includes(lst)){ line=lst; pick($("#nl"),line); loadSup(); }
+  const toDate = t => { if(!t) return null; const base=new Date($("#no").value); const [h,m]=t.split(":").map(Number); base.setHours(h,m,0,0); return base; };
+  $("#nbuild").onclick = () => {
+    const q=parseInt($("#nq").value), errs=[];
+    if(!line) errs.push("라인"); if(!supplier) errs.push("업체"); if(!defect) errs.push("불량유형"); if(!(q>0)) errs.push("불량수량");
+    if($("#nmemo").value.trim().length<2) errs.push("메모");
+    if(errs.length) return msg($("#nm"),"err",errs.join(", ")+"을(를) 입력하세요");
+    msg($("#nm"),"","");
+    if($("#nfinal").value && $("#nfinal").value!==drafted && !confirm("고친 통보문을 새 초안으로 바꿀까요?")) return;
+    drafted = buildNoticeDraft({line, memo:$("#nmemo").value, qty:q, defect, repeat, occurred:new Date($("#no").value),
+      dtStart:$("#ndt").checked?toDate($("#nds").value):null, dtEnd:$("#ndt").checked?toDate($("#nde").value):null, request:$("#nreq").value.trim(), rules});
+    $("#nfinal").value=drafted; $("#nedit").hidden=false; $("#nfinal").focus();
+  };
+  const drawThumbs=()=>{ $("#np").innerHTML = photos.map((p,i)=>`<div class="t"><img src="${p.url}" alt="사진 ${i+1}"><button type="button" data-i="${i}" aria-label="삭제">×</button></div>`).join("")
+      + (photos.length<4?`<label class="addph" for="nf">+ 사진<br>${photos.length}/4</label>`:""); };
+  $("#np").onclick=e=>{ const b=e.target.closest("button[data-i]"); if(!b) return; const [p]=photos.splice(+b.dataset.i,1); URL.revokeObjectURL(p.url); drawThumbs(); };
+  $("#nf").onchange=async e=>{ const fs=[...e.target.files].slice(0,4-photos.length); e.target.value="";
+    for(const f of fs){ try{ const blob=await shrinkImage(f); photos.push({blob,url:URL.createObjectURL(blob)}); }catch(err){ msg($("#nm"),"err",err.message); } } drawThumbs(); };
+  drawThumbs();
+  $("#fN").onsubmit = async e => {
+    e.preventDefault(); const fin=$("#nfinal").value.trim(); if(fin.length<5) return msg($("#nm"),"err","통보문이 비어 있습니다");
+    if(!confirm(`${supplier} · ${defect} ${$("#nq").value}EA\n사진 ${photos.length}장\n\n저장할까요? (저장 후 카톡으로 보냅니다)`)) return;
+    const b=$("#nsave"); b.disabled=true; b.textContent="저장 중…"; let id=null;
+    try{
+      const ds=$("#ndt").checked?toDate($("#nds").value):null, de=$("#ndt").checked?toDate($("#nde").value):null;
+      const r = await rpc("qms_notice_create",{p:{line_name:line,supplier,defect_type:defect,defect_qty:$("#nq").value,occurred_at:new Date($("#no").value).toISOString(),
+        downtime_start:ds?ds.toISOString():"",downtime_end:de?de.toISOString():"",raw_memo:$("#nmemo").value.trim(),draft_text:drafted,final_text:fin,
+        edits:wordEdits(drafted,fin),record_kind:$("#ntest").checked?"TEST":"NORMAL"}});
+      id=r.id; const paths=[];
+      for(let i=0;i<photos.length;i++){ b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`; const path=`${r.uid}/sn/${id}/${Date.now()}_${i+1}.jpg`; await uploadPhoto(path,photos[i].blob); paths.push(path); }
+      if(paths.length) await rpc("qms_notice_attach",{p_id:id,p_paths:paths});
+      ls("qms_notice_sup_"+line, supplier); ls("qms_notice_req", $("#nreq").value.trim());
+      showShare(id, fin, photos.map((p,i)=>new File([p.blob],`통보_${id}_${i+1}.jpg`,{type:"image/jpeg"})));
+    }catch(err){ msg($("#nm"),"err", id?`통보 #${id}는 저장됐지만 사진 저장 실패: ${err.message}`:"저장 실패: "+err.message); b.disabled=false; b.textContent="저장"; }
+  };
+  function showShare(id, text, files){
+    $("#fN").hidden=true; const s=$("#nshare"); s.hidden=false; window.scrollTo(0,0);
+    const canFiles = files.length && navigator.canShare && navigator.canShare({files});
+    s.innerHTML = `<h2>저장 완료 #${id} — 카톡으로 보내기</h2><div id="shm"></div>
+      <div class="msg info">카톡 방을 고른 뒤 @멘션을 붙여 보내세요. 사진과 글이 같이 안 넘어가면 ② ③을 차례로 누르세요.</div>
+      <div class="sharebar">
+        ${canFiles||navigator.share?`<button class="btn primary" id="sh1">① 카톡으로 보내기 (사진+글)</button>`:""}
+        ${canFiles?`<button class="btn" id="sh2">② 사진만 보내기 (${files.length}장)</button>`:""}
+        <button class="btn" id="sh3">③ 글 복사</button>
+        <button class="btn ghost" id="sh4">카톡 전송 완료 표시</button>
+        <button class="btn ghost" id="sh5">새 통보 작성</button></div>
+      <textarea class="notice-text" readonly style="margin-top:10px">${esc(text)}</textarea>`;
+    const done = async () => { try{ await rpc("qms_notice_update",{p_id:id,p:{mark_sent:true}}); msg($("#shm"),"ok",`#${id} 발송 기록됨`); }catch(e){ msg($("#shm"),"err",e.message); } };
+    const share = async data => { try{ await navigator.share(data); await done(); }catch(e){ if(e.name!=="AbortError") msg($("#shm"),"err","공유 실패: "+e.message+" — ② ③ 버튼을 쓰세요"); } };
+    if($("#sh1")) $("#sh1").onclick=()=>share(canFiles?{files,text}:{text});
+    if($("#sh2")) $("#sh2").onclick=()=>share({files});
+    $("#sh3").onclick=async()=>{ try{ await navigator.clipboard.writeText(text); msg($("#shm"),"ok","복사됨 — 카톡 입력창을 길게 눌러 붙여넣으세요"); }
+      catch(e){ const t=$("#nshare textarea"); t.removeAttribute("readonly"); t.select(); document.execCommand("copy"); msg($("#shm"),"ok","복사됨"); } };
+    $("#sh4").onclick=done; $("#sh5").onclick=()=>viewNotice();
+  }
+}
+
+/* ---------- 통보이력 · 패턴 분석 (PC) ---------- */
+function viewNoticeList(){
+  const canQ = ["admin","quality"].includes(me.role);
+  const from=new Date(Date.now()-60*864e5); from.setMinutes(from.getMinutes()-from.getTimezoneOffset());
+  $("#app").innerHTML = `<section class="panel"><h2>업체 통보 이력</h2><div id="lm9"></div>
+    <div class="row"><label>시작<input type="date" id="tf" value="${from.toISOString().slice(0,10)}"></label><label>종료<input type="date" id="tt" value="${today()}"></label>
+      <label>업체<input id="tsu" placeholder="전체"></label></div>
+    <label class="check"><input type="checkbox" id="tit"> 시험용 기록 포함</label>
+    <div class="btns"><button class="btn" id="tgo">조회</button><button class="btn ghost" id="tcsv">CSV 내보내기</button></div></section>
+    <div class="kpis" id="tk"></div>
+    ${canQ?`<section class="panel"><h2>패턴 분석</h2><div id="tpat"></div></section><section class="panel"><h2>표현 학습 제안</h2><div class="muted">사람이 같은 방식으로 2번 이상 고친 표현입니다. 승인하면 다음 초안부터 자동 반영됩니다.</div><div id="tlearn"></div><div id="trules"></div></section>`:""}
+    <div id="tlist"></div>`;
+  let rows=[];
+  const load = async () => {
+    msg($("#lm9"),"","");
+    try{
+      rows = await rpc("qms_notice_list",{p_from:$("#tf").value,p_to:$("#tt").value,p_supplier:$("#tsu").value.trim()||null,p_include_test:$("#tit").checked,p_limit:500});
+      const sum=(f)=>rows.filter(r=>r.status!=="무효").reduce((s,r)=>s+(f(r)||0),0);
+      $("#tk").innerHTML = [["통보",rows.length,"건"],["불량수량",sum(r=>r.defect_qty),"EA"],["비가동",sum(r=>r.downtime_min),"분"],["회신대기",rows.filter(r=>r.status==="발송"&&!r.supplier_done_at).length,"건"]]
+        .map(([k,v,u],i)=>`<div class="kpi ${i===2&&v>0?"hl":""}"><div class="k">${k}</div><div class="v">${n0(v)} ${u}</div></div>`).join("");
+      $("#tlist").innerHTML = rows.length ? rows.map(r=>`<div class="rep" data-id="${r.id}">
+        <div class="hd"><b>#${r.id}</b>${fmtDT(r.occurred_at)} · <b>${esc(r.supplier)}</b> · ${esc(r.line_name)} · ${esc(r.defect_type)} ${n0(r.defect_qty)}EA
+          <span class="pill ${r.status==="조치완료"||r.status==="종결"?"ok":r.status==="무효"?"":"wait"}">${esc(r.status)}</span>
+          ${r.repeat_count_month>=3?`<span class="pill ng">월 ${r.repeat_count_month}회 · 8D</span>`:r.repeat_count_month===2?`<span class="pill wait">월 2회</span>`:""}
+          ${r.downtime_min?`<span class="pill ng">비가동 ${n0(r.downtime_min)}분</span>`:""}${r.record_kind==="TEST"?'<span class="pill test">시험</span>':""} · 작성 ${esc(r.reporter)}</div>
+        <div class="bd">${esc(r.final_text)}</div>
+        ${r.photos.length?`<div class="thumbs">${r.photos.map((p,i)=>`<div class="t"><img data-path="${esc(p)}" alt="증빙 ${i+1}"></div>`).join("")}</div>`:`<div class="muted">사진 없음</div>`}
+        <details class="raw"><summary>현장 원문 · 자동초안 보기</summary><div><b>원문</b>\n${esc(r.raw_memo)}\n\n<b>자동초안</b>\n${esc(r.draft_text)}</div></details>
+        <div class="muted" style="margin-top:6px">${r.sent_at?`카톡 발송 ${fmtDT(r.sent_at)}`:"카톡 발송 미표시"}${r.supplier_eta?` · 업체 도착예정 ${esc(r.supplier_eta)}`:""}${r.supplier_done_at?` · 조치완료 ${fmtDT(r.supplier_done_at)}`:""}${r.response_note?` · ${esc(r.response_note)}`:""}</div>
+        <form class="rv" data-id="${r.id}"><div class="row">
+          <label>업체 도착예정<input name="eta" maxlength="100" value="${esc(r.supplier_eta||"")}" placeholder="예: 윤지웅 사원 14:50 도착"></label>
+          <label>조치완료 시각<input name="done" type="datetime-local" value="${r.supplier_done_at?new Date(new Date(r.supplier_done_at).getTime()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16):""}"></label>
+          <label>상태<select name="st">${["작성","발송","조치완료","종결"].concat(canQ?["무효"]:[]).map(s=>`<option ${s===r.status?"selected":""}>${s}</option>`).join("")}</select></label></div>
+          <label>회신 메모<input name="note" maxlength="1000" value="${esc(r.response_note||"")}"></label>
+          <div class="btns"><button class="btn ghost" type="submit">회신 저장</button></div><div class="em"></div></form>
+      </div>`).join("") : `<div class="panel muted">조회 결과가 없습니다.</div>`;
+      fillPhotos($("#tlist"));
+      if(canQ) loadStats();
+    }catch(e){ msg($("#lm9"),"err",e.message); }
+  };
+  const loadStats = async () => {
+    try{
+      const s = await rpc("qms_notice_stats",{p_from:$("#tf").value,p_to:$("#tt").value,p_include_test:$("#tit").checked});
+      const g=s.quality_gaps||{}; const flags=(s.repeats||[]).filter(x=>x.cnt>=3);
+      $("#tpat").innerHTML = `
+        ${flags.length?flags.map(x=>`<div class="flag8d" style="margin-bottom:6px">⚠ <b>${esc(x.supplier)} · ${esc(x.defect_type)}</b> ${esc(x.month)} ${x.cnt}회 (${x.dates.join(", ")}) · ${n0(x.qty)}EA — 대책서(8D) 요구 대상</div>`).join(""):`<div class="muted">월 3회 이상 반복 건 없음</div>`}
+        <div class="tablewrap"><table><thead><tr><th>업체</th><th class="n">통보</th><th class="n">불량(EA)</th><th class="n">비가동(분)</th><th class="n">평균 조치시간(분)</th><th class="n">미종결</th></tr></thead><tbody>
+        ${(s.by_supplier||[]).map(x=>`<tr><td>${esc(x.supplier)}</td><td class="n">${n0(x.cnt)}</td><td class="n">${n0(x.qty)}</td><td class="n">${n0(x.downtime_min)}</td><td class="n">${x.avg_response_min==null?"-":n0(x.avg_response_min)}</td><td class="n">${n0(x.open_cnt)}</td></tr>`).join("")||`<tr><td colspan="6" class="muted">데이터 없음</td></tr>`}
+        </tbody></table></div>
+        <div class="muted" style="margin-top:8px">작성 점검: 전체 ${n0(g.total)}건 중 사진 없음 ${n0(g.no_photo)}건 · 카톡 발송 미표시 ${n0(g.not_sent)}건 · 업체 회신 미기록 ${n0(g.no_response)}건</div>`;
+      $("#tlearn").innerHTML = (s.learning||[]).length ? `<div class="tablewrap"><table><thead><tr><th>초안 표현</th><th>사람이 고친 표현</th><th class="n">횟수</th><th></th></tr></thead><tbody>${s.learning.map((x,i)=>`<tr><td>${esc(x.from)}</td><td>${esc(x.to)}</td><td class="n">${x.cnt}</td><td><button class="btn ghost" data-l="${i}">승인</button></td></tr>`).join("")}</tbody></table></div>` : `<div class="muted" style="margin-top:6px">아직 제안이 없습니다. 통보가 쌓이면 나타납니다.</div>`;
+      $("#tlearn").onclick = async e => { const b=e.target.closest("button[data-l]"); if(!b) return; const x=s.learning[b.dataset.l]; b.disabled=true;
+        try{ await rpc("qms_text_rule_set",{p_from:x.from,p_to:x.to,p_active:true}); loadStats(); }catch(err){ msg($("#tlearn"),"err",err.message); } };
+      const rules = await rpc("qms_text_rules");
+      $("#trules").innerHTML = rules.length ? `<div class="muted" style="margin-top:10px">적용 중인 규칙</div>${rules.map(r=>`<div class="sel"><div>${esc(r.from)} → <b>${esc(r.to)}</b> ${r.active?"":'<span class="pill">해제</span>'}</div><button class="btn ghost" data-rf="${esc(r.from)}" data-rt="${esc(r.to)}" data-ra="${r.active?0:1}">${r.active?"해제":"다시 적용"}</button></div>`).join("")}` : "";
+      $("#trules").onclick = async e => { const b=e.target.closest("button[data-rf]"); if(!b) return; b.disabled=true;
+        try{ await rpc("qms_text_rule_set",{p_from:b.dataset.rf,p_to:b.dataset.rt,p_active:b.dataset.ra==="1"}); loadStats(); }catch(err){ msg($("#trules"),"err",err.message); } };
+    }catch(e){ msg($("#tpat"),"err",e.message); }
+  };
+  $("#tlist").onsubmit = async e => { e.preventDefault(); const f=e.target; const em=$(".em",f);
+    try{ await rpc("qms_notice_update",{p_id:Number(f.dataset.id),p:{supplier_eta:f.eta.value,supplier_done_at:f.done.value?new Date(f.done.value).toISOString():"",status:f.st.value,response_note:f.note.value}});
+      msg(em,"ok","저장됨"); }catch(err){ msg(em,"err",err.message); } };
+  $("#tgo").onclick=load;
+  $("#tcsv").onclick=()=>downloadCsv(`업체통보_${$("#tf").value}_${$("#tt").value}.csv`,
+    ["번호","발생","업체","라인","불량유형","수량(EA)","월반복","비가동(분)","상태","발송","도착예정","조치완료","회신메모","작성자","통보문","원문","구분"],
+    rows.map(r=>[r.id,new Date(r.occurred_at).toLocaleString("ko-KR"),r.supplier,r.line_name,r.defect_type,r.defect_qty,r.repeat_count_month,r.downtime_min,r.status,r.sent_at?new Date(r.sent_at).toLocaleString("ko-KR"):"",r.supplier_eta,r.supplier_done_at?new Date(r.supplier_done_at).toLocaleString("ko-KR"):"",r.response_note,r.reporter,r.final_text,r.raw_memo,r.record_kind]));
   load();
 }
 
