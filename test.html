@@ -524,13 +524,13 @@ async function uploadPhoto(path, blob){
   const r = await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${path}`, {method:"POST", headers:{apikey:SB_KEY, Authorization:`Bearer ${await token()}`, "Content-Type":"image/jpeg", "x-upsert":"false"}, body:blob});
   if(!r.ok){ const j = await r.json().catch(()=>({})); throw new Error(j.message || `사진 업로드 오류 ${r.status}`); }
 }
-const signCache = {};
+const photoCache = {};
+// 로그인 토큰으로 직접 내려받아 화면에 표시 (서버 주소를 이미지에 직접 넣으면 일부 브라우저가 차단함)
 async function signedUrl(path){
-  const c = signCache[path]; if(c && c.exp > Date.now()) return c.url;
-  const r = await fetch(`${SB_URL}/storage/v1/object/sign/${BUCKET}/${path}`, {method:"POST", headers:{apikey:SB_KEY, Authorization:`Bearer ${await token()}`, "Content-Type":"application/json"}, body:JSON.stringify({expiresIn:1800})});
-  const j = await r.json().catch(()=>({}));
-  if(!r.ok || !j.signedURL) throw new Error(j.message || "사진 열람 권한 없음");
-  const url = `${SB_URL}/storage/v1${j.signedURL}`; signCache[path] = {url, exp: Date.now()+25*60*1000}; return url;
+  if(photoCache[path]) return photoCache[path];
+  const r = await fetch(`${SB_URL}/storage/v1/object/authenticated/${BUCKET}/${path}`, {headers:{apikey:SB_KEY, Authorization:`Bearer ${await token()}`}});
+  if(!r.ok){ const j = await r.json().catch(()=>({})); throw new Error(j.message || "사진 열람 권한 없음"); }
+  const url = URL.createObjectURL(await r.blob()); photoCache[path] = url; return url;
 }
 function lightbox(src){ const d=document.createElement("div"); d.id="lightbox"; d.innerHTML=`<img src="${esc(src)}" alt="증빙사진">`; d.onclick=()=>d.remove(); document.body.appendChild(d); }
 async function fillPhotos(host){
