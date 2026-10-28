@@ -136,6 +136,10 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--blue-soft)!important}
 #lightbox{position:fixed;inset:0;background:rgba(15,23,42,.92);display:flex;align-items:center;justify-content:center;z-index:99}
 #lightbox img{max-width:96vw;max-height:92vh}
 nav.tabs{overflow-x:auto;scrollbar-width:none}
+.subnav{position:sticky;top:0;z-index:15;display:flex;gap:6px;overflow-x:auto;padding:8px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;scrollbar-width:none}
+.subnav[hidden]{display:none}
+.subnav button{flex:0 0 auto;min-height:40px;padding:6px 14px;border:1px solid #CBD5E1;border-radius:20px;background:#fff;font:inherit;font-size:14px;font-weight:600;color:#334155}
+.subnav button.on{background:#1E293B;border-color:#1E293B;color:#fff}
 @media (max-width:620px){nav.tabs{justify-content:flex-start}}
 .notice-text{width:100%;min-height:260px;font:inherit;font-size:15px;line-height:1.55;padding:10px;border:1px solid #CBD5E1;border-radius:6px;white-space:pre-wrap}
 .flag8d{background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;border-radius:6px;padding:8px 10px;font-size:14px}
@@ -151,6 +155,7 @@ details.raw div{white-space:pre-wrap;font-size:13px;color:#334155;background:#F1
   <div class="tblock" id="tblock" hidden></div>
   <button id="btnLogout" hidden>로그아웃</button>
 </div></header>
+<div id="subnav" class="subnav" hidden></div>
 <main id="app"></main>
 <nav class="tabs" id="tabs" hidden></nav>
 
@@ -164,6 +169,13 @@ const LINES = ["KA4 G/BOX","CE1/CT1 G/BOX","SV1 G/BOX","SV1 UPR","GN7 G/BOX","SP
 const ROLE_KO = {admin:"관리자",quality:"품질",production:"생관",materials:"자재"};
 const REPORT_CATS = ["불량","변동점·T/O","설비이상","변동점(4M)","자재이상","기타"];
 const STATUS_KO = {draft:"검토대기",confirmed:"확정",void:"무효"};
+// 하단 메뉴 묶음 (10-28 대표: 하단 기능이 많아 복잡 → 4개 묶음으로)
+const GROUPS = [
+  {id:"g_rec", label:"현장기록", ids:["report","pab","notice"], ic:'<path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/>'},
+  {id:"g_view", label:"조회", ids:["inbox","nlist"], ic:'<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5 5h14l2 8v6H3v-6z"/>'},
+  {id:"g_in", label:"수입·공정", ids:["incoming","inlist","ppm","line","material"], ic:'<path d="M9 4h6v3H9z"/><path d="M8 5H5v16h14V5h-3"/><path d="m9 14 2 2 4-5"/>'},
+  {id:"g_adm", label:"관리", ids:["users"], ic:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>'},
+];
 const TABS = [
   {id:"report", label:"수시기록", roles:["admin","quality","production"], ic:'<path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/>'},
   {id:"notice", label:"업체통보", roles:["admin","quality","production"], ic:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>'},
@@ -242,7 +254,7 @@ function msg(el, type, text){ el.innerHTML = text ? `<div class="msg ${type}">${
 
 /* ---------- 로그인 ---------- */
 function showLogin(note){
-  me=null; $("#tabs").hidden=true; $("#btnLogout").hidden=true; $("#tblock").hidden=true; document.body.classList.add("is-login"); $("#whoami").textContent="품질관리 시스템";
+  me=null; $("#tabs").hidden=true; if($("#subnav")) $("#subnav").hidden=true; $("#btnLogout").hidden=true; $("#tblock").hidden=true; document.body.classList.add("is-login"); $("#whoami").textContent="품질관리 시스템";
   $("#app").innerHTML = `${WORD_SKETCH}<form class="panel login" id="fLogin" style="margin-top:12px">
     <div><h2 style="border:0;padding:0;font-size:22px">품질관리 시스템</h2>
     <div class="tb"><div>수입검사 · 공식 PPM · 공정불량</div><div>IATF 16949</div></div></div>
@@ -271,15 +283,23 @@ async function boot(){
   $("#tblock").innerHTML = `<div>사용자</div><div>${esc(uname)}</div><div>권한</div><div>${esc(ROLE_KO[me.role]||me.role)}</div><div>일자</div><div>${today()}</div>`;
   $("#tblock").hidden=false; $("#btnLogout").hidden=false; document.body.classList.remove("is-login");
   const mine = TABS.filter(t=>t.roles.includes(me.role));
-  $("#tabs").innerHTML = mine.map(t=>`<button data-t="${t.id}"><svg viewBox="0 0 24 24" aria-hidden="true">${t.ic}</svg>${t.label}</button>`).join("");
+  const myGroups = GROUPS.map(g=>({...g, ids:g.ids.filter(id=>mine.some(t=>t.id===id))})).filter(g=>g.ids.length);
+  window.__groups = myGroups;
+  $("#tabs").innerHTML = myGroups.map(g=>`<button data-t="${g.ids[0]}" data-g="${g.id}"><svg viewBox="0 0 24 24" aria-hidden="true">${g.ic}</svg>${g.label}</button>`).join("");
   $("#tabs").hidden=false;
-  $("#tabs").onclick = e => { const b=e.target.closest("button"); if(b) go(b.dataset.t); };
+  $("#tabs").onclick = e => { const b=e.target.closest("button"); if(!b) return; const g=myGroups.find(x=>x.id===b.dataset.g);
+    let last=null; try{ last=localStorage.getItem("qms_tab_"+g.id); }catch(e2){} go(g.ids.includes(last)?last:g.ids[0]); };
   let saved=null; try{ saved=localStorage.getItem("qms_tab"); }catch(e){}
   go(mine.some(t=>t.id===saved) ? saved : mine[0].id);
 }
 function go(id, arg){
   current=id; try{ localStorage.setItem("qms_tab",id); }catch(e){}
-  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===id));
+  const g=(window.__groups||[]).find(x=>x.ids.includes(id));
+  if(g){ try{ localStorage.setItem("qms_tab_"+g.id,id); }catch(e){}
+    document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.g===g.id));
+    const sub=$("#subnav"); sub.hidden = g.ids.length<2;
+    sub.innerHTML = g.ids.map(t=>`<button data-t="${t}" class="${t===id?"on":""}">${esc(TABS.find(x=>x.id===t).label)}</button>`).join("");
+    sub.onclick = e => { const b=e.target.closest("button"); if(b) go(b.dataset.t); }; }
   ({report:viewReport, pab:viewPab, inbox:viewInbox, notice:viewNotice, nlist:viewNoticeList, material:viewMaterial, incoming:viewIncoming, inlist:viewInList, ppm:viewPpm, line:viewLine, users:viewUsers})[id](arg);
   window.scrollTo(0,0);
 }
