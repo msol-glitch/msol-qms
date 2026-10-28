@@ -282,7 +282,7 @@ async function boot(){
   $("#whoami").textContent = `품질관리 시스템 · ${ROLE_KO[me.role]||me.role}`;
   $("#tblock").innerHTML = `<div>사용자</div><div>${esc(uname)}</div><div>권한</div><div>${esc(ROLE_KO[me.role]||me.role)}</div><div>일자</div><div>${today()}</div>`;
   $("#tblock").hidden=false; $("#btnLogout").hidden=false; document.body.classList.remove("is-login");
-  const mine = TABS.filter(t=>t.roles.includes(me.role));
+  const mine = TABS.filter(t=>t.roles.includes(me.role) || (t.id==="incoming" && (me.perms||[]).includes("incoming")));
   const myGroups = GROUPS.map(g=>({...g, ids:g.ids.filter(id=>mine.some(t=>t.id===id))})).filter(g=>g.ids.length);
   window.__groups = myGroups;
   $("#tabs").innerHTML = myGroups.map(g=>`<button data-t="${g.ids[0]}" data-g="${g.id}"><svg viewBox="0 0 24 24" aria-hidden="true">${g.ic}</svg>${g.label}</button>`).join("");
@@ -523,10 +523,15 @@ async function viewUsers(){
     <div class="muted">관리자 권한은 이 화면에서 발급할 수 없습니다 (관리자 2명 제한).</div></form>
   <section class="panel"><h2>사용자 목록</h2><div id="ul2"></div></section>`;
   const list = async () => {
-    try{ const {users} = await adminFn({action:"list"});
-      $("#ul2").innerHTML = `<div class="tablewrap"><table><thead><tr><th>이름</th><th>아이디</th><th>권한</th><th>상태</th><th></th></tr></thead><tbody>${users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.login)}</td><td>${esc(ROLE_KO[u.role]||u.role)}</td><td>${u.active?'<span class="pill ok">사용</span>':'<span class="pill">중지</span>'}</td><td>${u.role==="admin"?"":`<button class="btn ghost" data-u="${esc(u.user_id)}" data-a="${u.active?0:1}">${u.active?"중지":"사용"}</button>`}</td></tr>`).join("")}</tbody></table></div>`;
+    try{ const {users} = await adminFn({action:"list"}); const pm = await rpc("qms_user_perms_list").catch(()=>({}));
+      $("#ul2").innerHTML = `<div class="tablewrap"><table><thead><tr><th>이름</th><th>아이디</th><th>권한</th><th>수입검사 입력</th><th>상태</th><th></th></tr></thead><tbody>${users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.login)}</td><td>${esc(ROLE_KO[u.role]||u.role)}</td>
+        <td>${["admin","quality"].includes(u.role)?'<span class="muted">기본 허용</span>':`<label class="check" style="margin:0"><input type="checkbox" class="pin" data-u="${esc(u.user_id)}" ${(pm[u.user_id]||[]).includes("incoming")?"checked":""}> 허용</label>`}</td>
+        <td>${u.active?'<span class="pill ok">사용</span>':'<span class="pill">중지</span>'}</td><td>${u.role==="admin"?"":`<button class="btn ghost" data-u="${esc(u.user_id)}" data-a="${u.active?0:1}">${u.active?"중지":"사용"}</button>`}</td></tr>`).join("")}</tbody></table></div>`;
     }catch(e){ msg($("#ul2"),"err",e.message); }
   };
+  $("#ul2").onchange = async e => { const c=e.target.closest(".pin"); if(!c) return; c.disabled=true;
+    try{ await rpc("qms_user_set_perm",{p_user:c.dataset.u,p_perm:"incoming",p_on:c.checked}); msg($("#um"),"ok",`수입검사 입력 권한 ${c.checked?"부여":"해제"}됨 (본인이 다시 로그인하면 메뉴에 반영)`); }
+    catch(err){ c.checked=!c.checked; msg($("#um"),"err",err.message); } c.disabled=false; };
   $("#ul2").onclick = async e => { const b=e.target.closest("button[data-u]"); if(!b) return; b.disabled=true;
     try{ await adminFn({action:"set_active",user_id:b.dataset.u,active:b.dataset.a==="1"}); list(); }catch(err){ msg($("#um"),"err",err.message); b.disabled=false; } };
   $("#fU").onsubmit = async e => { e.preventDefault(); $("#ubtn").disabled=true;
