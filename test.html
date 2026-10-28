@@ -1009,10 +1009,10 @@ function viewNoticeList(){
 /* ---------- SP3k PAB 심라인 증빙사진 (장기 보관) ---------- */
 // 판정: 위·아래 도어판 틈이 뒷면 밀링 홈 폭 안이면 OK, 벗어나면 NG (안전 직결)
 const PAB_GUIDE_KEY = {좌:"pab_left", 우:"pab_right"};
-// 가이드 위치(화면 비율 %). 좌=휴대폰 세로(상단에 H_M 라벨), 우=휴대폰 90도 회전
+// 가이드 위치(화면 비율 %). 좌=휴대폰 세로(상단 노란 칸에 라벨 날짜·고유번호), 우=휴대폰 90도 회전. 바코드 매핑 안 함(10-28 대표 결정)
 const PAB_LAYOUT = {
-  좌:{line:58, band:3, label:[22,3,78,22], corner:[6,48,22,68], hint:"휴대폰 세로 · 위 칸에 H_M 라벨, 빨간선에 도어판 틈"},
-  우:{line:50, band:3.5, label:null, corner:[78,38,96,62], hint:"휴대폰 90도 회전(가로) · 빨간선에 도어판 틈"}
+  좌:{line:58, band:3, label:[20,3,78,27], hint:"휴대폰 세로 · 노란 칸에 라벨(날짜·고유번호)이 보이게, 빨간선에 도어판 틈"},
+  우:{line:50, band:3.5, label:null, hint:"휴대폰 90도 회전(가로) · 빨간선에 도어판 틈"}
 };
 const myUid = () => { try{ const b=session.access_token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"); return JSON.parse(decodeURIComponent(escape(atob(b + "===".slice((b.length+3)%4))))).sub; }catch(e){ return ""; } };
 const pabShiftNow = () => { const h=new Date().getHours(); return (h>=8 && h<20) ? "주간" : "야간"; };
@@ -1024,7 +1024,6 @@ function pabOverlaySvg(side){
     <line x1="0" y1="${L.line+L.band}" x2="100" y2="${L.line+L.band}" stroke="#22C55E" stroke-width=".35" stroke-dasharray="1.5 1" vector-effect="non-scaling-stroke"/>
     <line x1="0" y1="${L.line}" x2="100" y2="${L.line}" stroke="#EF4444" stroke-width="3" vector-effect="non-scaling-stroke"/>
     ${L.label?`<rect x="${L.label[0]}" y="${L.label[1]}" width="${L.label[2]-L.label[0]}" height="${L.label[3]-L.label[1]}" fill="none" stroke="#FACC15" stroke-width="2" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>`:""}
-    <rect x="${L.corner[0]}" y="${L.corner[1]}" width="${L.corner[2]-L.corner[0]}" height="${L.corner[3]-L.corner[1]}" fill="none" stroke="#38BDF8" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
   </svg>`;
 }
 function pabDrawGuide(ctx, w, h, side){
@@ -1059,7 +1058,7 @@ async function readBarcodes(canvas){
 
 function viewPab(){
   const canQ=["admin","quality"].includes(me.role);
-  let shift=pabShiftNow(), stage="초물", setId=null, setLot=null;
+  let shift=pabShiftNow(), stage="초물", setId=null;
   $("#app").innerHTML = `<section class="panel"><h2>SP3k PAB 심라인 증빙</h2>
     <div class="msg info">도어판 틈이 <b>밀링 홈 안</b>(초록 띠)이면 OK, 벗어나면 NG입니다. 교대별 <b>초물 좌·우 필수</b>, 종물은 선택.</div>
     <div id="pm"></div>
@@ -1067,7 +1066,7 @@ function viewPab(){
       <div><div class="muted" style="margin-bottom:6px">구분</div><div class="chips" id="pst">${["초물","종물"].map(v=>`<button type="button" data-v="${v}">${v}</button>`).join("")}</div></div></div>
     <div id="ptoday" style="margin:10px 0"></div>
     <div class="row" style="grid-template-columns:1fr 1fr">
-      <button type="button" class="btn accent" id="pL" style="min-height:70px;font-size:17px">① 왼쪽 촬영<br><small>세로 · H_M 라벨 포함</small></button>
+      <button type="button" class="btn accent" id="pL" style="min-height:70px;font-size:17px">① 왼쪽 촬영<br><small>세로 · 라벨 포함</small></button>
       <button type="button" class="btn" id="pR" style="min-height:70px;font-size:17px">② 오른쪽 촬영<br><small>90도 회전</small></button></div>
     <label class="check"><input type="checkbox" id="ptest"> 시험용 기록</label></section>
     <section class="panel"><h2>증빙 이력</h2>
@@ -1078,8 +1077,8 @@ function viewPab(){
     <div id="pcam" hidden></div>`;
   const pick=(box,v)=>box.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   pick($("#psh"),shift); pick($("#pst"),stage);
-  $("#psh").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; shift=b.dataset.v; pick($("#psh"),shift); setId=null; setLot=null; loadToday(); };
-  $("#pst").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; stage=b.dataset.v; pick($("#pst"),stage); setId=null; setLot=null; loadToday(); };
+  $("#psh").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; shift=b.dataset.v; pick($("#psh"),shift); setId=null; loadToday(); };
+  $("#pst").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; stage=b.dataset.v; pick($("#pst"),stage); setId=null; loadToday(); };
   const loadToday = async () => {
     try{ const t=await rpc("qms_pab_today",{p_include_test:$("#ptest").checked});
       const cell=(sh,st,sd)=>{ const x=t.filter(r=>r.shift===sh&&r.stage===st&&r.side===sd); const last=x[x.length-1];
@@ -1113,12 +1112,12 @@ function viewPab(){
   async function review(side, full){
     const box=$("#pcam"); box.hidden=false;
     const prev=canvasFrom(full,1600); pabDrawGuide(prev.getContext("2d"),prev.width,prev.height,side);
-    let judgment=null, cause=null, lot=side==="좌"?null:setLot, lotSource=null, seen=[];
+    let judgment=null, cause=null;
     box.innerHTML = `<div style="position:fixed;inset:0;background:#F8FAFC;z-index:60;overflow:auto"><div class="panel" style="margin:0;border-radius:0">
       <h2>${side==="좌"?"① 왼쪽":"② 오른쪽"} 확인 · ${shift} ${stage}</h2><div id="rvm"></div>
       <img src="${prev.toDataURL("image/jpeg",.8)}" alt="촬영 사진" style="width:100%;border-radius:6px">
       <div class="muted">빨간선 = 도어판 틈 기준, 초록 띠 = 밀링 홈 범위</div>
-      ${side==="좌"?`<div id="rlot" style="margin-top:8px"><div class="muted">바코드 읽는 중…</div></div>`:`<div class="muted" style="margin-top:8px">LOT: ${setLot?`<b>${esc(setLot)}</b> (① 왼쪽과 같은 제품)`:"① 왼쪽을 먼저 찍으면 LOT가 연결됩니다"}</div>`}
+      ${side==="좌"?`<div class="muted" style="margin-top:8px">사진에서 라벨의 <b>날짜·고유번호</b>가 읽히는지 확인하세요. 안 보이면 [다시 찍기].</div>`:`<div class="muted" style="margin-top:8px">① 왼쪽과 같은 제품으로 묶어 저장됩니다.</div>`}
       <div style="margin-top:10px"><div class="muted" style="margin-bottom:6px">판정 — 도어판 틈이 밀링 홈 안인가요?</div>
         <div class="row" style="grid-template-columns:1fr 1fr"><button type="button" class="btn" id="jok" style="min-height:60px;font-size:20px;background:#15803D">OK<br><small>홈 안</small></button>
         <button type="button" class="btn" id="jng" style="min-height:60px;font-size:20px;background:#B91C1C">NG<br><small>홈 벗어남</small></button></div></div>
@@ -1134,27 +1133,14 @@ function viewPab(){
     if(canQ) $("#jguide").onclick=async()=>{ try{ const g=canvasFrom(full,1200); const path=`${myUid()}/guide/${PAB_GUIDE_KEY[side]}_${Date.now()}.jpg`;
         await uploadPhoto(path, await toBlob(g,.8)); await rpc("qms_guide_set",{p_key:PAB_GUIDE_KEY[side],p_path:path}); msg($("#rvm"),"ok","기준사진으로 등록했습니다. 다음 촬영부터 반투명으로 겹쳐 보입니다."); }
       catch(err){ msg($("#rvm"),"err",err.message); } };
-    if(side==="좌"){
-      const r=await readBarcodes(full); seen=r.codes; const hm=r.codes.filter(c=>/H_M/i.test(c));
-      if(hm.length===1){ lot=hm[0]; lotSource="자동인식"; }
-      $("#rlot").innerHTML = `${r.supported?(r.codes.length?`<div class="muted">읽힌 바코드 ${r.codes.length}개${hm.length===1?" · H_M 자동 선택":hm.length>1?" · H_M이 여러 개, 하나를 고르세요":" · H_M 없음, 직접 입력하세요"}</div>
-          <div class="chips" id="lc">${r.codes.map(c=>`<button type="button" data-v="${esc(c)}" class="${c===lot?"on":""}">${esc(c.length>34?c.slice(0,34)+"…":c)}</button>`).join("")}</div>`
-          :`<div class="msg err">바코드를 읽지 못했습니다. 라벨이 노란 칸 안에 선명하게 들어오게 다시 찍거나, 아래에 직접 입력하세요.</div>`)
-        :`<div class="msg info">이 휴대폰 브라우저는 바코드 자동 인식을 지원하지 않습니다. LOT를 직접 입력하세요.</div>`}
-        <label>LOT (H_M 바코드)<input id="lotin" value="${esc(lot||"")}" placeholder="H_M84708-…" maxlength="200"></label>`;
-      if($("#lc")) $("#lc").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; lot=b.dataset.v; lotSource="자동인식"; pick($("#lc"),lot); $("#lotin").value=lot; };
-      $("#lotin").oninput=()=>{ lot=$("#lotin").value.trim()||null; lotSource=lot&&seen.includes(lot)?"자동인식":"직접입력"; };
-    }
     $("#jsave").onclick=async()=>{
       if(!judgment) return msg($("#rvm"),"err","OK 또는 NG를 선택하세요");
       if(judgment==="NG" && !cause) return msg($("#rvm"),"err","NG 원인을 선택하세요");
-      if(side==="좌" && !lot) return msg($("#rvm"),"err","LOT(H_M 바코드)가 필요합니다");
       const b=$("#jsave"); b.disabled=true; b.textContent="저장 중…"; let id=null;
       try{
-        const r=await rpc("qms_pab_create",{p:{set_id:setId,shift,stage,side,judgment,ng_cause:cause,note:$("#jn")?.value||"",lot_barcode:lot,lot_source:lotSource||(lot?"직접입력":null),
-          barcodes_seen:seen,record_kind:$("#ptest").checked?"TEST":"NORMAL"}});
-        id=r.id; setId=r.set_id; if(side==="좌") setLot=lot;
-        const ts=new Date(); const stamp=`SP3k PAB 심라인 · ${ts.getFullYear()}-${pad2(ts.getMonth()+1)}-${pad2(ts.getDate())} ${hm(ts)} · ${shift} ${stage} · ${side} · ${judgment}${cause?"("+cause+")":""} · LOT ${lot||"-"} · #${id}`;
+        const r=await rpc("qms_pab_create",{p:{set_id:setId,shift,stage,side,judgment,ng_cause:cause,note:$("#jn")?.value||"",record_kind:$("#ptest").checked?"TEST":"NORMAL"}});
+        id=r.id; setId=r.set_id;
+        const ts=new Date(); const stamp=`SP3k PAB 심라인 · ${ts.getFullYear()}-${pad2(ts.getMonth()+1)}-${pad2(ts.getDate())} ${hm(ts)} · ${shift} ${stage} · ${side} · ${judgment}${cause?"("+cause+")":""} · #${id}`;
         b.textContent="원본 올리는 중"; const orig=canvasFrom(full,2600); const p1=`${r.uid}/pab/${id}/${Date.now()}_orig.jpg`; await uploadPhoto(p1, await toBlob(orig,.9));
         b.textContent="합성본 올리는 중"; const ov=canvasFrom(full,1600); const ctx=ov.getContext("2d"); pabDrawGuide(ctx,ov.width,ov.height,side); pabStamp(ctx,ov.width,ov.height,stamp);
         const p2=`${r.uid}/pab/${id}/${Date.now()}_guide.jpg`; await uploadPhoto(p2, await toBlob(ov,.85));
@@ -1174,14 +1160,14 @@ function viewPab(){
       const arr=Object.values(sets).sort((a,b)=>b.at.localeCompare(a.at));
       const cellH=r=>r?`<div><div class="t" style="aspect-ratio:3/4;max-width:180px">${r.overlay_path?`<img data-path="${esc(r.overlay_path)}" alt="${r.side}">`:`<div class="muted">사진 없음</div>`}</div>
           <span class="pill ${r.judgment==="OK"?"ok":"ng"}">${r.side} ${r.judgment}</span>${r.ng_cause?` <span class="muted">${esc(r.ng_cause)}</span>`:""}</div>`:`<div class="muted">미등록</div>`;
-      $("#plist").innerHTML = arr.length ? arr.map(s=>`<div class="rep"><div class="hd"><b>${fmtDT(s.at)}</b> · ${s.shift} ${s.stage} · LOT <b>${esc(s.lot||"-")}</b> · ${esc(s.reporter)}${s.kind==="TEST"?' <span class="pill test">시험</span>':""}</div>
+      $("#plist").innerHTML = arr.length ? arr.map(s=>`<div class="rep"><div class="hd"><b>${fmtDT(s.at)}</b> · ${s.shift} ${s.stage} · ${esc(s.reporter)}${s.kind==="TEST"?' <span class="pill test">시험</span>':""}</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">${cellH(s.side["좌"])}${cellH(s.side["우"])}</div></div>`).join("") : `<div class="muted">기록이 없습니다.</div>`;
       fillPhotos($("#plist"));
     }catch(e){ msg($("#plist"),"err",e.message); }
   };
   $("#pgo").onclick=loadList;
-  $("#pcsv").onclick=()=>downloadCsv(`PAB심라인증빙_${$("#pf").value}_${$("#pt").value}.csv`,["번호","촬영시각","교대","구분","좌우","판정","NG원인","메모","LOT","LOT입력","세트","작성자","구분(시험)"],
-    list.map(r=>[r.id,new Date(r.created_at).toLocaleString("ko-KR"),r.shift,r.stage,r.side,r.judgment,r.ng_cause,r.note,r.lot_barcode,r.lot_source,r.set_id,r.reporter,r.record_kind]));
+  $("#pcsv").onclick=()=>downloadCsv(`PAB심라인증빙_${$("#pf").value}_${$("#pt").value}.csv`,["번호","촬영시각","교대","구분","좌우","판정","NG원인","메모","세트","작성자","구분(시험)"],
+    list.map(r=>[r.id,new Date(r.created_at).toLocaleString("ko-KR"),r.shift,r.stage,r.side,r.judgment,r.ng_cause,r.note,r.set_id,r.reporter,r.record_kind]));
   loadToday(); loadList();
 }
 
