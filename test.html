@@ -1206,7 +1206,35 @@ const TBL_KO = {"qms.material_master":"자재마스터","qms.incoming_inspection
   "qms.shopfloor_event_revisions":"수시기록_변경이력","qms.shopfloor_event_photos":"수시기록_첨부","qms.supplier_notices":"업체통보","qms.supplier_notice_photos":"업체통보_첨부",
   "qms.text_edits":"표현학습_수정","qms.text_rules":"표현학습_규칙","qms.pab_evidence":"PAB증빙","qms.photo_guides":"기준사진","qms.audit_log":"감사로그",
   "qms.import_batches":"엑셀업로드","qms.process_checks":"공정점검","qms.gauge_monthly":"검사구","public.qms_users":"사용자권한"};
-function loadXlsx(){ return window.XLSX ? Promise.resolve() : new Promise((res,rej)=>{ const sc=document.createElement("script"); sc.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; sc.onload=res; sc.onerror=()=>rej(new Error("엑셀 도구를 불러오지 못했습니다")); document.head.appendChild(sc); }); }
+// 외부 라이브러리 없이 .xlsx 생성 (공장망·브라우저 차단에도 동작). 시트: [{name, rows:[[...]]}]
+const _crcT=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+function _crc32(b){ let c=0xFFFFFFFF; for(let i=0;i<b.length;i++) c=_crcT[(c^b[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function _zip(files){ const enc=new TextEncoder(), parts=[], central=[]; let off=0;
+  for(const f of files){ const name=enc.encode(f.name), data=typeof f.data==="string"?enc.encode(f.data):f.data, crc=_crc32(data);
+    const h=new DataView(new ArrayBuffer(30)); h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(6,0x0800,true); h.setUint16(8,0,true);
+    h.setUint32(14,crc,true); h.setUint32(18,data.length,true); h.setUint32(22,data.length,true); h.setUint16(26,name.length,true);
+    parts.push(new Uint8Array(h.buffer),name,data);
+    const c=new DataView(new ArrayBuffer(46)); c.setUint32(0,0x02014b50,true); c.setUint16(4,20,true); c.setUint16(6,20,true); c.setUint16(8,0x0800,true);
+    c.setUint32(16,crc,true); c.setUint32(20,data.length,true); c.setUint32(24,data.length,true); c.setUint16(28,name.length,true); c.setUint32(42,off,true);
+    central.push(new Uint8Array(c.buffer),name); off+=30+name.length+data.length; }
+  const csize=central.reduce((a,b)=>a+b.length,0), e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true); e.setUint16(8,files.length,true); e.setUint16(10,files.length,true); e.setUint32(12,csize,true); e.setUint32(16,off,true);
+  return new Blob([...parts,...central,new Uint8Array(e.buffer)],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}); }
+function makeXlsx(sheets){
+  const x=v=>String(v).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"");
+  const col=i=>{ let s=""; i++; while(i){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; };
+  const sheetXml=rows=>`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows.map((r,ri)=>`<row r="${ri+1}">${r.map((v,ci)=>{ const ref=col(ci)+(ri+1);
+      if(v===null||v===undefined||v==="") return ""; if(typeof v==="number"&&isFinite(v)) return `<c r="${ref}"><v>${v}</v></c>`;
+      if(typeof v==="boolean") return `<c r="${ref}" t="b"><v>${v?1:0}</v></c>`; const t=String(v).slice(0,32000);
+      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${x(t)}</t></is></c>`; }).join("")}</row>`).join("")}</sheetData></worksheet>`;
+  const files=[
+    {name:"[Content_Types].xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`},
+    {name:"_rels/.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:"xl/workbook.xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s,i)=>`<sheet name="${x(s.name.replace(/[\\\/\?\*\[\]:]/g," ").slice(0,31))}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join("")}</sheets></workbook>`},
+    {name:"xl/_rels/workbook.xml.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join("")}</Relationships>`},
+    ...sheets.map((s,i)=>({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXml(s.rows)}))];
+  return _zip(files); }
+function saveBlob(blob, name){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
 async function viewBackup(){
   $("#app").innerHTML = `<section class="panel"><h2>백업</h2>
     <div class="msg info">통합안전 시스템과 같은 3중 백업입니다. ✔가 매일 갱신되는지만 확인하세요. 월초에 PC 백업 파일을 외장하드에 복사하세요.</div>
@@ -1227,16 +1255,14 @@ async function viewBackup(){
   $("#bkpc").onclick = async () => {
     const b=$("#bkpc"); b.disabled=true; b.textContent="백업 만드는 중…";
     try{
-      await loadXlsx(); const d=await rpc("qms_backup_export"); const wb=XLSX.utils.book_new(); let total=0, names=[];
+      const d=await rpc("qms_backup_export"); const sheets=[]; let total=0;
       for(const [t,rows] of Object.entries(d.tables)){
-        const flat = rows.map(r=>Object.fromEntries(Object.entries(r).map(([k,v])=>[k, v!==null && typeof v==="object" ? JSON.stringify(v) : v])));
-        const ws = flat.length ? XLSX.utils.json_to_sheet(flat) : XLSX.utils.aoa_to_sheet([["(기록 없음)"]]);
-        let nm=(TBL_KO[t]||t).slice(0,31); while(names.includes(nm)) nm=nm.slice(0,29)+"_"+names.length; names.push(nm);
-        XLSX.utils.book_append_sheet(wb, ws, nm); total+=rows.length;
+        const cols = rows.length ? Object.keys(rows[0]) : [];
+        const data = rows.length ? [cols, ...rows.map(r=>cols.map(c=>{ const v=r[c]; return v!==null && typeof v==="object" ? JSON.stringify(v) : v; }))] : [["(기록 없음)"]];
+        let nm=(TBL_KO[t]||t).slice(0,31); while(sheets.some(s=>s.name===nm)) nm=nm.slice(0,29)+"_"+sheets.length; sheets.push({name:nm, rows:data}); total+=rows.length;
       }
-      const info=XLSX.utils.aoa_to_sheet([["엠솔루션 QMS 전체 백업"],["백업 시각",new Date(d.exported_at).toLocaleString("ko-KR")],["테이블 수",names.length],["전체 행 수",total],["사진·음성","포함 안 됨(구글 드라이브 백업 참조)"]]);
-      XLSX.utils.book_append_sheet(wb, info, "백업정보"); wb.SheetNames.unshift(wb.SheetNames.pop());
-      const fn=`엠솔루션_QMS_전체백업_${today()}.xlsx`; XLSX.writeFile(wb, fn);
+      sheets.unshift({name:"백업정보", rows:[["엠솔루션 QMS 전체 백업"],["백업 시각",new Date(d.exported_at).toLocaleString("ko-KR")],["표 수",sheets.length],["전체 행 수",total],["사진·음성","포함 안 됨 (구글 드라이브 백업 참조)"]]});
+      const names=sheets.slice(1).map(s=>s.name); const fn=`엠솔루션_QMS_전체백업_${today()}.xlsx`; saveBlob(makeXlsx(sheets), fn);
       await rpc("qms_backup_log_write",{p_kind:"pc",p_ok:true,p_detail:`${fn} · ${names.length}개 표 · ${total}행`});
       msg($("#bkm"),"ok",`${fn} 저장됨 (${names.length}개 표, ${n0(total)}행). 월초에 외장하드로 복사하세요.`); load();
     }catch(e){ msg($("#bkm"),"err","PC 백업 실패: "+e.message); try{ await rpc("qms_backup_log_write",{p_kind:"pc",p_ok:false,p_detail:e.message}); }catch(e2){} }
