@@ -525,13 +525,15 @@ async function viewUsers(){
   <section class="panel"><h2>사용자 목록</h2><div id="ul2"></div></section>`;
   const list = async () => {
     try{ const {users} = await adminFn({action:"list"}); const pm = await rpc("qms_user_perms_list").catch(()=>({}));
-      $("#ul2").innerHTML = `<div class="tablewrap"><table><thead><tr><th>이름</th><th>아이디</th><th>권한</th><th>수입검사 입력</th><th>상태</th><th></th></tr></thead><tbody>${users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.login)}</td><td>${esc(ROLE_KO[u.role]||u.role)}</td>
+      $("#ul2").innerHTML = `<div class="tablewrap"><table><thead><tr><th>이름</th><th>아이디</th><th>권한</th><th>수입검사 입력</th><th>백업 계정</th><th>상태</th><th></th></tr></thead><tbody>${users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.login)}</td><td>${esc(ROLE_KO[u.role]||u.role)}</td>
         <td>${["admin","quality"].includes(u.role)?'<span class="muted">기본 허용</span>':`<label class="check" style="margin:0"><input type="checkbox" class="pin" data-u="${esc(u.user_id)}" ${(pm[u.user_id]||[]).includes("incoming")?"checked":""}> 허용</label>`}</td>
+        <td>${u.role==="admin"?'<span class="muted">-</span>':`<label class="check" style="margin:0"><input type="checkbox" class="pin" data-p="backup" data-u="${esc(u.user_id)}" ${(pm[u.user_id]||[]).includes("backup")?"checked":""}> 백업 전용</label>`}</td>
         <td>${u.active?'<span class="pill ok">사용</span>':'<span class="pill">중지</span>'}</td><td>${u.role==="admin"?"":`<button class="btn ghost" data-u="${esc(u.user_id)}" data-a="${u.active?0:1}">${u.active?"중지":"사용"}</button>`}</td></tr>`).join("")}</tbody></table></div>`;
     }catch(e){ msg($("#ul2"),"err",e.message); }
   };
   $("#ul2").onchange = async e => { const c=e.target.closest(".pin"); if(!c) return; c.disabled=true;
-    try{ await rpc("qms_user_set_perm",{p_user:c.dataset.u,p_perm:"incoming",p_on:c.checked}); msg($("#um"),"ok",`수입검사 입력 권한 ${c.checked?"부여":"해제"}됨 (본인이 다시 로그인하면 메뉴에 반영)`); }
+    const pp=c.dataset.p||"incoming";
+    try{ await rpc("qms_user_set_perm",{p_user:c.dataset.u,p_perm:pp,p_on:c.checked}); msg($("#um"),"ok",`${pp==="backup"?"백업 계정":"수입검사 입력"} 권한 ${c.checked?"부여":"해제"}됨`); }
     catch(err){ c.checked=!c.checked; msg($("#um"),"err",err.message); } c.disabled=false; };
   $("#ul2").onclick = async e => { const b=e.target.closest("button[data-u]"); if(!b) return; b.disabled=true;
     try{ await adminFn({action:"set_active",user_id:b.dataset.u,active:b.dataset.a==="1"}); list(); }catch(err){ msg($("#um"),"err",err.message); b.disabled=false; } };
