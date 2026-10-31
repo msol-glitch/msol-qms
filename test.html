@@ -838,9 +838,13 @@ function wordEdits(a, b){
 
 /* ---------- 업체통보 작성 (휴대폰) ---------- */
 function viewNotice(pre){
-  let line=null, supplier=null, defect=null, rules=[], drafted="", lastDraftKey="";
+  let line=null, supplier=null, defect=null, rules=[], drafted="", lastDraftKey="", sourceKind="메모", copiedFrom=null;
   const photos=[]; const ls=(k,v)=>{ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } };
-  $("#app").innerHTML = `<form class="panel" id="fN" novalidate><h2>업체 통보 작성</h2><div id="nm"></div>${pre?`<div class="msg info">수시 기록 ${pre.ids.length}건을 공식 통보 1건으로 묶습니다 (${esc(pre.supplier)} · ${esc(pre.defect)}). 저장하면 묶인 기록은 수시 집계에서 빠지고 이 통보로 합쳐집니다.</div>`:""}
+  $("#app").innerHTML = `<form class="panel" id="fN" novalidate><h2>업체 통보 작성</h2><div id="nm"></div>
+    <div class="row" style="grid-template-columns:1fr 1fr;margin-bottom:6px">
+      <button type="button" class="btn accent" id="ncp" style="min-height:58px">📋 이전 통보 복사해서 쓰기</button>
+      <button type="button" class="btn" id="nps" style="min-height:58px">📥 카톡 글 붙여넣기</button></div>
+    <div id="ncopy"></div>${pre?`<div class="msg info">수시 기록 ${pre.ids.length}건을 공식 통보 1건으로 묶습니다 (${esc(pre.supplier)} · ${esc(pre.defect)}). 저장하면 묶인 기록은 수시 집계에서 빠지고 이 통보로 합쳐집니다.</div>`:""}
     <div><div class="muted" style="margin-bottom:6px">라인 (필수)</div><div class="chips" id="nl">${LINES.map(l=>`<button type="button" data-v="${esc(l)}">${esc(l)}</button>`).join("")}</div></div>
     <label>업체 (필수 · 라인 차종 업체가 위에 나옵니다)<select id="ns"><option value="">라인을 먼저 선택</option></select></label>
     <div><div class="muted" style="margin-bottom:6px">불량유형 (필수)</div><div class="chips" id="nd">${NOTICE_DEFECTS.map(d=>`<button type="button" data-v="${esc(d)}">${esc(d)}</button>`).join("")}</div></div>
@@ -882,6 +886,46 @@ function viewNotice(pre){
   }
   const lst = pre?.line || ls("qms_last_line"); if(lst && LINES.includes(lst)){ line=lst; pick($("#nl"),line); loadSup(); }
   if(pre){ defect=pre.defect; pick($("#nd"),defect); $("#nq").value=pre.qty; $("#nmemo").value=pre.memo; }
+
+  const todayHead = () => { const d=new Date($("#no").value||Date.now()); return `(${d.getMonth()+1}월${d.getDate()}일)`; };
+  const refreshText = t => String(t).replace(/\(\s*\d{1,2}\s*월\s*\d{1,2}\s*일\s*\)/, todayHead())
+      .replace(/\s*\(금월 동일유형 \d+회째\)/g, "").replace(/(불량수량\s*\d[\d,]*\s*EA)/, m => repeat>=2 ? `${m} (금월 동일유형 ${repeat}회째)` : m);
+  const guessLine = t => { const m=String(t).match(/\b(KA4|CE1|CT1|SV1|GN7|SP3K)\b[^\n]*?(G\/BOX|UPR|PAB)?/i); if(!m) return null;
+    const v=m[1].toUpperCase().replace("SP3K","SP3k"), it=(m[2]||"").toUpperCase();
+    return LINES.find(l=>l.toUpperCase().includes(v.toUpperCase()) && (!it || l.toUpperCase().includes(it))) || LINES.find(l=>l.toUpperCase().includes(v.toUpperCase())) || null; };
+  const guessDefect = t => NOTICE_DEFECTS.find(d=>d!=="기타" && String(t).includes(d)) || null;
+  const guessQty = t => { const m=String(t).match(/(\d[\d,]*)\s*EA/i); return m ? parseInt(m[1].replace(/,/g,"")) : null; };
+  async function useText(text, kind, fromId){
+    sourceKind=kind; copiedFrom=fromId||null;
+    $("#nmemo").value = kind==="이전통보복사" ? `[#${fromId} 통보 복사]` : "[카톡 글 붙여넣기]";
+    $("#nedit").hidden=false; $("#ncopy").innerHTML="";
+    await refreshRepeat();
+    const t = refreshText(text); drafted=t; $("#nfinal").value=t;
+    msg($("#nm"),"info", kind==="이전통보복사" ? "날짜를 오늘로 바꿨습니다. 수량·내용을 고치고 사진을 붙여 저장하세요." : "붙여넣은 글입니다. 라인·업체·불량유형·수량이 맞는지 확인하고 저장하세요.");
+    $("#nfinal").scrollIntoView({block:"center"});
+  }
+  $("#ncp").onclick = async () => {
+    try{ const rows = await rpc("qms_notice_recent",{p_line:line,p_supplier:supplier,p_limit:20});
+      $("#ncopy").innerHTML = `<div class="muted" style="margin:4px 0">최근 통보${line?` · ${esc(line)}`:""}${supplier?` · ${esc(supplier)}`:""} (라인·업체를 먼저 고르면 좁혀집니다)</div>` +
+        (rows.length ? rows.map((r,i)=>`<div class="rep"><div class="hd"><b>#${r.id}</b>${fmtDT(r.occurred_at)} · ${esc(r.supplier)} · ${esc(r.defect_type)} ${n0(r.defect_qty)}EA${r.record_kind==="TEST"?' <span class="pill test">시험</span>':""}</div>
+          <div class="bd" style="max-height:7.5em;overflow:hidden">${esc(r.final_text)}</div><button type="button" class="btn primary" data-i="${i}">이 통보로 쓰기</button></div>`).join("") : `<div class="muted">복사할 통보가 없습니다.</div>`);
+      $("#ncopy").onclick = async e => { const b=e.target.closest("button[data-i]"); if(!b) return; const r=rows[+b.dataset.i];
+        if(LINES.includes(r.line_name)){ line=r.line_name; pick($("#nl"),line); }
+        defect=r.defect_type; pick($("#nd"),defect); $("#nq").value=r.defect_qty;
+        const keep=r.supplier; await loadSup(); if(![...$("#ns").options].some(o=>o.value===keep)) $("#ns").insertAdjacentHTML("beforeend",`<option>${esc(keep)}</option>`);
+        $("#ns").value=keep; supplier=keep; await useText(r.final_text,"이전통보복사",r.id); };
+    }catch(e){ msg($("#nm"),"err",e.message); }
+  };
+  $("#nps").onclick = () => {
+    $("#ncopy").innerHTML = `<label>카톡에서 복사한 통보 글을 붙여넣으세요<textarea id="npaste" class="notice-text" style="min-height:180px" maxlength="5000"></textarea></label>
+      <button type="button" class="btn primary" id="npgo">이 글로 쓰기</button>`;
+    $("#npaste").focus();
+    $("#npgo").onclick = async () => { const t=$("#npaste").value.trim(); if(t.length<5) return msg($("#nm"),"err","붙여넣은 글이 없습니다");
+      const gl=guessLine(t); if(gl){ line=gl; pick($("#nl"),line); await loadSup(); }
+      const gd=guessDefect(t); if(gd){ defect=gd; pick($("#nd"),defect); }
+      const gq=guessQty(t); if(gq) $("#nq").value=gq;
+      await useText(t,"카톡붙여넣기",null); };
+  };
   const toDate = t => { if(!t) return null; const base=new Date($("#no").value); const [h,m]=t.split(":").map(Number); base.setHours(h,m,0,0); return base; };
   $("#nbuild").onclick = () => {
     const q=parseInt($("#nq").value), errs=[];
@@ -890,6 +934,7 @@ function viewNotice(pre){
     if(errs.length) return msg($("#nm"),"err",errs.join(", ")+"을(를) 입력하세요");
     msg($("#nm"),"","");
     if($("#nfinal").value && $("#nfinal").value!==drafted && !confirm("고친 통보문을 새 초안으로 바꿀까요?")) return;
+    sourceKind="메모"; copiedFrom=null;
     drafted = buildNoticeDraft({line, memo:$("#nmemo").value, qty:q, defect, repeat, occurred:new Date($("#no").value),
       dtStart:$("#ndt").checked?toDate($("#nds").value):null, dtEnd:$("#ndt").checked?toDate($("#nde").value):null, request:$("#nreq").value.trim(), rules});
     $("#nfinal").value=drafted; $("#nedit").hidden=false; $("#nfinal").focus();
@@ -902,13 +947,15 @@ function viewNotice(pre){
   drawThumbs();
   $("#fN").onsubmit = async e => {
     e.preventDefault(); const fin=$("#nfinal").value.trim(); if(fin.length<5) return msg($("#nm"),"err","통보문이 비어 있습니다");
+    { const er=[]; if(!line) er.push("라인"); if(!supplier) er.push("업체"); if(!defect) er.push("불량유형"); if(!(parseInt($("#nq").value)>0)) er.push("불량수량");
+      if(er.length){ window.scrollTo(0,0); return msg($("#nm"),"err",er.join(", ")+"을(를) 위에서 선택·입력하세요 (클레임 집계 근거)"); } }
     if(!confirm(`${supplier} · ${defect} ${$("#nq").value}EA\n사진 ${photos.length}장\n\n저장할까요? (저장 후 카톡으로 보냅니다)`)) return;
     const b=$("#nsave"); b.disabled=true; b.textContent="저장 중…"; let id=null;
     try{
       const ds=$("#ndt").checked?toDate($("#nds").value):null, de=$("#ndt").checked?toDate($("#nde").value):null;
       const r = await rpc("qms_notice_create",{p:{line_name:line,supplier,defect_type:defect,defect_qty:$("#nq").value,occurred_at:new Date($("#no").value).toISOString(),
         downtime_start:ds?ds.toISOString():"",downtime_end:de?de.toISOString():"",raw_memo:$("#nmemo").value.trim(),draft_text:drafted,final_text:fin,
-        edits:wordEdits(drafted,fin),record_kind:$("#ntest").checked?"TEST":"NORMAL",promote_ids:pre?pre.ids:undefined}});
+        edits:wordEdits(drafted,fin),record_kind:$("#ntest").checked?"TEST":"NORMAL",promote_ids:pre?pre.ids:undefined,source_kind:sourceKind,copied_from:copiedFrom}});
       id=r.id; const paths=[];
       for(let i=0;i<photos.length;i++){ b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`; const path=`${r.uid}/sn/${id}/${Date.now()}_${i+1}.jpg`; await uploadPhoto(path,photos[i].blob); paths.push(path); }
       if(paths.length) await rpc("qms_notice_attach",{p_id:id,p_paths:paths});
