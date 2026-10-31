@@ -837,14 +837,14 @@ function wordEdits(a, b){
 }
 
 /* ---------- 업체통보 작성 (휴대폰) ---------- */
-function viewNotice(pre){
+function viewNoticeForm(pre){
   let line=null, supplier=null, defect=null, rules=[], drafted="", lastDraftKey="", sourceKind="메모", copiedFrom=null;
   const photos=[]; const ls=(k,v)=>{ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } };
   $("#app").innerHTML = `<form class="panel" id="fN" novalidate><h2>업체 통보 작성</h2><div id="nm"></div>
     <div class="row" style="grid-template-columns:1fr 1fr;margin-bottom:6px">
       <button type="button" class="btn accent" id="ncp" style="min-height:58px">📋 이전 통보 복사해서 쓰기</button>
       <button type="button" class="btn" id="nps" style="min-height:58px">📥 카톡 글 붙여넣기</button></div>
-    <div id="ncopy"></div>${pre?`<div class="msg info">수시 기록 ${pre.ids.length}건을 공식 통보 1건으로 묶습니다 (${esc(pre.supplier)} · ${esc(pre.defect)}). 저장하면 묶인 기록은 수시 집계에서 빠지고 이 통보로 합쳐집니다.</div>`:""}
+    <div id="ncopy"></div><button type="button" class="btn ghost" id="nback" style="min-height:40px;margin-bottom:8px">← 업체 목록</button>${pre?.ids?`<div class="msg info">수시 기록 ${pre.ids.length}건을 공식 통보 1건으로 묶습니다 (${esc(pre.supplier)} · ${esc(pre.defect)}). 저장하면 묶인 기록은 수시 집계에서 빠지고 이 통보로 합쳐집니다.</div>`:""}
     <div><div class="muted" style="margin-bottom:6px">라인 (필수)</div><div class="chips" id="nl">${LINES.map(l=>`<button type="button" data-v="${esc(l)}">${esc(l)}</button>`).join("")}</div></div>
     <label>업체 (필수 · 라인 차종 업체가 위에 나옵니다)<select id="ns"><option value="">라인을 먼저 선택</option></select></label>
     <div><div class="muted" style="margin-bottom:6px">불량유형 (필수)</div><div class="chips" id="nd">${NOTICE_DEFECTS.map(d=>`<button type="button" data-v="${esc(d)}">${esc(d)}</button>`).join("")}</div></div>
@@ -875,6 +875,7 @@ function viewNotice(pre){
   $("#nl").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; line=b.dataset.v; pick($("#nl"),line); ls("qms_last_line",line); loadSup(); };
   $("#nd").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; defect=b.dataset.v; pick($("#nd"),defect); refreshRepeat(); };
   $("#ns").onchange=()=>{ supplier=$("#ns").value||null; refreshRepeat(); };
+  $("#nq").oninput=()=>{ const v=parseInt($("#nq").value); const f=$("#nfinal"); if(v>0 && f.value) f.value=f.value.replace(/(불량수량\s*)\d[\d,]*(\s*EA)/, `$1${v}$2`); };
   $("#ndt").onchange=()=>{ $("#ndtr").hidden=!$("#ndt").checked; if($("#ndt").checked&&!$("#nds").value){ $("#nds").value=hm(new Date()); } };
   let repeat=1;
   async function refreshRepeat(){
@@ -885,7 +886,8 @@ function viewNotice(pre){
     }catch(e){ repeat=1; }
   }
   const lst = pre?.line || ls("qms_last_line"); if(lst && LINES.includes(lst)){ line=lst; pick($("#nl"),line); loadSup(); }
-  if(pre){ defect=pre.defect; pick($("#nd"),defect); $("#nq").value=pre.qty; $("#nmemo").value=pre.memo; }
+  if(pre){ if(pre.defect){ defect=pre.defect; pick($("#nd"),defect); } if(pre.qty) $("#nq").value=pre.qty; if(pre.memo) $("#nmemo").value=pre.memo; }
+  $("#nback").onclick=()=>pre?.supplier ? viewSupplier(pre.supplier) : viewNotice();
 
   const todayHead = () => { const d=new Date($("#no").value||Date.now()); return `(${d.getMonth()+1}월${d.getDate()}일)`; };
   const refreshText = t => String(t).replace(/\(\s*\d{1,2}\s*월\s*\d{1,2}\s*일\s*\)/, todayHead())
@@ -945,8 +947,14 @@ function viewNotice(pre){
   $("#nf").onchange=async e=>{ const fs=[...e.target.files].slice(0,4-photos.length); e.target.value="";
     for(const f of fs){ try{ const blob=await shrinkImage(f); photos.push({blob,url:URL.createObjectURL(blob)}); }catch(err){ msg($("#nm"),"err",err.message); } } drawThumbs(); };
   drawThumbs();
+  if(pre?.copy){ (async()=>{ const r=pre.copy; if(LINES.includes(r.line_name)){ line=r.line_name; pick($("#nl"),line); }
+      defect=r.defect_type; pick($("#nd"),defect); $("#nq").value=r.defect_qty; await loadSup();
+      if(![...$("#ns").options].some(o=>o.value===r.supplier)) $("#ns").insertAdjacentHTML("beforeend",`<option>${esc(r.supplier)}</option>`);
+      $("#ns").value=r.supplier; supplier=r.supplier; await useText(r.final_text,"이전통보복사",r.id); })(); }
   $("#fN").onsubmit = async e => {
     e.preventDefault(); const fin=$("#nfinal").value.trim(); if(fin.length<5) return msg($("#nm"),"err","통보문이 비어 있습니다");
+    { const m=fin.match(/불량수량\s*(\d[\d,]*)\s*EA/); const fq=parseInt($("#nq").value);
+      if(m && parseInt(m[1].replace(/,/g,""))!==fq && !confirm(`통보문의 불량수량(${m[1]}EA)과 입력한 불량수량(${fq||"-"}EA)이 다릅니다.\n집계는 입력한 수량으로 됩니다. 그대로 저장할까요?`)) return; }
     { const er=[]; if(!line) er.push("라인"); if(!supplier) er.push("업체"); if(!defect) er.push("불량유형"); if(!(parseInt($("#nq").value)>0)) er.push("불량수량");
       if(er.length){ window.scrollTo(0,0); return msg($("#nm"),"err",er.join(", ")+"을(를) 위에서 선택·입력하세요 (클레임 집계 근거)"); } }
     if(!confirm(`${supplier} · ${defect} ${$("#nq").value}EA\n사진 ${photos.length}장\n\n저장할까요? (저장 후 카톡으로 보냅니다)`)) return;
@@ -969,11 +977,11 @@ function viewNotice(pre){
     s.innerHTML = `<h2>저장 완료 #${id} — 카톡으로 보내기</h2><div id="shm"></div>
       <div class="msg info">카톡 방을 고른 뒤 @멘션을 붙여 보내세요. 사진과 글이 같이 안 넘어가면 ② ③을 차례로 누르세요.</div>
       <div class="sharebar">
-        ${canFiles||navigator.share?`<button class="btn primary" id="sh1">① 카톡으로 보내기 (사진+글)</button>`:""}
+        <button class="btn primary" id="sh3" style="min-height:58px;font-size:17px">📋 글 복사 → 카톡에 붙여넣기</button>
+        ${canFiles||navigator.share?`<button class="btn" id="sh1">① 카톡으로 보내기 (사진+글)</button>`:""}
         ${canFiles?`<button class="btn" id="sh2">② 사진만 보내기 (${files.length}장)</button>`:""}
-        <button class="btn" id="sh3">③ 글 복사</button>
         <button class="btn ghost" id="sh4">카톡 전송 완료 표시</button>
-        <button class="btn ghost" id="sh5">새 통보 작성</button></div>
+        <button class="btn ghost" id="sh5">이 업체로 돌아가기</button></div>
       <textarea class="notice-text" readonly style="margin-top:10px">${esc(text)}</textarea>`;
     const done = async () => { try{ await rpc("qms_notice_update",{p_id:id,p:{mark_sent:true}}); msg($("#shm"),"ok",`#${id} 발송 기록됨`); }catch(e){ msg($("#shm"),"err",e.message); } };
     const share = async data => { try{ await navigator.share(data); await done(); }catch(e){ if(e.name!=="AbortError") msg($("#shm"),"err","공유 실패: "+e.message+" — ② ③ 버튼을 쓰세요"); } };
@@ -981,7 +989,7 @@ function viewNotice(pre){
     if($("#sh2")) $("#sh2").onclick=()=>share({files});
     $("#sh3").onclick=async()=>{ try{ await navigator.clipboard.writeText(text); msg($("#shm"),"ok","복사됨 — 카톡 입력창을 길게 눌러 붙여넣으세요"); }
       catch(e){ const t=$("#nshare textarea"); t.removeAttribute("readonly"); t.select(); document.execCommand("copy"); msg($("#shm"),"ok","복사됨"); } };
-    $("#sh4").onclick=done; $("#sh5").onclick=()=>viewNotice();
+    $("#sh4").onclick=done; $("#sh5").onclick=()=>viewSupplier(supplier);
   }
 }
 
@@ -1315,6 +1323,59 @@ async function viewBackup(){
     }catch(e){ msg($("#bkm"),"err","PC 백업 실패: "+e.message); try{ await rpc("qms_backup_log_write",{p_kind:"pc",p_ok:false,p_detail:e.message}); }catch(e2){} }
     b.disabled=false; b.textContent="💾 PC에 백업 받기 (엑셀 1개)";
   };
+  load();
+}
+
+/* ---------- 업체통보: 업체 연락처 목록 → 업체 화면 (수입검사·공식 PPM과 별개 데이터) ---------- */
+function viewNotice(pre){
+  if(pre) return viewNoticeForm(pre);
+  $("#app").innerHTML = `<section class="panel"><h2>업체 불량 통보</h2>
+    <label>업체 검색<input id="cq" placeholder="업체명 또는 차종 (예: 아성, GN7)" autocomplete="off"></label>
+    <label class="check"><input type="checkbox" id="cit"> 시험용 기록 포함</label><div id="cm"></div></section><div id="clist"></div>`;
+  let rows=[];
+  const render=()=>{ const q=$("#cq").value.trim().toLowerCase(); const v=q?rows.filter(r=>(r.supplier+" "+(r.vehicles||"")).toLowerCase().includes(q)):rows;
+    $("#clist").innerHTML = v.map((r,i)=>`<button type="button" class="rep" data-s="${esc(r.supplier)}" style="display:flex;width:100%;text-align:left;align-items:center;gap:12px;cursor:pointer;font:inherit">
+      <div style="width:44px;height:44px;border-radius:50%;background:${r.month_cnt?"#1E293B":"#CBD5E1"};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex:0 0 auto">${esc(r.supplier.slice(0,1))}</div>
+      <div style="flex:1;min-width:0"><b>${esc(r.supplier)}</b><div class="muted" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.vehicles||"")}${r.last_at?` · 최근 ${fmtDT(r.last_at)}`:""}</div></div>
+      ${r.month_cnt?`<div style="text-align:right;font-size:12px"><span class="pill ${r.month_cnt>=3?"ng":"wait"}">이번달 ${r.month_cnt}건</span><div class="muted">${n0(r.month_qty)}EA${r.month_downtime?` · 비가동 ${n0(r.month_downtime)}분`:""}</div></div>`:""}</button>`).join("") || `<div class="panel muted">업체가 없습니다.</div>`; };
+  const load=async()=>{ try{ rows=await rpc("qms_supplier_contacts",{p_include_test:$("#cit").checked}); render(); }catch(e){ msg($("#cm"),"err",e.message); } };
+  $("#cq").oninput=render; $("#cit").onchange=load;
+  $("#clist").onclick=e=>{ const b=e.target.closest("[data-s]"); if(b) viewSupplier(b.dataset.s); };
+  load();
+}
+async function viewSupplier(sup){
+  $("#app").innerHTML = `<section class="panel"><button type="button" class="btn ghost" id="sback" style="min-height:40px">← 업체 목록</button>
+    <h2 style="margin-top:8px">${esc(sup)}</h2><div id="sm"></div>
+    <label class="check"><input type="checkbox" id="sit"> 시험용 기록 포함</label>
+    <div class="kpis" id="sk"></div><div id="sflag"></div>
+    <button type="button" class="btn primary" id="snew" style="width:100%;min-height:56px;margin-top:10px;font-size:17px">＋ 새 불량 통보 쓰기</button></section>
+    <section class="panel"><h2>월별 이력 <span class="muted" style="font-size:13px;font-weight:400">최근 6개월 · 업체통보 기준</span></h2><div id="smon"></div></section>
+    <section class="panel"><h2>이전 통보 <span class="muted" style="font-size:13px;font-weight:400">눌러서 바로 고쳐 쓰기</span></h2><div id="sprev"></div></section>`;
+  $("#sback").onclick=()=>viewNotice();
+  let prev=[];
+  const load=async()=>{
+    const it=$("#sit").checked;
+    try{
+      const [h, list] = await Promise.all([rpc("qms_supplier_history",{p_supplier:sup,p_months:6,p_include_test:it}), rpc("qms_notice_recent",{p_line:null,p_supplier:sup,p_limit:30})]);
+      prev = list.filter(r=>it || r.record_kind!=="TEST");
+      const ym=today().slice(0,7), cur=h.monthly.find(m=>m.month===ym)||{cnt:0,qty:0,downtime:0}, tot=h.monthly.reduce((a,m)=>({cnt:a.cnt+m.cnt,qty:a.qty+m.qty,dt:a.dt+m.downtime}),{cnt:0,qty:0,dt:0});
+      $("#sk").innerHTML=[["이번달 통보",cur.cnt,"건"],["이번달 불량",cur.qty,"EA"],["이번달 비가동",cur.downtime,"분"],["6개월 누계",tot.qty,"EA"]]
+        .map(([k,v,u],i)=>`<div class="kpi ${i===2&&v>0?"hl":""}"><div class="k">${k}</div><div class="v">${n0(v)} ${u}</div></div>`).join("");
+      const f=h.by_type.filter(t=>t.month_cnt>=3);
+      $("#sflag").innerHTML = f.map(t=>`<div class="flag8d" style="margin-top:8px">⚠ ${esc(t.defect_type)} 이번 달 ${t.month_cnt}회 — 대책서(8D) 요구 대상</div>`).join("")
+        + (h.field_cnt?`<div class="muted" style="margin-top:6px">이번 달 현장 수시기록 ${h.field_cnt}건 별도 (참고자료)</div>`:"");
+      const max=Math.max(1,...h.monthly.map(m=>m.qty));
+      $("#smon").innerHTML = h.monthly.length ? `<div class="tablewrap"><table><thead><tr><th>월</th><th class="n">통보</th><th class="n">불량(EA)</th><th></th><th class="n">비가동(분)</th></tr></thead><tbody>${h.monthly.map(m=>`<tr><td>${m.month}</td><td class="n">${n0(m.cnt)}</td><td class="n">${n0(m.qty)}</td><td style="width:35%"><div style="height:10px;background:#2563EB;border-radius:3px;width:${m.qty*100/max}%"></div></td><td class="n">${n0(m.downtime)}</td></tr>`).join("")}
+          <tr class="total"><td>합계</td><td class="n">${n0(tot.cnt)}</td><td class="n">${n0(tot.qty)}</td><td></td><td class="n">${n0(tot.dt)}</td></tr></tbody></table></div>
+          ${h.by_type.length?`<div class="muted" style="margin-top:6px">유형별: ${h.by_type.map(t=>`${esc(t.defect_type)} ${t.cnt}건·${n0(t.qty)}EA`).join(" / ")}</div>`:""}` : `<div class="muted">기록이 없습니다.</div>`;
+      $("#sprev").innerHTML = prev.length ? prev.map((r,i)=>`<div class="rep"><div class="hd"><b>#${r.id}</b>${fmtDT(r.occurred_at)} · ${esc(r.line_name)} · ${esc(r.defect_type)} ${n0(r.defect_qty)}EA${r.record_kind==="TEST"?' <span class="pill test">시험</span>':""}</div>
+          <div class="bd" style="max-height:8em;overflow:hidden">${esc(r.final_text)}</div><button type="button" class="btn primary" data-i="${i}">이 통보로 고쳐 쓰기</button></div>`).join("")
+        : `<div class="muted">이전 통보가 없습니다. '새 불량 통보 쓰기'로 시작하세요. 카톡에 있던 글은 작성 화면의 '카톡 글 붙여넣기'로 옮길 수 있습니다.</div>`;
+    }catch(e){ msg($("#sm"),"err",e.message); }
+  };
+  $("#sit").onchange=load;
+  $("#snew").onclick=()=>viewNoticeForm({supplier:sup, line:(prev[0]&&prev[0].line_name)||null});
+  $("#sprev").onclick=e=>{ const b=e.target.closest("button[data-i]"); if(!b) return; const r=prev[+b.dataset.i]; viewNoticeForm({supplier:sup, line:r.line_name, copy:r}); };
   load();
 }
 
