@@ -1334,10 +1334,11 @@ function viewNotice(pre){
     <label class="check"><input type="checkbox" id="cit"> 시험용 기록 포함</label><div id="cm"></div></section><div id="clist"></div>`;
   let rows=[];
   const render=()=>{ const q=$("#cq").value.trim().toLowerCase(); const v=q?rows.filter(r=>(r.supplier+" "+(r.vehicles||"")).toLowerCase().includes(q)):rows;
-    $("#clist").innerHTML = v.map((r,i)=>`<button type="button" class="rep" data-s="${esc(r.supplier)}" style="display:flex;width:100%;text-align:left;align-items:center;gap:12px;cursor:pointer;font:inherit">
+    const core=r=>(r.core_cnt||0)>0; let lastG=null;
+    $("#clist").innerHTML = v.map((r,i)=>{ const g=core(r); const h=g!==lastG?`<div class="muted" style="font-size:13px;font-weight:700;margin:12px 4px 6px">${g?"🔶 하우징·커버 업체 (불량 주요 업체)":"기타 업체"}</div>`:""; lastG=g; return h+`<button type="button" class="rep" data-s="${esc(r.supplier)}" style="display:flex;width:100%;text-align:left;align-items:center;gap:12px;cursor:pointer;font:inherit">
       <div style="width:44px;height:44px;border-radius:50%;background:${r.month_cnt?"#1E293B":"#CBD5E1"};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex:0 0 auto">${esc(r.supplier.slice(0,1))}</div>
-      <div style="flex:1;min-width:0"><b>${esc(r.supplier)}</b><div class="muted" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.vehicles||"")}${r.last_at?` · 최근 ${fmtDT(r.last_at)}`:""}</div></div>
-      ${r.month_cnt?`<div style="text-align:right;font-size:12px"><span class="pill ${r.month_cnt>=3?"ng":"wait"}">이번달 ${r.month_cnt}건</span><div class="muted">${n0(r.month_qty)}EA${r.month_downtime?` · 비가동 ${n0(r.month_downtime)}분`:""}</div></div>`:""}</button>`).join("") || `<div class="panel muted">업체가 없습니다.</div>`; };
+      <div style="flex:1;min-width:0"><b>${esc(r.supplier)}</b>${g?` <span class="pill wait" style="font-size:11px">하우징·커버</span>`:""}<div class="muted" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.vehicles||"")}${r.last_at?` · 최근 ${fmtDT(r.last_at)}`:""}</div></div>
+      ${r.month_cnt?`<div style="text-align:right;font-size:12px"><span class="pill ${r.month_cnt>=3?"ng":"wait"}">이번달 ${r.month_cnt}건</span><div class="muted">${n0(r.month_qty)}EA${r.month_downtime?` · 비가동 ${n0(r.month_downtime)}분`:""}</div></div>`:""}</button>`; }).join("") || `<div class="panel muted">업체가 없습니다.</div>`; };
   const load=async()=>{ try{ rows=await rpc("qms_supplier_contacts",{p_include_test:$("#cit").checked}); render(); }catch(e){ msg($("#cm"),"err",e.message); } };
   $("#cq").oninput=render; $("#cit").onchange=load;
   $("#clist").onclick=e=>{ const b=e.target.closest("[data-s]"); if(b) viewSupplier(b.dataset.s); };
