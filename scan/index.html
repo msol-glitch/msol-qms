@@ -24,7 +24,16 @@ header h1{font-size:16px;margin:0;letter-spacing:.02em}
 button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
 button.primary{background:#2b5d8a;border-color:#2b5d8a;font-weight:700}
-#reader{width:100%;background:#000;border-radius:10px;overflow:hidden;min-height:200px}
+.cam{position:relative;border-radius:12px;overflow:hidden;border:6px solid var(--idle);transition:border-color .3s}
+.cam.ok{border-color:var(--ok)} .cam.ng{border-color:var(--ng)} .cam.warn{border-color:var(--warn)}
+#reader{width:100%;background:#000;min-height:200px}
+.flash{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  pointer-events:none;opacity:0;transition:opacity .35s ease-out;color:#fff;text-align:center;padding:12px}
+.flash.on{opacity:.9;transition:none}
+.flash.ok{background:var(--ok)} .flash.ng{background:var(--ng)} .flash.warn{background:var(--warn);color:#1a1300}
+.flash b{font-size:80px;line-height:1;font-weight:900}
+.flash span{font:700 18px var(--mono);word-break:break-all}
+.seq{position:absolute;top:8px;right:8px;z-index:6;background:rgba(0,0,0,.6);color:#fff;border-radius:6px;padding:2px 8px;font:700 14px var(--mono)}
 #reader video{width:100%!important;display:block}
 .verdict{border-radius:12px;background:var(--idle);text-align:center;padding:18px 12px;transition:background .08s}
 .verdict .big{font-size:64px;font-weight:900;line-height:1;letter-spacing:.04em}
@@ -60,7 +69,11 @@ summary{cursor:pointer;font-weight:700}
     <button id="camBtn" class="primary">카메라 켜기</button>
   </header>
 
-  <div id="reader"></div>
+  <div class="cam" id="cam">
+    <div id="reader"></div>
+    <div class="flash" id="flash"><b id="fBig"></b><span id="fCode"></span></div>
+    <div class="seq" id="seq">#0</div>
+  </div>
 
   <div id="verdict" class="verdict">
     <div class="big" id="vBig">대기</div>
@@ -117,6 +130,9 @@ summary{cursor:pointer;font-weight:700}
   let armRef = !S.ref;          // 기준 미등록이면 첫 스캔을 기준으로
   let lastText = '', lastSeenAt = 0;
   const HOLD_MS = 2000;         // 같은 코드가 화면에 계속 있으면 2초간 무시
+  const REPEAT_MS = 6000;       // 방금 판정한 코드를 6초 안에 다시 찍으면 '중복' 대신 직전 결과만 다시 보여줌
+  const LOCK_MS = 600;          // 판정 직후 0.6초는 다른 코드도 무시 (이중 인식 방지)
+  let lastJudged = {code:'', at:0, cls:'', big:''}, lockUntil = 0, seq = 0, flashTimer = null;
 
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 
@@ -143,6 +159,12 @@ summary{cursor:pointer;font-weight:700}
     if(!code) return;
     if(armRef){ setRef(code); return; }
     if(!S.ref){ show('warn','기준 없음',code,'정상품을 먼저 기준으로 등록하세요'); return; }
+    const now = Date.now();
+    if(code===lastJudged.code && now-lastJudged.at < REPEAT_MS){
+      // 방금 찍은 제품을 다시 비춘 경우: 카운트·기록 없이 같은 결과만 다시 표시
+      lastJudged.at = now;
+      show(lastJudged.cls, lastJudged.big, code, '방금 판정한 제품입니다 (카운트 안 함)'); beep('tick'); return;
+    }
     if(S.dup && seen.has(code)){
       show('warn','중복',code,'이미 찍은 코드입니다 (카운트 안 함)'); beep('warn');
       addLog('중복',code); return;
@@ -150,7 +172,9 @@ summary{cursor:pointer;font-weight:700}
     const j = judge(code);
     seen.add(code);
     if(j.r==='OK') S.ok++; else S.ng++;
-    show(j.r==='OK'?'ok':'ng', j.r, code, j.why); beep(j.r);
+    seq++;
+    lastJudged = {code, at:now, cls:j.r==='OK'?'ok':'ng', big:j.r};
+    show(lastJudged.cls, j.r, code, j.why); beep(j.r);
     addLog(j.r, code);
   }
 
@@ -169,6 +193,14 @@ summary{cursor:pointer;font-weight:700}
   function show(cls, big, code, why){
     const v = $('verdict'); v.className = 'verdict ' + cls;
     $('vBig').textContent = big; $('vCode').textContent = code; $('vWhy').textContent = why||'';
+    // 카메라 화면 위에 크게 번쩍 + 테두리 색 유지 + 판정 번호
+    $('cam').className = 'cam ' + cls;
+    $('seq').textContent = '#' + seq;
+    if(!cls) return;
+    const f = $('flash'); $('fBig').textContent = big; $('fCode').textContent = code;
+    f.className = 'flash on ' + cls;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(()=>{ f.className = 'flash ' + cls; }, 700);
   }
 
   function renderRef(){
@@ -194,14 +226,22 @@ summary{cursor:pointer;font-weight:700}
   let ac=null;
   function beep(r){
     if(!S.sound) return;
+    const tick = r==='tick';
     try{
       ac = ac || new (window.AudioContext||window.webkitAudioContext)();
       const o=ac.createOscillator(), g=ac.createGain(); o.connect(g); g.connect(ac.destination);
+      if(ac.state==='suspended') ac.resume();
       const ng = r==='NG';
-      o.type = ng?'square':'sine'; o.frequency.value = ng?220:(r==='warn'?600:1320);
-      g.gain.value = .25; o.start(); o.stop(ac.currentTime + (ng?.6:.12));
+      o.type = ng?'square':'sine'; o.frequency.value = ng?220:tick?900:(r==='warn'?600:1320);
+      g.gain.value = tick?.12:.3; o.start(); o.stop(ac.currentTime + (ng?.6:tick?.05:.15));
     }catch(e){}
-    if(navigator.vibrate) navigator.vibrate(r==='NG'?[300,100,300]:r==='warn'?[120]:0);
+    if(navigator.vibrate) navigator.vibrate(r==='NG'?[300,100,300]:r==='warn'?[120,60,120]:tick?0:[60]);
+  }
+  // 휴대폰은 버튼을 누른 순간에만 소리를 허용하므로, 카메라 켜기 버튼에서 미리 소리를 깨워 둔다
+  function unlockAudio(){
+    try{ ac = ac || new (window.AudioContext||window.webkitAudioContext)(); ac.resume();
+      const o=ac.createOscillator(), g=ac.createGain(); g.gain.value=0; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime+.01);
+    }catch(e){}
   }
 
   // 카메라 연속 스캔
@@ -215,7 +255,8 @@ summary{cursor:pointer;font-weight:700}
         text=>{
           const now=Date.now(), c=clean(text);
           if(c===lastText && now-lastSeenAt<HOLD_MS){ lastSeenAt=now; return; }
-          lastText=c; lastSeenAt=now; handle(c);
+          if(now<lockUntil) return;
+          lastText=c; lastSeenAt=now; lockUntil=now+LOCK_MS; handle(c);
         }, ()=>{});
       running=true; $('camBtn').textContent='카메라 끄기';
       try{ await navigator.wakeLock?.request('screen'); }catch(e){}
@@ -225,7 +266,7 @@ summary{cursor:pointer;font-weight:700}
   }
 
   // 이벤트
-  $('camBtn').onclick = toggleCam;
+  $('camBtn').onclick = ()=>{ unlockAudio(); toggleCam(); };
   $('setRefBtn').onclick = ()=>{ armRef=true; renderRef(); show('warn','기준 대기','','정상품 QR을 찍으면 기준으로 등록됩니다'); };
   const doManual = ()=>{ const v=$('manualIn').value; $('manualIn').value=''; handle(v); };
   $('manualBtn').onclick = doManual;
