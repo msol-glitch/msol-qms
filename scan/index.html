@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>엠솔루션 스캔판정</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+/* 현장용 단일 다크 화면: 위 카메라 / 가운데 큰 판정판 / 아래 카운터·기록 */
+:root{
+  --bg:#0f1316; --panel:#192026; --line:#2a333b; --fg:#eef2f4; --mute:#8e9aa4;
+  --ok:#14a44d; --ng:#d62e2e; --warn:#e0a400; --idle:#2a333b;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --sans:-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.4 var(--sans);
+  padding:env(safe-area-inset-top,0) max(12px,env(safe-area-inset-right,0)) env(safe-area-inset-bottom,0) max(12px,env(safe-area-inset-left,0))}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:10px;padding-block:10px}
+header{display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:16px;margin:0;letter-spacing:.02em}
+button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
+button.primary{background:#2b5d8a;border-color:#2b5d8a;font-weight:700}
+#reader{width:100%;background:#000;border-radius:10px;overflow:hidden;min-height:200px}
+#reader video{width:100%!important;display:block}
+.verdict{border-radius:12px;background:var(--idle);text-align:center;padding:18px 12px;transition:background .08s}
+.verdict .big{font-size:64px;font-weight:900;line-height:1;letter-spacing:.04em}
+.verdict .code{font-family:var(--mono);font-size:18px;margin-top:8px;word-break:break-all}
+.verdict .why{font-size:14px;margin-top:4px;opacity:.9}
+.verdict.ok{background:var(--ok)} .verdict.ng{background:var(--ng)} .verdict.warn{background:var(--warn);color:#1a1300}
+.ref{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px}
+.ref .row{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.ref .code{font-family:var(--mono);font-size:16px;word-break:break-all}
+.label{color:var(--mute);font-size:12px;letter-spacing:.04em}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.counts div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}
+.counts b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
+.c-ok b{color:var(--ok)} .c-ng b{color:var(--ng)}
+details{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+summary{cursor:pointer;font-weight:700}
+.opts{display:grid;gap:10px;margin-top:10px}
+.opts label{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.opts input[type=number]{width:70px;font:inherit;padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.manual{display:flex;gap:8px}
+.manual input{flex:1;min-width:0;font:16px var(--mono);padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+.log{list-style:none;margin:8px 0 0;padding:0;font-family:var(--mono);font-size:13px;max-height:220px;overflow:auto}
+.log li{display:grid;grid-template-columns:56px 40px 1fr;gap:6px;padding:4px 0;border-bottom:1px solid var(--line)}
+.log .t-OK{color:var(--ok);font-weight:700}.log .t-NG{color:var(--ng);font-weight:700}.log .t-중복{color:var(--warn);font-weight:700}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.hint{color:var(--mute);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>스캔 판정 (OK / NG)</h1>
+    <button id="camBtn" class="primary">카메라 켜기</button>
+  </header>
+
+  <div id="reader"></div>
+
+  <div id="verdict" class="verdict">
+    <div class="big" id="vBig">대기</div>
+    <div class="code" id="vCode">먼저 정상품을 찍어 기준을 등록하세요</div>
+    <div class="why" id="vWhy"></div>
+  </div>
+
+  <div class="ref">
+    <div class="row"><span class="label">기준 (정상품)</span><button id="setRefBtn">다음 스캔을 기준으로</button></div>
+    <div class="code" id="refCode">미등록</div>
+    <div class="hint" id="refInfo"></div>
+  </div>
+
+  <div class="counts">
+    <div class="c-ok"><span class="label">OK</span><b id="cOk">0</b></div>
+    <div class="c-ng"><span class="label">NG</span><b id="cNg">0</b></div>
+    <div><span class="label">합계</span><b id="cAll">0</b></div>
+  </div>
+
+  <details id="optBox">
+    <summary>판정 조건</summary>
+    <div class="opts">
+      <label>자릿수가 기준과 같아야 OK <input type="checkbox" id="optLen" checked disabled></label>
+      <label>앞자리 일치 (0 = 안 봄) <input type="number" id="optPrefix" min="0" max="40" value="0" inputmode="numeric"></label>
+      <label>자리별 숫자/영문 형식 일치 <input type="checkbox" id="optPattern"></label>
+      <label>같은 코드 재스캔 시 '중복' 경고 <input type="checkbox" id="optDup" checked></label>
+      <label>소리·진동 <input type="checkbox" id="optSound" checked></label>
+    </div>
+  </details>
+
+  <div class="manual">
+    <input id="manualIn" placeholder="블루투스 스캐너·직접 입력 후 Enter" autocomplete="off" autocapitalize="characters">
+    <button id="manualBtn">판정</button>
+  </div>
+
+  <details open>
+    <summary>스캔 기록 (최근 순)</summary>
+    <ul class="log" id="log"></ul>
+    <div class="btns" style="margin-top:10px">
+      <button id="csvBtn">기록 CSV 저장</button>
+      <button id="resetBtn">카운트·기록 초기화</button>
+    </div>
+    <div class="hint" id="resetHint"></div>
+  </details>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const KEY = 'msol-scan-v1';
+  let S = { ref:null, prefix:0, pattern:false, dup:true, sound:true, ok:0, ng:0, log:[] };
+  try{ const s = JSON.parse(localStorage.getItem(KEY)||'null'); if(s) S = Object.assign(S, s); }catch(e){}
+  const seen = new Set(S.log.map(r=>r.code));
+  let armRef = !S.ref;          // 기준 미등록이면 첫 스캔을 기준으로
+  let lastText = '', lastSeenAt = 0;
+  const HOLD_MS = 2000;         // 같은 코드가 화면에 계속 있으면 2초간 무시
+
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+
+  // 판정 규칙
+  const kind = c => /[0-9]/.test(c) ? 'N' : /[A-Za-z]/.test(c) ? 'A' : 'S';
+  function judge(code){
+    const ref = S.ref;
+    if(code.length !== ref.length)
+      return {r:'NG', why:`자릿수 ${code.length}자리 (기준 ${ref.length}자리)`};
+    const n = Math.min(S.prefix, ref.length);
+    if(n>0 && code.slice(0,n).toUpperCase() !== ref.slice(0,n).toUpperCase())
+      return {r:'NG', why:`앞 ${n}자리 불일치 (${code.slice(0,n)} ≠ ${ref.slice(0,n)})`};
+    if(S.pattern){
+      for(let i=0;i<code.length;i++) if(kind(code[i])!==kind(ref[i]))
+        return {r:'NG', why:`${i+1}번째 자리 형식 다름 ('${code[i]}')`};
+    }
+    return {r:'OK', why:`${code.length}자리 일치`};
+  }
+
+  function clean(t){ return String(t).replace(/[\r\n\t]/g,'').trim(); }
+
+  function handle(raw){
+    const code = clean(raw);
+    if(!code) return;
+    if(armRef){ setRef(code); return; }
+    if(!S.ref){ show('warn','기준 없음',code,'정상품을 먼저 기준으로 등록하세요'); return; }
+    if(S.dup && seen.has(code)){
+      show('warn','중복',code,'이미 찍은 코드입니다 (카운트 안 함)'); beep('warn');
+      addLog('중복',code); return;
+    }
+    const j = judge(code);
+    seen.add(code);
+    if(j.r==='OK') S.ok++; else S.ng++;
+    show(j.r==='OK'?'ok':'ng', j.r, code, j.why); beep(j.r);
+    addLog(j.r, code);
+  }
+
+  function setRef(code){
+    S.ref = code; armRef = false; save(); renderRef();
+    show('ok','기준 등록',code,`${code.length}자리 · 이제 계속 찍으면 됩니다`); beep('OK');
+  }
+
+  function addLog(r, code){
+    const d = new Date();
+    S.log.unshift({t:d.toLocaleTimeString('ko-KR',{hour12:false}), d:d.toISOString(), r, code});
+    if(S.log.length>2000) S.log.length = 2000;
+    save(); renderLog(); renderCounts();
+  }
+
+  function show(cls, big, code, why){
+    const v = $('verdict'); v.className = 'verdict ' + cls;
+    $('vBig').textContent = big; $('vCode').textContent = code; $('vWhy').textContent = why||'';
+  }
+
+  function renderRef(){
+    $('refCode').textContent = S.ref || '미등록';
+    if(S.ref){
+      const pat = [...S.ref].map(kind).join('');
+      $('refInfo').textContent = `${S.ref.length}자리 · 형식 ${pat} (N=숫자 A=영문 S=기호)`;
+    } else $('refInfo').textContent = '';
+    $('setRefBtn').textContent = armRef ? '기준 대기 중… 정상품을 찍으세요' : '다음 스캔을 기준으로';
+  }
+  function renderCounts(){ $('cOk').textContent=S.ok; $('cNg').textContent=S.ng; $('cAll').textContent=S.ok+S.ng; }
+  function renderLog(){
+    const ul = $('log'); ul.textContent='';
+    S.log.slice(0,100).forEach(r=>{
+      const li=document.createElement('li');
+      li.innerHTML=`<span></span><span class="t-${r.r}"></span><span></span>`;
+      li.children[0].textContent=r.t; li.children[1].textContent=r.r; li.children[2].textContent=r.code;
+      ul.appendChild(li);
+    });
+  }
+
+  // 소리·진동
+  let ac=null;
+  function beep(r){
+    if(!S.sound) return;
+    try{
+      ac = ac || new (window.AudioContext||window.webkitAudioContext)();
+      const o=ac.createOscillator(), g=ac.createGain(); o.connect(g); g.connect(ac.destination);
+      const ng = r==='NG';
+      o.type = ng?'square':'sine'; o.frequency.value = ng?220:(r==='warn'?600:1320);
+      g.gain.value = .25; o.start(); o.stop(ac.currentTime + (ng?.6:.12));
+    }catch(e){}
+    if(navigator.vibrate) navigator.vibrate(r==='NG'?[300,100,300]:r==='warn'?[120]:0);
+  }
+
+  // 카메라 연속 스캔
+  let qr=null, running=false;
+  async function toggleCam(){
+    if(!window.Html5Qrcode){ show('warn','열기 방식 확인','','앱 안 미리보기에서는 카메라가 막혀 있습니다. 크롬 등 브라우저에서 https 주소로 여세요. (인터넷 연결도 필요)'); return; }
+    if(running){ await qr.stop(); running=false; $('camBtn').textContent='카메라 켜기'; return; }
+    qr = qr || new Html5Qrcode('reader', {verbose:false, experimentalFeatures:{useBarCodeDetectorIfSupported:true}});
+    try{
+      await qr.start({facingMode:'environment'}, {fps:12, qrbox:(w,h)=>{const s=Math.floor(Math.min(w,h)*0.7);return {width:s,height:s};}},
+        text=>{
+          const now=Date.now(), c=clean(text);
+          if(c===lastText && now-lastSeenAt<HOLD_MS){ lastSeenAt=now; return; }
+          lastText=c; lastSeenAt=now; handle(c);
+        }, ()=>{});
+      running=true; $('camBtn').textContent='카메라 끄기';
+      try{ await navigator.wakeLock?.request('screen'); }catch(e){}
+    }catch(e){
+      show('warn','카메라 오류','', '카메라 권한을 허용했는지, https 주소로 열었는지 확인하세요');
+    }
+  }
+
+  // 이벤트
+  $('camBtn').onclick = toggleCam;
+  $('setRefBtn').onclick = ()=>{ armRef=true; renderRef(); show('warn','기준 대기','','정상품 QR을 찍으면 기준으로 등록됩니다'); };
+  const doManual = ()=>{ const v=$('manualIn').value; $('manualIn').value=''; handle(v); };
+  $('manualBtn').onclick = doManual;
+  $('manualIn').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doManual(); } });
+  $('optPrefix').value=S.prefix; $('optPattern').checked=S.pattern; $('optDup').checked=S.dup; $('optSound').checked=S.sound;
+  $('optPrefix').onchange=e=>{ S.prefix=Math.max(0,parseInt(e.target.value||'0',10)); save(); };
+  $('optPattern').onchange=e=>{ S.pattern=e.target.checked; save(); };
+  $('optDup').onchange=e=>{ S.dup=e.target.checked; save(); };
+  $('optSound').onchange=e=>{ S.sound=e.target.checked; save(); };
+
+  let resetArmed=false;
+  $('resetBtn').onclick = ()=>{
+    if(!resetArmed){ resetArmed=true; $('resetHint').textContent='한 번 더 누르면 초기화됩니다 (기준은 유지)'; setTimeout(()=>{resetArmed=false;$('resetHint').textContent='';},3000); return; }
+    S.ok=0; S.ng=0; S.log=[]; seen.clear(); resetArmed=false; $('resetHint').textContent='초기화했습니다';
+    save(); renderLog(); renderCounts(); show('', '대기', '', '');
+  };
+  $('csvBtn').onclick = ()=>{
+    const rows=[['일시','판정','코드','기준']].concat(S.log.slice().reverse().map(r=>[r.d,r.r,r.code,S.ref||'']));
+    const csv='﻿'+rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download='scan_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  };
+
+  renderRef(); renderCounts(); renderLog();
+  if(S.ref) show('', '대기', '기준: '+S.ref, '카메라를 켜고 계속 찍으세요');
+
+  // 판정 로직 자체 점검용 (브라우저 콘솔에서 사용)
+  window.__judgeTest = (ref, code, opt={}) => { const b={...S}; Object.assign(S,{ref,prefix:0,pattern:false},opt); const r=judge(code); Object.assign(S,b); return r; };
+})();
+</script>
+</body>
+</html>
