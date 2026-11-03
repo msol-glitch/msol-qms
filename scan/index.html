@@ -56,10 +56,52 @@ summary{cursor:pointer;font-weight:700}
 .manual{display:flex;gap:8px}
 .manual input{flex:1;min-width:0;font:16px var(--mono);padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
 .log{list-style:none;margin:8px 0 0;padding:0;font-family:var(--mono);font-size:13px;max-height:220px;overflow:auto}
-.log li{display:grid;grid-template-columns:56px 40px 1fr;gap:6px;padding:4px 0;border-bottom:1px solid var(--line)}
+.log li{display:grid;grid-template-columns:68px 40px 1fr;gap:6px;padding:4px 0;border-bottom:1px solid var(--line)}
 .log .t-OK{color:var(--ok);font-weight:700}.log .t-NG{color:var(--ng);font-weight:700}.log .t-중복{color:var(--warn);font-weight:700}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 .hint{color:var(--mute);font-size:12px}
+.sup{display:flex;gap:8px;align-items:center}
+.sup input,.rctl input,.rctl select{flex:1;min-width:0;font:16px var(--sans);padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.log .s{grid-column:3;color:var(--mute);font-size:11px;font-family:var(--sans)}
+/* 품질개선 요구서: 흰 종이 문서 */
+#report{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;
+  padding:env(safe-area-inset-top,0) max(12px,env(safe-area-inset-right,0)) env(safe-area-inset-bottom,0) max(12px,env(safe-area-inset-left,0))}
+.rwrap{max-width:760px;margin:0 auto;padding-block:12px;display:grid;gap:10px}
+.rctl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rctl label{display:grid;gap:4px;font-size:12px;color:var(--mute)}
+.rctl .full{grid-column:1/-1}
+.paper{background:#fff;color:#111;border-radius:6px;padding:28px 24px;font:14px/1.6 -apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif}
+.paper h2{text-align:center;font-size:24px;letter-spacing:.3em;margin:0 0 18px}
+.paper table{width:100%;border-collapse:collapse;font-size:13px}
+.paper th,.paper td{border:1px solid #555;padding:5px 7px;text-align:left;vertical-align:top}
+.paper th{background:#eef0f2;width:22%;white-space:nowrap}
+.paper .list th{width:auto;text-align:center}
+.paper .list td{font-variant-numeric:tabular-nums}
+.paper .list td.c{font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+.paper h3{font-size:15px;margin:18px 0 6px}
+.paper ol{margin:0;padding-left:20px}
+.paper .sign{display:flex;justify-content:flex-end;gap:0;margin-top:20px}
+.paper .sign div{border:1px solid #555;width:80px;text-align:center;font-size:12px}
+.paper .sign div span{display:block;border-bottom:1px solid #555;background:#eef0f2}
+.paper .sign div i{display:block;height:46px}
+.paper .foot{margin-top:14px;text-align:right;font-weight:700}
+.tblwrap{overflow-x:auto}
+.btnlike{display:inline-block;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700}
+.thumbs{display:flex;gap:6px;overflow-x:auto}
+.thumbs img{height:56px;border-radius:6px;border:1px solid var(--line)}
+.paper .photos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.paper figure{margin:0;break-inside:avoid;border:1px solid #bbb;padding:4px}
+.paper figure img{width:100%;display:block}
+.paper figcaption{font-size:11px;line-height:1.4;margin-top:4px}
+.paper code{font-family:ui-monospace,Menlo,Consolas,monospace}
+#rCopyBox{font:14px var(--sans);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px}
+@media print{
+  body>*:not(#report){display:none!important}
+  #report{position:static;padding:0;background:#fff}
+  .noprint{display:none!important}
+  .paper{padding:0;border-radius:0}
+  @page{size:A4;margin:15mm}
+}
 </style>
 </head>
 <body>
@@ -87,10 +129,27 @@ summary{cursor:pointer;font-weight:700}
     <div class="hint" id="refInfo"></div>
   </div>
 
-  <div class="counts">
-    <div class="c-ok"><span class="label">OK</span><b id="cOk">0</b></div>
-    <div class="c-ng"><span class="label">NG</span><b id="cNg">0</b></div>
-    <div><span class="label">합계</span><b id="cAll">0</b></div>
+  <div class="ref">
+    <span class="label">협력사 (스캔 기록에 함께 저장)</span>
+    <div class="sup">
+      <input id="supplier" list="supList" placeholder="업체명 입력 예: ○○산업" autocomplete="off">
+      <datalist id="supList"></datalist>
+    </div>
+  </div>
+
+  <div class="ref">
+    <div class="row"><span class="label" id="pltLabel">현재 PLT-1</span><button id="newPltBtn">이 PLT 마감 → 다음 PLT</button></div>
+    <div class="counts">
+      <div class="c-ok"><span class="label">OK</span><b id="cOk">0</b></div>
+      <div class="c-ng"><span class="label">NG</span><b id="cNg">0</b></div>
+      <div><span class="label">NG율</span><b id="cRate">0%</b></div>
+    </div>
+    <div class="row">
+      <span class="hint" id="pltHint"></span>
+      <label class="btnlike" for="photoIn">근거 사진 추가</label>
+      <input type="file" id="photoIn" accept="image/*" capture="environment" multiple hidden>
+    </div>
+    <div class="thumbs" id="thumbs"></div>
   </div>
 
   <details id="optBox">
@@ -100,6 +159,7 @@ summary{cursor:pointer;font-weight:700}
       <label>앞자리 일치 (0 = 안 봄) <input type="number" id="optPrefix" min="0" max="40" value="0" inputmode="numeric"></label>
       <label>자리별 숫자/영문 형식 일치 <input type="checkbox" id="optPattern"></label>
       <label>같은 코드 재스캔 시 '중복' 경고 <input type="checkbox" id="optDup" checked></label>
+      <label>NG 때 카메라 화면 자동 촬영 <input type="checkbox" id="optSnap" checked></label>
       <label>소리·진동 <input type="checkbox" id="optSound" checked></label>
     </div>
   </details>
@@ -113,20 +173,46 @@ summary{cursor:pointer;font-weight:700}
     <summary>스캔 기록 (최근 순)</summary>
     <ul class="log" id="log"></ul>
     <div class="btns" style="margin-top:10px">
+      <button id="reportBtn" class="primary">품질개선 요구서</button>
       <button id="csvBtn">기록 CSV 저장</button>
-      <button id="resetBtn">카운트·기록 초기화</button>
+      <button id="resetBtn">기록·사진 초기화</button>
     </div>
     <div class="hint" id="resetHint"></div>
   </details>
 </div>
 
+<section id="report" hidden>
+  <div class="rwrap">
+    <div class="noprint btns" style="justify-content:space-between">
+      <button id="rClose">← 스캔 화면</button>
+      <div class="btns">
+        <button id="rCopy">카톡용 문구 복사</button>
+        <button id="rPrint" class="primary">인쇄 / PDF 저장</button>
+      </div>
+    </div>
+    <div class="rctl noprint">
+      <label>기록 대상 업체<select id="rSup"></select></label>
+      <label>PLT<select id="rPlt"></select></label>
+      <label>기간 시작<input type="date" id="rFrom"></label>
+      <label>기간 끝<input type="date" id="rTo"></label>
+      <label>수신 업체명 (문서 표기)<input id="rName" autocomplete="off"></label>
+      <label>회신 기한<input type="date" id="rDue"></label>
+      <label class="full">품번 / 품명 (선택)<input id="rPart" autocomplete="off" placeholder="예: KA4 도어트림 클립"></label>
+      <label class="full">요구 내용 (수정 가능)<input id="rReq" autocomplete="off"></label>
+      <textarea id="rCopyBox" class="full" rows="6" hidden></textarea>
+      <div class="hint full" id="rMsg"></div>
+    </div>
+    <div class="paper" id="paper"></div>
+  </div>
+</section>
+
 <script>
 (function(){
   const $ = id => document.getElementById(id);
   const KEY = 'msol-scan-v1';
-  let S = { ref:null, prefix:0, pattern:false, dup:true, sound:true, ok:0, ng:0, log:[] };
+  let S = { ref:null, prefix:0, pattern:false, dup:true, sound:true, snap:true, ok:0, ng:0, log:[], supplier:'', plt:1 };
   try{ const s = JSON.parse(localStorage.getItem(KEY)||'null'); if(s) S = Object.assign(S, s); }catch(e){}
-  const seen = new Set(S.log.map(r=>r.code));
+  const seen = new Set(S.log.filter(r=>r.r!=='중복').map(r=>r.code));
   let armRef = !S.ref;          // 기준 미등록이면 첫 스캔을 기준으로
   let lastText = '', lastSeenAt = 0;
   const HOLD_MS = 2000;         // 같은 코드가 화면에 계속 있으면 2초간 무시
@@ -135,8 +221,71 @@ summary{cursor:pointer;font-weight:700}
   let lastJudged = {code:'', at:0, cls:'', big:''}, lockUntil = 0, seq = 0, flashTimer = null;
 
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+  const ymd = d => new Date(d).toLocaleDateString('sv-SE');           // 2026-11-03
+  const two = n => String(n).padStart(2,'0');
+  const hm  = d => { const x=new Date(d); return two(x.getHours())+':'+two(x.getMinutes()); };
+  const hms = d => { const x=new Date(d); return hm(x)+':'+two(x.getSeconds()); };
+  const pct = (a,b) => b ? (a/b*100).toFixed(1) : '0.0';
+  const supOf = r => r.s || '(미지정)';
+  const pltOf = r => r.p || 1;
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 
-  // 판정 규칙
+  // ---- 사진 저장소 (IndexedDB: 휴대폰 안에만 저장) ----
+  const dbp = new Promise((res,rej)=>{
+    try{ const q = indexedDB.open('msol-scan',1);
+      q.onupgradeneeded = ()=> q.result.createObjectStore('photos',{keyPath:'id'});
+      q.onsuccess = ()=> res(q.result); q.onerror = ()=> rej(q.error);
+    }catch(e){ rej(e); }
+  });
+  async function tx(mode, fn){
+    const db = await dbp;
+    return new Promise((res,rej)=>{ const t=db.transaction('photos',mode); const st=t.objectStore('photos');
+      const out = fn(st); t.oncomplete=()=>res(out && out.result); t.onerror=()=>rej(t.error); });
+  }
+  const putPhoto = p => tx('readwrite', st=>st.put(p));
+  const allPhotos = () => tx('readonly', st=>st.getAll());
+  const clearPhotos = () => tx('readwrite', st=>st.clear());
+
+  function toJpeg(src, w, h){
+    const max = 1024, k = Math.min(1, max/Math.max(w,h));
+    const c = document.createElement('canvas'); c.width = Math.round(w*k); c.height = Math.round(h*k);
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    return new Promise(r=>c.toBlob(r,'image/jpeg',0.72));
+  }
+  async function snapNG(code, why){
+    if(!S.snap) return null;
+    const v = document.querySelector('#reader video');
+    if(!v || !v.videoWidth) return null;
+    try{
+      const blob = await toJpeg(v, v.videoWidth, v.videoHeight);
+      const id = uid();
+      await putPhoto({id, d:new Date().toISOString(), p:S.plt, s:S.supplier, code, why, kind:'ng', blob});
+      renderThumbs(); return id;
+    }catch(e){ return null; }
+  }
+  async function addManualPhotos(files){
+    let n=0;
+    for(const f of files){
+      try{
+        const bmp = await createImageBitmap(f);
+        const blob = await toJpeg(bmp, bmp.width, bmp.height);
+        await putPhoto({id:uid(), d:new Date().toISOString(), p:S.plt, s:S.supplier, code:'', why:'현장 사진', kind:'manual', blob});
+        n++;
+      }catch(e){}
+    }
+    $('pltHint').textContent = n ? `사진 ${n}장 저장 (PLT-${S.plt})` : '사진을 저장하지 못했습니다';
+    renderThumbs();
+  }
+  let thumbUrls=[];
+  async function renderThumbs(){
+    let ps=[]; try{ ps = (await allPhotos()).filter(p=>p.p===S.plt); }catch(e){}
+    thumbUrls.forEach(URL.revokeObjectURL); thumbUrls=[];
+    const box=$('thumbs'); box.textContent='';
+    ps.slice(-8).forEach(p=>{ const u=URL.createObjectURL(p.blob); thumbUrls.push(u);
+      const im=document.createElement('img'); im.src=u; im.alt=p.kind==='ng'?'NG 자동 촬영':'현장 사진'; box.appendChild(im); });
+  }
+
+  // ---- 판정 규칙 ----
   const kind = c => /[0-9]/.test(c) ? 'N' : /[A-Za-z]/.test(c) ? 'A' : 'S';
   function judge(code){
     const ref = S.ref;
@@ -154,20 +303,19 @@ summary{cursor:pointer;font-weight:700}
 
   function clean(t){ return String(t).replace(/[\r\n\t]/g,'').trim(); }
 
-  function handle(raw){
+  async function handle(raw){
     const code = clean(raw);
     if(!code) return;
     if(armRef){ setRef(code); return; }
     if(!S.ref){ show('warn','기준 없음',code,'정상품을 먼저 기준으로 등록하세요'); return; }
     const now = Date.now();
     if(code===lastJudged.code && now-lastJudged.at < REPEAT_MS){
-      // 방금 찍은 제품을 다시 비춘 경우: 카운트·기록 없이 같은 결과만 다시 표시
       lastJudged.at = now;
       show(lastJudged.cls, lastJudged.big, code, '방금 판정한 제품입니다 (카운트 안 함)'); beep('tick'); return;
     }
     if(S.dup && seen.has(code)){
       show('warn','중복',code,'이미 찍은 코드입니다 (카운트 안 함)'); beep('warn');
-      addLog('중복',code); return;
+      addLog('중복',code,'중복 스캔'); return;
     }
     const j = judge(code);
     seen.add(code);
@@ -175,7 +323,8 @@ summary{cursor:pointer;font-weight:700}
     seq++;
     lastJudged = {code, at:now, cls:j.r==='OK'?'ok':'ng', big:j.r};
     show(lastJudged.cls, j.r, code, j.why); beep(j.r);
-    addLog(j.r, code);
+    const entry = addLog(j.r, code, j.why);
+    if(j.r==='NG'){ const ph = await snapNG(code, j.why); if(ph){ entry.ph = ph; save(); } }
   }
 
   function setRef(code){
@@ -183,17 +332,18 @@ summary{cursor:pointer;font-weight:700}
     show('ok','기준 등록',code,`${code.length}자리 · 이제 계속 찍으면 됩니다`); beep('OK');
   }
 
-  function addLog(r, code){
+  function addLog(r, code, why){
     const d = new Date();
-    S.log.unshift({t:d.toLocaleTimeString('ko-KR',{hour12:false}), d:d.toISOString(), r, code});
-    if(S.log.length>2000) S.log.length = 2000;
+    const e = {t:hms(d), d:d.toISOString(), r, code, why, s:S.supplier, p:S.plt, ref:S.ref};
+    S.log.unshift(e);
+    if(S.log.length>3000) S.log.length = 3000;
     save(); renderLog(); renderCounts();
+    return e;
   }
 
   function show(cls, big, code, why){
     const v = $('verdict'); v.className = 'verdict ' + cls;
     $('vBig').textContent = big; $('vCode').textContent = code; $('vWhy').textContent = why||'';
-    // 카메라 화면 위에 크게 번쩍 + 테두리 색 유지 + 판정 번호
     $('cam').className = 'cam ' + cls;
     $('seq').textContent = '#' + seq;
     if(!cls) return;
@@ -211,18 +361,33 @@ summary{cursor:pointer;font-weight:700}
     } else $('refInfo').textContent = '';
     $('setRefBtn').textContent = armRef ? '기준 대기 중… 정상품을 찍으세요' : '다음 스캔을 기준으로';
   }
-  function renderCounts(){ $('cOk').textContent=S.ok; $('cNg').textContent=S.ng; $('cAll').textContent=S.ok+S.ng; }
+  function pltStats(p){
+    const rs = S.log.filter(r=>pltOf(r)===p && (r.r==='OK'||r.r==='NG'));
+    const ok = rs.filter(r=>r.r==='OK').length, ng = rs.length-ok;
+    return {ok, ng, all:rs.length};
+  }
+  function renderCounts(){
+    const st = pltStats(S.plt);
+    $('pltLabel').textContent = `현재 PLT-${S.plt}` + (S.supplier?` · ${S.supplier}`:'');
+    $('cOk').textContent = st.ok; $('cNg').textContent = st.ng; $('cRate').textContent = pct(st.ng, st.all)+'%';
+  }
   function renderLog(){
     const ul = $('log'); ul.textContent='';
     S.log.slice(0,100).forEach(r=>{
       const li=document.createElement('li');
-      li.innerHTML=`<span></span><span class="t-${r.r}"></span><span></span>`;
-      li.children[0].textContent=r.t; li.children[1].textContent=r.r; li.children[2].textContent=r.code;
+      li.innerHTML=`<span></span><span class="t-${r.r}"></span><span></span><span class="s"></span>`;
+      li.children[0].textContent=hms(r.d); li.children[1].textContent=r.r; li.children[2].textContent=r.code;
+      li.children[3].textContent=`PLT-${pltOf(r)} · ${supOf(r)}` + (r.r==='NG'&&r.why?` · ${r.why}`:'') + (r.ph?' · 사진':'');
       ul.appendChild(li);
     });
   }
+  function renderSuppliers(){
+    const set = new Set(S.log.map(r=>r.s).filter(Boolean)); if(S.supplier) set.add(S.supplier);
+    const dl=$('supList'); dl.textContent='';
+    set.forEach(s=>{ const o=document.createElement('option'); o.value=s; dl.appendChild(o); });
+  }
 
-  // 소리·진동
+  // ---- 소리·진동 ----
   let ac=null;
   function beep(r){
     if(!S.sound) return;
@@ -237,14 +402,13 @@ summary{cursor:pointer;font-weight:700}
     }catch(e){}
     if(navigator.vibrate) navigator.vibrate(r==='NG'?[300,100,300]:r==='warn'?[120,60,120]:tick?0:[60]);
   }
-  // 휴대폰은 버튼을 누른 순간에만 소리를 허용하므로, 카메라 켜기 버튼에서 미리 소리를 깨워 둔다
   function unlockAudio(){
     try{ ac = ac || new (window.AudioContext||window.webkitAudioContext)(); ac.resume();
       const o=ac.createOscillator(), g=ac.createGain(); g.gain.value=0; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime+.01);
     }catch(e){}
   }
 
-  // 카메라 연속 스캔
+  // ---- 카메라 연속 스캔 ----
   let qr=null, running=false;
   async function toggleCam(){
     if(!window.Html5Qrcode){ show('warn','열기 방식 확인','','앱 안 미리보기에서는 카메라가 막혀 있습니다. 크롬 등 브라우저에서 https 주소로 여세요. (인터넷 연결도 필요)'); return; }
@@ -265,35 +429,166 @@ summary{cursor:pointer;font-weight:700}
     }
   }
 
-  // 이벤트
+  // ---- 품질개선 요구서 ----
+  const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const korDate = s => { if(!s) return ''; const [y,m,d]=s.split('-'); return `${y}년 ${+m}월 ${+d}일`; };
+  let reportUrls=[], lastCopy='';
+  const DEFAULT_REQ = '납입품 라벨 바코드의 인쇄 상태 및 코드 규격(자릿수·품번) 준수 여부를 전수 점검하고, 발생 원인과 재발방지 대책을 회신 바랍니다.';
+
+  function openReport(){
+    const today = ymd(new Date());
+    const dates = S.log.map(r=>ymd(r.d)).sort();
+    $('rFrom').value = $('rFrom').value || (dates.includes(today) ? today : (dates[dates.length-1]||today));
+    $('rTo').value = $('rTo').value || $('rFrom').value;
+    const due = new Date(); due.setDate(due.getDate()+7);
+    $('rDue').value = $('rDue').value || ymd(due);
+    $('rReq').value = $('rReq').value || DEFAULT_REQ;
+    const sups = [...new Set(S.log.map(supOf))];
+    $('rSup').innerHTML = ['전체',...sups].map(s=>`<option>${esc(s)}</option>`).join('');
+    $('rSup').value = S.supplier && sups.includes(S.supplier) ? S.supplier : (sups.length===1?sups[0]:'전체');
+    fillPlt(true);
+    $('report').hidden = false; window.scrollTo(0,0);
+    buildReport();
+  }
+  function scoped(){
+    const sup=$('rSup').value, from=$('rFrom').value, to=$('rTo').value;
+    return S.log.filter(r=>{ const d=ymd(r.d); return (!from||d>=from)&&(!to||d<=to)&&(sup==='전체'||supOf(r)===sup); });
+  }
+  function fillPlt(pickCurrent){
+    const prev=$('rPlt').value;
+    const ps=[...new Set(scoped().map(pltOf))].sort((a,b)=>a-b);
+    $('rPlt').innerHTML = ['<option value="all">전체 PLT</option>'].concat(ps.map(p=>`<option value="${p}">PLT-${p}</option>`)).join('');
+    if(pickCurrent && ps.includes(S.plt) && pltStats(S.plt).all) $('rPlt').value=String(S.plt);
+    else if(ps.map(String).includes(prev)) $('rPlt').value=prev;
+    if(!pickCurrent && $('rSup').value!=='전체' && !$('rName').dataset.touched) $('rName').value=$('rSup').value==='(미지정)'?'':$('rSup').value;
+    if(pickCurrent && !$('rName').dataset.touched) $('rName').value = ($('rSup').value==='전체'||$('rSup').value==='(미지정)')?'':$('rSup').value;
+  }
+
+  async function buildReport(){
+    const sel=$('rPlt').value;
+    const rows = scoped().filter(r=> sel==='all' || String(pltOf(r))===sel);
+    const judged = rows.filter(r=>r.r==='OK'||r.r==='NG');
+    const ngRows = judged.filter(r=>r.r==='NG').slice().reverse();
+    const ok = judged.length - ngRows.length, ng = ngRows.length;
+    const plts = [...new Set(judged.map(pltOf))].sort((a,b)=>a-b);
+    const name = $('rName').value.trim() || '○○○';
+    const part = $('rPart').value.trim();
+    const days = [...new Set(judged.map(r=>ymd(r.d)))].sort();
+    const period = days.length ? (days[0]===days[days.length-1] ? korDate(days[0]) : `${korDate(days[0])} ~ ${korDate(days[days.length-1])}`) : '-';
+    const refs = [...new Set(judged.map(r=>r.ref||S.ref).filter(Boolean))];
+    $('rMsg').textContent = judged.length ? '' : '선택한 조건에 스캔 기록이 없습니다. 업체·기간·PLT를 확인하세요.';
+
+    const pltTxt = plts.length===1 ? `1PLT(PLT-${plts[0]})` : `${plts.length}PLT`;
+    const summary = `${period} 귀사 납입품${part?`(${part})`:''} ${pltTxt} 바코드 리딩 결과, 총 ${judged.length}EA 중 OK ${ok}EA, NG ${ng}EA(NG율 ${pct(ng,judged.length)}%)가 발생하였습니다. 바코드 규격 불일치로 이종 혼입 여부를 판별할 수 없어 라인 가동이 불가하였습니다.`;
+
+    const pltRows = plts.map(p=>{
+      const rs = judged.filter(r=>pltOf(r)===p), n = rs.filter(r=>r.r==='NG').length;
+      const ts = rs.map(r=>r.d).sort();
+      return `<tr><td>PLT-${p}</td><td>${esc(ymd(ts[0]))} ${esc(hm(ts[0]))}~${esc(hm(ts[ts.length-1]))}</td><td>${rs.length}</td><td>${rs.length-n}</td><td>${n}</td><td>${pct(n,rs.length)}%</td></tr>`;
+    }).join('');
+    const ngTable = ngRows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(ymd(r.d).slice(5))} ${esc(hms(r.d))}</td><td>PLT-${pltOf(r)}</td><td class="c">${esc(r.code)}</td><td>${esc(r.why||'기준 불일치')}</td></tr>`).join('');
+
+    // 사진
+    reportUrls.forEach(URL.revokeObjectURL); reportUrls=[];
+    let photos=[];
+    try{
+      const pset = new Set(plts), sup=$('rSup').value, from=$('rFrom').value, to=$('rTo').value;
+      photos = (await allPhotos()).filter(p=>{ const d=ymd(p.d);
+        return pset.has(p.p) && (!from||d>=from)&&(!to||d<=to) && (sup==='전체'||(p.s||'(미지정)')===sup); })
+        .sort((a,b)=>a.d<b.d?-1:1);
+    }catch(e){}
+    const photoHtml = photos.map((p,i)=>{ const u=URL.createObjectURL(p.blob); reportUrls.push(u);
+      return `<figure><img src="${u}" alt="근거 사진 ${i+1}"><figcaption>[사진 ${i+1}] ${esc(ymd(p.d).slice(5))} ${esc(hm(p.d))} · PLT-${p.p}${p.code?` · ${esc(p.code)}`:''}<br>${esc(p.why||'')}</figcaption></figure>`; }).join('');
+
+    $('paper').innerHTML = `
+      <h2>품질 개선 요구서</h2>
+      <table>
+        <tr><th>수신</th><td>${esc(name)} 품질 담당자 귀하</td></tr>
+        <tr><th>발신</th><td>㈜엠솔루션</td></tr>
+        <tr><th>작성일</th><td>${korDate(ymd(new Date()))}</td></tr>
+        <tr><th>발생일</th><td>${esc(period)}</td></tr>
+        ${part?`<tr><th>품번 / 품명</th><td>${esc(part)}</td></tr>`:''}
+        <tr><th>판정 기준</th><td>정상품 바코드 ${refs.map(r=>`<code>${esc(r)}</code> (${r.length}자리)`).join(', ')||'-'}${S.prefix?`, 앞 ${S.prefix}자리 일치`:''}</td></tr>
+        <tr><th>회신 기한</th><td>${korDate($('rDue').value)}</td></tr>
+      </table>
+      <h3>1. 발생 현황</h3>
+      <p style="margin:0">${esc(summary)}</p>
+      <h3>2. PLT별 리딩 결과</h3>
+      <div class="tblwrap"><table class="list"><tr><th>PLT</th><th>리딩 일시</th><th>총(EA)</th><th>OK</th><th>NG</th><th>NG율</th></tr>${pltRows}
+        <tr><td><b>합계</b></td><td></td><td><b>${judged.length}</b></td><td><b>${ok}</b></td><td><b>${ng}</b></td><td><b>${pct(ng,judged.length)}%</b></td></tr></table></div>
+      <h3>3. NG 상세 (${ng}건)</h3>
+      ${ng?`<div class="tblwrap"><table class="list"><tr><th>No</th><th>일시</th><th>PLT</th><th>스캔 코드</th><th>사유</th></tr>${ngTable}</table></div>`:'<p style="margin:0">해당 없음</p>'}
+      <h3>4. 근거 사진 (${photos.length}장)</h3>
+      ${photos.length?`<div class="photos">${photoHtml}</div>`:'<p style="margin:0">첨부 사진 없음</p>'}
+      <h3>5. 요구 사항</h3>
+      <ol>
+        <li>${esc($('rReq').value.trim()||DEFAULT_REQ)}</li>
+        <li>회신 기한: ${korDate($('rDue').value)}까지 원인 분석 및 대책서 제출</li>
+        <li>대책 적용 전 납입분은 라벨 전수 확인 후 납입 바랍니다.</li>
+      </ol>
+      <div class="sign"><div><span>작성</span><i></i></div><div><span>검토</span><i></i></div><div><span>승인</span><i></i></div></div>
+      <div class="foot">㈜엠솔루션</div>`;
+
+    lastCopy = `[품질 개선 요구] ${name} 귀하\n`+
+      `발생일: ${period}${part?`\n품번: ${part}`:''}\n`+
+      `${summary}\n`+
+      plts.map(p=>{ const rs=judged.filter(r=>pltOf(r)===p), n=rs.filter(r=>r.r==='NG').length; return `- PLT-${p}: 총 ${rs.length} / OK ${rs.length-n} / NG ${n} (${pct(n,rs.length)}%)`; }).join('\n')+
+      `\n요구: ${$('rReq').value.trim()||DEFAULT_REQ}\n회신 기한: ${korDate($('rDue').value)}\n- ㈜엠솔루션`;
+  }
+
+  // ---- 이벤트 ----
   $('camBtn').onclick = ()=>{ unlockAudio(); toggleCam(); };
   $('setRefBtn').onclick = ()=>{ armRef=true; renderRef(); show('warn','기준 대기','','정상품 QR을 찍으면 기준으로 등록됩니다'); };
   const doManual = ()=>{ const v=$('manualIn').value; $('manualIn').value=''; handle(v); };
   $('manualBtn').onclick = doManual;
   $('manualIn').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doManual(); } });
-  $('optPrefix').value=S.prefix; $('optPattern').checked=S.pattern; $('optDup').checked=S.dup; $('optSound').checked=S.sound;
+  $('optPrefix').value=S.prefix; $('optPattern').checked=S.pattern; $('optDup').checked=S.dup; $('optSound').checked=S.sound; $('optSnap').checked=S.snap;
   $('optPrefix').onchange=e=>{ S.prefix=Math.max(0,parseInt(e.target.value||'0',10)); save(); };
   $('optPattern').onchange=e=>{ S.pattern=e.target.checked; save(); };
   $('optDup').onchange=e=>{ S.dup=e.target.checked; save(); };
   $('optSound').onchange=e=>{ S.sound=e.target.checked; save(); };
+  $('optSnap').onchange=e=>{ S.snap=e.target.checked; save(); };
+  $('supplier').value = S.supplier;
+  $('supplier').onchange = e=>{ S.supplier=e.target.value.trim(); save(); renderCounts(); renderSuppliers(); };
+  $('photoIn').onchange = e=>{ if(e.target.files.length) addManualPhotos([...e.target.files]); e.target.value=''; };
+
+  $('newPltBtn').onclick = ()=>{
+    const st = pltStats(S.plt);
+    if(!st.all){ $('pltHint').textContent='이 PLT에 아직 판정 기록이 없습니다'; return; }
+    $('pltHint').textContent = `PLT-${S.plt} 마감: OK ${st.ok} / NG ${st.ng} (NG율 ${pct(st.ng,st.all)}%)`;
+    S.plt++; save(); renderCounts(); renderThumbs();
+    show('', '대기', `PLT-${S.plt} 시작`, '다음 PLT를 찍으세요');
+  };
 
   let resetArmed=false;
-  $('resetBtn').onclick = ()=>{
-    if(!resetArmed){ resetArmed=true; $('resetHint').textContent='한 번 더 누르면 초기화됩니다 (기준은 유지)'; setTimeout(()=>{resetArmed=false;$('resetHint').textContent='';},3000); return; }
-    S.ok=0; S.ng=0; S.log=[]; seen.clear(); resetArmed=false; $('resetHint').textContent='초기화했습니다';
-    save(); renderLog(); renderCounts(); show('', '대기', '', '');
+  $('resetBtn').onclick = async ()=>{
+    if(!resetArmed){ resetArmed=true; $('resetHint').textContent='한 번 더 누르면 기록과 사진이 모두 지워집니다 (기준·업체명은 유지)'; setTimeout(()=>{resetArmed=false;$('resetHint').textContent='';},3000); return; }
+    S.ok=0; S.ng=0; S.log=[]; S.plt=1; seen.clear(); resetArmed=false;
+    try{ await clearPhotos(); }catch(e){}
+    $('resetHint').textContent='초기화했습니다';
+    save(); renderLog(); renderCounts(); renderThumbs(); show('', '대기', '', '');
   };
   $('csvBtn').onclick = ()=>{
-    const rows=[['일시','판정','코드','기준']].concat(S.log.slice().reverse().map(r=>[r.d,r.r,r.code,S.ref||'']));
+    const rows=[['일시','업체','PLT','판정','코드','사유','기준']].concat(S.log.slice().reverse().map(r=>[r.d,supOf(r),'PLT-'+pltOf(r),r.r,r.code,r.why||'',r.ref||S.ref||'']));
     const csv='﻿'+rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-    a.download='scan_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+    a.download='scan_'+ymd(new Date())+'.csv'; a.click();
   };
 
-  renderRef(); renderCounts(); renderLog();
+  $('reportBtn').onclick = openReport;
+  $('rClose').onclick = ()=>{ $('report').hidden = true; };
+  $('rPrint').onclick = ()=>{ window.print(); };
+  ['rFrom','rTo','rSup'].forEach(id=>$(id).addEventListener('change', ()=>{ fillPlt(false); buildReport(); }));
+  ['rPlt','rDue'].forEach(id=>$(id).addEventListener('change', buildReport));
+  ['rName','rPart','rReq'].forEach(id=>$(id).addEventListener('input', e=>{ if(id==='rName') e.target.dataset.touched='1'; buildReport(); }));
+  $('rCopy').onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(lastCopy); $('rMsg').textContent='복사했습니다. 카톡에 붙여 넣으세요. 사진은 PDF로 저장해 함께 보내세요.'; }
+    catch(e){ const t=$('rCopyBox'); t.hidden=false; t.value=lastCopy; t.select(); $('rMsg').textContent='위 글을 길게 눌러 복사하세요.'; }
+  };
+
+  renderRef(); renderCounts(); renderLog(); renderSuppliers(); renderThumbs();
   if(S.ref) show('', '대기', '기준: '+S.ref, '카메라를 켜고 계속 찍으세요');
 
-  // 판정 로직 자체 점검용 (브라우저 콘솔에서 사용)
   window.__judgeTest = (ref, code, opt={}) => { const b={...S}; Object.assign(S,{ref,prefix:0,pattern:false},opt); const r=judge(code); Object.assign(S,b); return r; };
 })();
 </script>
