@@ -70,37 +70,43 @@ summary{cursor:pointer;font-weight:700}
 .rctl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .rctl label{display:grid;gap:4px;font-size:12px;color:var(--mute)}
 .rctl .full{grid-column:1/-1}
-.paper{background:#fff;color:#111;border-radius:6px;padding:28px 24px;font:14px/1.6 -apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif}
-.paper h2{text-align:center;font-size:24px;letter-spacing:.3em;margin:0 0 18px}
-.paper table{width:100%;border-collapse:collapse;font-size:13px}
-.paper th,.paper td{border:1px solid #555;padding:5px 7px;text-align:left;vertical-align:top}
-.paper th{background:#eef0f2;width:22%;white-space:nowrap}
+.paper{background:#fff;color:#111;border-radius:6px;padding:20px 18px;font:12px/1.5 -apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif}
+.paper h2{text-align:center;font-size:20px;letter-spacing:.3em;margin:0 0 10px}
+.paper table{width:100%;border-collapse:collapse;font-size:11.5px}
+.paper th,.paper td{border:1px solid #555;padding:3px 6px;text-align:left;vertical-align:top}
+.paper th{background:#eef0f2;white-space:nowrap;width:1%}
 .paper .list th{width:auto;text-align:center}
 .paper .list td{font-variant-numeric:tabular-nums}
-.paper .list td.c{font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
-.paper h3{font-size:15px;margin:18px 0 6px}
-.paper ol{margin:0;padding-left:20px}
-.paper .sign{display:flex;justify-content:flex-end;gap:0;margin-top:20px}
-.paper .sign div{border:1px solid #555;width:80px;text-align:center;font-size:12px}
+.paper .list td.n{text-align:right}
+.paper .c{font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all;font-size:11px}
+.paper h3{font-size:13px;margin:10px 0 4px}
+.paper p{margin:0 0 6px}
+.paper ol{margin:0;padding-left:18px}
+.paper .last{display:flex;gap:12px;align-items:flex-end;justify-content:space-between}
+.paper .last>div:first-child{flex:1;min-width:0}
+.paper .sign{display:flex;flex:none}
+.paper .sign div{border:1px solid #555;width:62px;text-align:center;font-size:11px;margin-left:-1px}
 .paper .sign div span{display:block;border-bottom:1px solid #555;background:#eef0f2}
-.paper .sign div i{display:block;height:46px}
-.paper .foot{margin-top:14px;text-align:right;font-weight:700}
+.paper .sign div i{display:block;height:40px}
+.paper .foot{margin-top:8px;text-align:right;font-weight:700}
 .tblwrap{overflow-x:auto}
 .btnlike{display:inline-block;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700}
 .thumbs{display:flex;gap:6px;overflow-x:auto}
 .thumbs img{height:56px;border-radius:6px;border:1px solid var(--line)}
-.paper .photos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.paper figure{margin:0;break-inside:avoid;border:1px solid #bbb;padding:4px}
-.paper figure img{width:100%;display:block}
-.paper figcaption{font-size:11px;line-height:1.4;margin-top:4px}
+.paper .photos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.paper figure{margin:0;break-inside:avoid;border:1px solid #bbb;padding:3px}
+.paper figure img{width:100%;height:110px;object-fit:cover;display:block}
+.paper figcaption{font-size:9.5px;line-height:1.3;margin-top:2px}
 .paper code{font-family:ui-monospace,Menlo,Consolas,monospace}
 #rCopyBox{font:14px var(--sans);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px}
 @media print{
   body>*:not(#report){display:none!important}
   #report{position:static;padding:0;background:#fff}
   .noprint{display:none!important}
-  .paper{padding:0;border-radius:0}
-  @page{size:A4;margin:15mm}
+  html,body{padding:0!important;margin:0;background:#fff}
+  .paper{padding:0;border-radius:0;width:auto;zoom:var(--fit,1)}
+  .rwrap{max-width:none;padding:0}
+  @page{size:A4;margin:12mm}
 }
 </style>
 </head>
@@ -464,6 +470,18 @@ summary{cursor:pointer;font-weight:700}
     if(pickCurrent && !$('rName').dataset.touched) $('rName').value = ($('rSup').value==='전체'||$('rSup').value==='(미지정)')?'':$('rSup').value;
   }
 
+  // A4(여백 12mm) 인쇄 영역 186×273mm에 맞도록 축소 비율 계산
+  function fitA4(has){
+    const MM = 96/25.4, W = 186*MM, H = 273*MM - 4;
+    const c = $('paper').cloneNode(true);
+    c.removeAttribute('id');
+    Object.assign(c.style,{position:'absolute',left:'-10000px',top:'0',width:W+'px',padding:'0',visibility:'hidden'});
+    document.body.appendChild(c);
+    const h = c.scrollHeight; c.remove();
+    const fit = Math.min(1, H/h);
+    $('paper').style.setProperty('--fit', fit.toFixed(3));
+    if(has) $('rMsg').textContent = fit<1 ? `A4 1장에 맞춰 ${Math.floor(fit*100)}%로 축소해 인쇄합니다.` : 'A4 1장에 들어갑니다.';
+  }
   async function buildReport(){
     const sel=$('rPlt').value;
     const rows = scoped().filter(r=> sel==='all' || String(pltOf(r))===sel);
@@ -484,50 +502,62 @@ summary{cursor:pointer;font-weight:700}
     const pltRows = plts.map(p=>{
       const rs = judged.filter(r=>pltOf(r)===p), n = rs.filter(r=>r.r==='NG').length;
       const ts = rs.map(r=>r.d).sort();
-      return `<tr><td>PLT-${p}</td><td>${esc(ymd(ts[0]))} ${esc(hm(ts[0]))}~${esc(hm(ts[ts.length-1]))}</td><td>${rs.length}</td><td>${rs.length-n}</td><td>${n}</td><td>${pct(n,rs.length)}%</td></tr>`;
+      return `<tr><td>PLT-${p}</td><td>${esc(ymd(ts[0]))} ${esc(hm(ts[0]))}~${esc(hm(ts[ts.length-1]))}</td><td class="n">${rs.length}</td><td class="n">${rs.length-n}</td><td class="n">${n}</td><td class="n">${pct(n,rs.length)}%</td></tr>`;
     }).join('');
-    const ngTable = ngRows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(ymd(r.d).slice(5))} ${esc(hms(r.d))}</td><td>PLT-${pltOf(r)}</td><td class="c">${esc(r.code)}</td><td>${esc(r.why||'기준 불일치')}</td></tr>`).join('');
+    // NG를 사유별로 묶어 한 줄씩 (건수 + 해당 코드 일부)
+    const reasonKey = w => String(w||'기준 불일치').replace(/\s*\((?!기준).*\)$/,'');
+    const groups = {};
+    ngRows.forEach(r=>{ const k=reasonKey(r.why); (groups[k]=groups[k]||[]).push(r); });
+    const SHOW = 4;
+    const ngTable = Object.entries(groups).sort((x,y)=>y[1].length-x[1].length).map(([k,rs])=>{
+      const codes = rs.slice(0,SHOW).map(r=>esc(r.code)).join(', ') + (rs.length>SHOW?` 외 ${rs.length-SHOW}건`:'');
+      const pl = [...new Set(rs.map(pltOf))].sort((a,b)=>a-b).map(p=>'PLT-'+p).join(', ');
+      return `<tr><td>${esc(k)}</td><td class="n">${rs.length}</td><td>${pl}</td><td class="c">${codes}</td></tr>`;
+    }).join('');
 
-    // 사진
+    // 사진: 직접 찍은 현장 사진 우선, 최대 4장
     reportUrls.forEach(URL.revokeObjectURL); reportUrls=[];
     let photos=[];
     try{
       const pset = new Set(plts), sup=$('rSup').value, from=$('rFrom').value, to=$('rTo').value;
       photos = (await allPhotos()).filter(p=>{ const d=ymd(p.d);
         return pset.has(p.p) && (!from||d>=from)&&(!to||d<=to) && (sup==='전체'||(p.s||'(미지정)')===sup); })
-        .sort((a,b)=>a.d<b.d?-1:1);
+        .sort((a,b)=> (a.kind===b.kind ? (a.d<b.d?-1:1) : (a.kind==='manual'?-1:1)));
     }catch(e){}
-    const photoHtml = photos.map((p,i)=>{ const u=URL.createObjectURL(p.blob); reportUrls.push(u);
-      return `<figure><img src="${u}" alt="근거 사진 ${i+1}"><figcaption>[사진 ${i+1}] ${esc(ymd(p.d).slice(5))} ${esc(hm(p.d))} · PLT-${p.p}${p.code?` · ${esc(p.code)}`:''}<br>${esc(p.why||'')}</figcaption></figure>`; }).join('');
+    const MAXP = 4, shown = photos.slice(0,MAXP);
+    const photoHtml = shown.map((p,i)=>{ const u=URL.createObjectURL(p.blob); reportUrls.push(u);
+      return `<figure><img src="${u}" alt="근거 사진 ${i+1}"><figcaption>[${i+1}] ${esc(ymd(p.d).slice(5))} ${esc(hm(p.d))} PLT-${p.p}<br>${esc(p.code||p.why||'')}</figcaption></figure>`; }).join('');
+    const refTxt = refs.map(r=>`<code>${esc(r)}</code> (${r.length}자리)`).join(', ')||'-';
 
     $('paper').innerHTML = `
       <h2>품질 개선 요구서</h2>
       <table>
-        <tr><th>수신</th><td>${esc(name)} 품질 담당자 귀하</td></tr>
-        <tr><th>발신</th><td>㈜엠솔루션</td></tr>
-        <tr><th>작성일</th><td>${korDate(ymd(new Date()))}</td></tr>
-        <tr><th>발생일</th><td>${esc(period)}</td></tr>
-        ${part?`<tr><th>품번 / 품명</th><td>${esc(part)}</td></tr>`:''}
-        <tr><th>판정 기준</th><td>정상품 바코드 ${refs.map(r=>`<code>${esc(r)}</code> (${r.length}자리)`).join(', ')||'-'}${S.prefix?`, 앞 ${S.prefix}자리 일치`:''}</td></tr>
-        <tr><th>회신 기한</th><td>${korDate($('rDue').value)}</td></tr>
+        <tr><th>수신</th><td>${esc(name)} 품질 담당자 귀하</td><th>발신</th><td>㈜엠솔루션</td></tr>
+        <tr><th>발생일</th><td>${esc(period)}</td><th>작성일</th><td>${korDate(ymd(new Date()))}</td></tr>
+        <tr><th>품번/품명</th><td>${esc(part||'-')}</td><th>회신 기한</th><td>${korDate($('rDue').value)}</td></tr>
+        <tr><th>판정 기준</th><td colspan="3">정상품 바코드 ${refTxt}${S.prefix?`, 앞 ${S.prefix}자리 일치`:''} — 기준과 다르면 NG</td></tr>
       </table>
       <h3>1. 발생 현황</h3>
-      <p style="margin:0">${esc(summary)}</p>
-      <h3>2. PLT별 리딩 결과</h3>
-      <div class="tblwrap"><table class="list"><tr><th>PLT</th><th>리딩 일시</th><th>총(EA)</th><th>OK</th><th>NG</th><th>NG율</th></tr>${pltRows}
-        <tr><td><b>합계</b></td><td></td><td><b>${judged.length}</b></td><td><b>${ok}</b></td><td><b>${ng}</b></td><td><b>${pct(ng,judged.length)}%</b></td></tr></table></div>
-      <h3>3. NG 상세 (${ng}건)</h3>
-      ${ng?`<div class="tblwrap"><table class="list"><tr><th>No</th><th>일시</th><th>PLT</th><th>스캔 코드</th><th>사유</th></tr>${ngTable}</table></div>`:'<p style="margin:0">해당 없음</p>'}
-      <h3>4. 근거 사진 (${photos.length}장)</h3>
-      ${photos.length?`<div class="photos">${photoHtml}</div>`:'<p style="margin:0">첨부 사진 없음</p>'}
-      <h3>5. 요구 사항</h3>
-      <ol>
-        <li>${esc($('rReq').value.trim()||DEFAULT_REQ)}</li>
-        <li>회신 기한: ${korDate($('rDue').value)}까지 원인 분석 및 대책서 제출</li>
-        <li>대책 적용 전 납입분은 라벨 전수 확인 후 납입 바랍니다.</li>
-      </ol>
-      <div class="sign"><div><span>작성</span><i></i></div><div><span>검토</span><i></i></div><div><span>승인</span><i></i></div></div>
+      <p>${esc(summary)}</p>
+      <table class="list"><tr><th>PLT</th><th>리딩 일시</th><th>총(EA)</th><th>OK</th><th>NG</th><th>NG율</th></tr>${pltRows}
+        ${plts.length>1?`<tr><td><b>합계</b></td><td></td><td class="n"><b>${judged.length}</b></td><td class="n"><b>${ok}</b></td><td class="n"><b>${ng}</b></td><td class="n"><b>${pct(ng,judged.length)}%</b></td></tr>`:''}</table>
+      <h3>2. NG 내역 (${ng}건, 사유별)</h3>
+      ${ng?`<table class="list"><tr><th>사유</th><th>건수</th><th>PLT</th><th>해당 코드</th></tr>${ngTable}</table>`:'<p>해당 없음</p>'}
+      <h3>3. 근거 사진 (${photos.length}장${photos.length>MAXP?`, ${MAXP}장 게재 · 나머지 보관`:''})</h3>
+      ${shown.length?`<div class="photos">${photoHtml}</div>`:'<p>첨부 사진 없음</p>'}
+      <div class="last">
+        <div>
+          <h3>4. 요구 사항</h3>
+          <ol>
+            <li>${esc($('rReq').value.trim()||DEFAULT_REQ)}</li>
+            <li>${korDate($('rDue').value)}까지 원인 분석 및 재발방지 대책서 제출</li>
+            <li>대책 적용 전 납입분은 라벨 전수 확인 후 납입</li>
+          </ol>
+        </div>
+        <div class="sign"><div><span>작성</span><i></i></div><div><span>검토</span><i></i></div><div><span>승인</span><i></i></div></div>
+      </div>
       <div class="foot">㈜엠솔루션</div>`;
+    fitA4(judged.length);
 
     lastCopy = `[품질 개선 요구] ${name} 귀하\n`+
       `발생일: ${period}${part?`\n품번: ${part}`:''}\n`+
