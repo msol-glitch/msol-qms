@@ -162,15 +162,95 @@ details.raw div{white-space:pre-wrap;font-size:13px;color:#334155;background:#F1
 .c-ok{background:#DCFCE7;color:#166534;border-color:#86EFAC!important}.c-stop{background:#B91C1C;color:#fff}
 .c-un{background:#E2E8F0;color:#475569;border-color:#94A3B8!important;border-style:dashed!important}.c-clean{background:#FFEDD5;color:#9A3412;border-color:#FDBA74!important}
 .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12.5px;margin:8px 0}.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+/* ---------- PC 화면 (11-05 대표: 통합안전 시스템처럼 상단 메뉴 + 좌측 메뉴 + 대시보드) ---------- */
+.side,.topnav,.pclogo{display:none}
+.brand .bt{display:flex;flex-direction:column;min-width:0}
+.brand .pclogo{font-size:20px;color:#fff;font-weight:800}
+.tscroll{overflow-x:auto;margin:0 -2px}
+@media (max-width:1099px){.dtab .pcc{display:none}}
+@media (max-width:1099px){.pc-only{display:none!important}}
+.dash-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.dash-head h1{font-size:21px;margin:0;letter-spacing:-.02em}
+.dash-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dash-tools .check{margin:0}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:4px 12px;border:1px solid #CBD5E1;border-radius:18px;background:#fff;font:inherit;font-size:13px;font-weight:600;color:#334155;cursor:pointer}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:linear-gradient(90deg,#0F172A,#1E3A8A);color:#fff;border-radius:6px;padding:18px 22px}
+.hero .k{font-size:11.5px;letter-spacing:.16em;color:#93C5FD;font-weight:700}
+.hero q{font-size:17px;font-weight:700;quotes:"“" "”"}
+.hero .r{display:flex;gap:18px;align-items:baseline;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:8px 14px;font-size:12.5px;color:#CBD5E1}
+.hero .r b{font-size:24px;color:#fff;font-variant-numeric:tabular-nums}
+.quick{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+.quick button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border:1px solid #D5DCE6;border-radius:6px;background:#fff;font:inherit;font-size:14px;font-weight:600;color:#0F172A;cursor:pointer}
+.quick button svg,.side svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.quick button:hover{border-color:#1D4ED8;color:#1D4ED8}
+.dgrid{display:grid;grid-template-columns:1fr;gap:14px}
+.card{background:#fff;border:1px solid var(--rule);border-radius:6px;padding:14px 16px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.card h3{margin:0;font-size:15px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h3 small{font-size:12px;font-weight:400;color:var(--muted)}
+.kcard{border-top:3px solid #1D4ED8}.kcard.o{border-top-color:#EA580C}.kcard.t{border-top-color:#0D9488}
+.kcard .k{font-size:12.5px;color:var(--muted)}.kcard .v{font-size:30px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.kcard .v small{font-size:14px;font-weight:500;color:var(--muted);margin-left:2px}.kcard .s{font-size:12.5px;color:var(--muted)}
+.kcard{cursor:pointer}.kcard:hover{box-shadow:0 2px 8px rgba(15,23,42,.08)}
+.dark{background:#0F172A;color:#E2E8F0;border-color:#0F172A}
+.dark h3{color:#fff}.dark h3 small{color:#94A3B8}
+.dark .pltv{border-top:1px solid #1E293B;padding-top:10px}
+.dark .pltv b{color:#fff}
+.rings{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center;font-size:12px;color:#94A3B8}
+.rings svg{width:78px;height:78px;display:block;margin:0 auto 2px}
+.dtab{width:100%;border-collapse:collapse;font-size:13px}
+.dtab th{background:#1E293B;color:#fff;font-weight:600;padding:7px 8px;text-align:center;white-space:nowrap}
+.dtab td{padding:7px 8px;border-bottom:1px solid #E2E8F0;text-align:center;font-variant-numeric:tabular-nums}
+.dtab td.l{text-align:left}
+.dtab tr.sum td{background:#E2E8F0;font-weight:700;border-top:2px solid #94A3B8}
+.dtab tbody tr:hover td{background:#F8FAFC}
+.hbars{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:13px}
+.hbars .bar{height:10px;background:#F1F5F9;border-radius:5px;overflow:hidden}.hbars .bar i{display:block;height:100%;background:#2563EB;border-radius:0 5px 5px 0}
+.legend2{display:flex;gap:14px;font-size:12.5px;color:#334155;flex-wrap:wrap}.legend2 i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:0}
+.trend{width:100%;height:auto;display:block}
+.trend .hit{fill:transparent;cursor:default}.trend .hit:hover{fill:rgba(15,23,42,.05)}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:24px 0}
+.tip{position:fixed;z-index:60;pointer-events:none;background:#0F172A;color:#fff;font-size:12.5px;padding:7px 10px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2);white-space:nowrap}
+@media (min-width:1100px){
+  body{padding-bottom:0}
+  body::after{display:none}
+  header{padding:0 24px}
+  .hbar{max-width:none;height:64px;align-items:center}
+  .brand{flex:0 0 auto;flex-direction:row;align-items:center;gap:14px}
+  .pclogo{display:flex;width:36px;height:36px;border-radius:6px;background:#1D4ED8;color:#fff;font-weight:800;font-size:20px;align-items:center;justify-content:center;font-family:var(--mono)}
+  .brand .bt{display:flex;flex-direction:column;border-left:1px solid #334155;padding-left:14px}
+  .topnav{display:flex;flex:1;justify-content:flex-end;gap:4px;margin-right:10px}
+  .topnav button{background:transparent;border:0;color:#CBD5E1;font:inherit;font-size:14.5px;font-weight:600;padding:8px 14px;border-radius:6px;cursor:pointer;min-height:40px}
+  .topnav button:hover{background:#1E293B;color:#fff}
+  .topnav button.on{background:#1D4ED8;color:#fff}
+  .topnav button:disabled{opacity:.4;cursor:default;background:transparent}
+  nav.tabs,#subnav,.tblock{display:none!important}
+  .side{display:flex;flex-direction:column;position:fixed;top:67px;left:0;bottom:0;width:236px;background:#fff;border-right:1px solid var(--rule);overflow-y:auto;padding:12px 10px 16px;z-index:10}
+  .side .sec{font-size:11.5px;color:#64748B;font-weight:700;margin:14px 8px 4px;letter-spacing:.02em}
+  .side button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;font:inherit;font-size:14px;color:#1E293B;padding:9px 10px;border-radius:6px;cursor:pointer;min-height:40px}
+  .side button:hover{background:#F1F5F9}
+  .side button.on{background:#E3EBFB;color:#1D4ED8;font-weight:700;box-shadow:inset 3px 0 0 #1D4ED8}
+  .side button:disabled{color:#94A3B8;cursor:default;background:transparent}
+  .side .bd{margin-left:auto;font-size:11.5px;font-weight:700;border-radius:10px;padding:1px 8px;background:#FEF3C7;color:#92400E}
+  .side .bd.r{background:#FEE2E2;color:#B91C1C}
+  .side .foot{margin-top:auto;padding:14px 8px 0;font-size:11.5px;color:#94A3B8;line-height:1.6}
+  main{margin:0 0 0 236px;max-width:1076px;padding:22px 28px}
+  main.wide{max-width:none}
+  .mob-only{display:none!important}
+  .dgrid{grid-template-columns:repeat(3,minmax(0,1fr)) 340px}
+  .dgrid .r2{grid-row:span 2}
+  .dgrid .c2{grid-column:span 2}
+}
 </style>
 </head>
 <body>
 <header><div class="hbar">
-  <div class="brand"><b>(주)엠솔루션</b><span id="whoami">품질관리 시스템</span></div>
+  <div class="brand"><span class="pclogo">M</span><div class="bt"><b>(주)엠솔루션</b><span id="whoami">품질관리 시스템</span></div></div>
+  <nav class="topnav" id="topnav" hidden></nav>
   <div class="tblock" id="tblock" hidden></div>
   <button id="btnLogout" hidden>로그아웃</button>
 </div></header>
 <div id="subnav" class="subnav" hidden></div>
+<aside class="side" id="side" hidden></aside>
 <main id="app"></main>
 <nav class="tabs" id="tabs" hidden></nav>
 
@@ -282,7 +362,7 @@ function msg(el, type, text){ el.innerHTML = text ? `<div class="msg ${type}">${
 
 /* ---------- 로그인 ---------- */
 function showLogin(note){
-  me=null; $("#tabs").hidden=true; if($("#subnav")) $("#subnav").hidden=true; $("#btnLogout").hidden=true; $("#tblock").hidden=true; document.body.classList.add("is-login"); $("#whoami").textContent="품질관리 시스템";
+  me=null; $("#tabs").hidden=true; $("#side").hidden=true; $("#topnav").hidden=true; $("#app").classList.remove("wide"); if($("#subnav")) $("#subnav").hidden=true; $("#btnLogout").hidden=true; $("#tblock").hidden=true; document.body.classList.add("is-login"); $("#whoami").textContent="품질관리 시스템";
   $("#app").innerHTML = `${WORD_SKETCH}<form class="panel login" id="fLogin" style="margin-top:12px">
     <div><h2 style="border:0;padding:0;font-size:22px">품질관리 시스템</h2>
     <div class="tb"><div>품질 QMS · 생산관리 · 생산 · 자재</div><div>IATF 16949</div></div></div>
@@ -314,6 +394,7 @@ async function boot(){
   window.__mine = mine;
   window.__parts = PARTS.map(p=>({...p, groups:p.groups.map(g=>({...g, ids:g.ids.filter(id=>mine.some(t=>t.id===id))})).filter(g=>g.ids.length)}));
   window.__part = null;
+  buildChrome();
   // 라인 벽 QR: go.html?plt=차종 → test.html#plt=차종 → 그 차종 팔레트 점검 입력으로 바로
   const hm = location.hash.match(/^#plt=(.+)$/);
   if(hm){ history.replaceState(null,"",location.pathname+location.search);
@@ -331,19 +412,128 @@ function setPart(p){
 }
 function home(){
   current="home"; window.__part=null; window.__groups=[];
-  $("#tabs").hidden=true; $("#subnav").hidden=true;
-  $("#whoami").textContent = `통합 시스템 · ${ROLE_KO[me.role]||me.role}`;
-  const parts = window.__parts;
-  $("#app").innerHTML = `<section class="panel"><h2>대문 <span class="muted" style="font-size:13px;font-weight:400">업무를 고르세요</span></h2></section>
-    <div class="parts">${parts.map(p=>{ const n=p.groups.reduce((a,g)=>a+g.ids.length,0);
+  $("#tabs").hidden=true; $("#subnav").hidden=true; $("#app").classList.add("wide"); markNav("home");
+  $("#whoami").textContent = `통합 품질·생산 관리시스템 · ${ROLE_KO[me.role]||me.role}`;
+  const parts=window.__parts, mine=window.__mine, has=id=>mine.some(t=>t.id===id);
+  const uname=(me.email||"").replace("@"+LOGIN_DOMAIN,"");
+  const dstr=new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"short"});
+  let inc=false; try{ inc=localStorage.getItem("qms_home_test")==="1"; }catch(e){}
+  const QUICK=[["report","수시기록"],["notice","업체통보"],["pab","PAB 증빙"],["incoming","수입검사"],["plt","팔레트 점검"],["plts","팔레트 현황"],["inbox","접수함"],["nlist","통보이력"]].filter(([id])=>has(id));
+  $("#app").innerHTML = `<div class="dash-head"><div><h1>오늘의 품질·생산 현황</h1><div class="muted">${dstr} · ${esc(uname)} (${esc(ROLE_KO[me.role]||me.role)})</div></div>
+      <div class="dash-tools"><label class="check"><input type="checkbox" id="htest" ${inc?"checked":""}> 시험용 기록 포함</label><button type="button" class="chip" id="hre">↻ 새로 불러오기</button></div></div>
+    <div class="hero pc-only"><div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><span class="k">QUALITY MESSAGE</span><q>기록이 쌓여야 재발이 멈춘다</q></div><div class="r" id="hero_r">불러오는 중…</div></div>
+    <div class="quick pc-only" style="grid-template-columns:repeat(${Math.max(QUICK.length,1)},1fr)">${QUICK.map(([id,l])=>`<button type="button" data-t="${id}"><svg viewBox="0 0 24 24" aria-hidden="true">${(TABS.find(t=>t.id===id)||{}).ic||""}</svg>${l}</button>`).join("")}</div>
+    <div class="parts mob-only">${parts.filter(p=>p.groups.length||!PARTS.find(x=>x.id===p.id).groups.length).map(p=>{ const n=p.groups.length;
       return `<button type="button" class="part" data-p="${p.id}" ${n?"":"disabled"}><span class="pic"><svg viewBox="0 0 24 24" aria-hidden="true">${p.ic}</svg></span>
-        <b>${esc(p.label)}</b><span class="muted">${n?esc(p.desc):(PARTS.find(x=>x.id===p.id).groups.length?"권한 없음":"준비 중")}</span></button>`; }).join("")}</div>`;
-  $("#app").querySelector(".parts").onclick = e => { const b=e.target.closest("[data-p]"); if(!b||b.disabled) return; const p=parts.find(x=>x.id===b.dataset.p);
-    const ids=p.groups.flatMap(g=>g.ids); let last=null; try{ last=localStorage.getItem("qms_part_"+p.id); }catch(e2){} go(ids.includes(last)?last:ids[0]); };
+        <b>${esc(p.label)}</b><span class="muted">${n?esc(p.desc):"준비 중"}</span></button>`; }).join("")}</div>
+    <div id="dash" class="dgrid"><div class="card empty">불러오는 중…</div></div>`;
+  $("#app").querySelector(".parts").onclick = e => { const b=e.target.closest("[data-p]"); if(b && !b.disabled) openPart(b.dataset.p); };
+  $("#app").querySelector(".quick").onclick = e => { const b=e.target.closest("[data-t]"); if(b) go(b.dataset.t); };
+  $("#htest").onchange=()=>{ try{ localStorage.setItem("qms_home_test",$("#htest").checked?"1":"0"); }catch(e){} loadDash(); };
+  $("#hre").onclick=loadDash;
+  loadDash();
   window.scrollTo(0,0);
+}
+async function loadDash(){
+  const host=$("#dash"); if(!host) return;
+  let s; try{ s=await rpc("qms_home_summary",{p_include_test:$("#htest").checked}); }
+  catch(e){ host.innerHTML=`<div class="card"><div class="msg err">${esc(e.message)}</div></div>`; return; }
+  if(current!=="home") return;
+  const mine=window.__mine, has=id=>mine.some(t=>t.id===id);
+  const E=s.events, N=s.notices, P=s.pallets||[];
+  $("#hero_r").innerHTML=`<span>이번 달 업체 불량</span><b>${n0(N.month_qty)}</b><span>EA</span><span>비가동</span><b>${n0(N.month_downtime)}</b><span>분</span>`;
+  // 좌측 메뉴 알림 숫자
+  const bd=(id,v,red)=>{ const el=document.querySelector(`#side [data-bd="${id}"]`); if(el){ el.hidden=!v; el.textContent=n0(v); el.classList.toggle("r",!!red); } };
+  bd("notice",N.open); bd("inbox",E.draft); bd("plts",P.reduce((a,p)=>a+(+p.unreturned||0),0),true);
+
+  const kc=(cls,id,k,v,unit,sub)=>`<div class="card kcard ${cls}" ${has(id)?`data-t="${id}"`:""} role="button" tabindex="0"><div class="k">${k}</div><div class="v">${n0(v)}<small>${unit}</small></div><div class="s">${sub}</div></div>`;
+  const ring=(pct,label)=>{ const r=30,c=2*Math.PI*r,v=Math.max(0,Math.min(100,pct)); return `<div><svg viewBox="0 0 78 78" role="img" aria-label="${label} ${v}%"><circle cx="39" cy="39" r="${r}" fill="none" stroke="#1E293B" stroke-width="7"/>
+    <circle cx="39" cy="39" r="${r}" fill="none" stroke="#2DD4BF" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(c*v/100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 39 39)"/>
+    <text x="39" y="44" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">${v}<tspan font-size="10">%</tspan></text></svg>${label}</div>`; };
+  const pct=(a,b)=>b?Math.round(a*100/b):0;
+  const pltPanel = P.length ? `<div class="card dark r2" ${has("plts")?'data-t="plts"':""} role="button" tabindex="0" style="cursor:pointer"><h3>PALLET POSITION <small>팔레트 관리대장</small></h3>
+      ${P.map(p=>`<div class="pltv"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><b>${esc(p.line||p.vehicle)}</b><span style="font-size:12.5px">등록 ${n0(p.total)}개 · 사용중지 <b style="color:${p.stopped?"#FCA5A5":"#fff"}">${n0(p.stopped)}</b></span></div>
+        <div class="rings">${ring(pct(p.today,p.total),"오늘 점검")}${ring(pct(p.total-p.clean_due,p.total),"청소 기한 내")}${ring(pct(p.total-p.unreturned,p.total),"회수 확인")}</div>
+        <div style="font-size:12.5px;margin-top:8px;color:#94A3B8">오늘 ${n0(p.today)}개 · 이번 달 ${n0(p.month)}개 점검 · 미회수 ${n0(p.unreturned)}개</div></div>`).join("")}
+      <div style="font-size:11.5px;color:#64748B">청소 기한 내 = 기준일 안에 청소 기록 있음 · 회수 확인 = 미회수 기준일 안에 입고 기록 있음</div></div>` : "";
+
+  const top=s.top_suppliers||[], tq=top.reduce((a,x)=>a+(+x.qty),0), tc=top.reduce((a,x)=>a+(+x.cnt),0), td=top.reduce((a,x)=>a+(+x.downtime),0);
+  const topCard=`<div class="card pc-only"><h3>① 이번 달 업체 불량 Top 5 <small>업체통보 기준</small></h3>${top.length?`<table class="dtab"><thead><tr><th>업체</th><th>건</th><th>불량</th><th>비가동</th></tr></thead><tbody>
+      ${top.map(x=>`<tr><td class="l">${esc(x.supplier)}</td><td>${n0(x.cnt)}건</td><td>${n0(x.qty)} EA</td><td>${n0(x.downtime)}분</td></tr>`).join("")}
+      <tr class="sum"><td class="l">합계</td><td>${n0(tc)}건</td><td>${n0(tq)} EA</td><td>${n0(td)}분</td></tr></tbody></table>`:`<div class="empty">이번 달 업체통보 기록이 없습니다</div>`}</div>`;
+  const trendCard=`<div class="card pc-only c2"><h3>② 최근 14일 기록 추이 <small>일별 건수 · 막대에 올리면 숫자</small></h3>
+      <div class="legend2"><span><i style="background:#2563EB"></i>수시기록</span><span><i style="background:#EA580C"></i>업체통보</span><span><i style="background:#0D9488"></i>팔레트 점검</span></div>${trendSvg(s.daily||[])}</div>`;
+  const bl=s.by_line||[], blmax=Math.max(1,...bl.map(x=>+x.cnt));
+  const lineCard=`<div class="card pc-only"><h3>③ 라인별 이번 달 기록 <small>수시기록 + 업체통보</small></h3>${bl.length?`<div class="hbars">${bl.map(x=>`<span>${esc(x.line)}</span><span class="bar"><i style="width:${(x.cnt*100/blmax).toFixed(0)}%"></i></span><b>${n0(x.cnt)}건</b>`).join("")}</div>`:`<div class="empty">이번 달 기록이 없습니다</div>`}</div>`;
+  const KIND={수시기록:"wait",업체통보:"ng",팔레트:"ok"};
+  const rc=s.recent||[];
+  const recentCard=`<div class="card c2"><h3>④ 최근 기록 <small>최근 10건</small></h3>${rc.length?`<div class="tscroll"><table class="dtab"><thead><tr><th>시각</th><th>구분</th><th>내용</th><th class="pcc">라인</th></tr></thead><tbody>
+      ${rc.map(r=>`<tr><td>${fmtDT(r.at)}</td><td><span class="pill ${KIND[r.kind]||""}">${esc(r.kind)}</span>${r.test?' <span class="pill test">시험</span>':""}</td><td class="l">${esc(r.title)}</td><td class="pcc">${esc(r.line||"")}</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty">기록이 없습니다</div>`}</div>`;
+  const I=s.incoming, B=s.pab;
+  const qcCard=`<div class="card pc-only"><h3>⑤ 수입검사 · PAB 증빙</h3><table class="dtab"><thead><tr><th>구분</th><th>건수</th><th>NG</th></tr></thead><tbody>
+      <tr><td class="l">수입검사 (이번 달)</td><td>${n0(I.month)}건</td><td>${n0(I.month_ng)}건</td></tr>
+      <tr><td class="l">PAB 증빙 (오늘)</td><td>${n0(B.today)}건</td><td>${n0(B.today_ng)}건</td></tr>
+      <tr class="sum"><td class="l">PAB 증빙 (이번 달)</td><td>${n0(B.month)}건</td><td>-</td></tr></tbody></table>
+      <div class="muted" style="font-size:12px">불량률(PPM)은 분모(입고·생산 수량) 기준 확정 후 표시</div></div>`;
+  host.innerHTML = kc("","report","오늘 현장 기록",E.today,"건",`이번 달 ${n0(E.month)}건 · 변동점·T/O ${n0(E.change_month)}건`)
+    + kc("o","nlist","업체 조치 대기",N.open,"건",`이번 달 통보 ${n0(N.month)}건 · 불량 ${n0(N.month_qty)} EA · 비가동 ${n0(N.month_downtime)}분`)
+    + kc("t","inbox","검토 대기 (접수함)",E.draft,"건","현장 기록 → 품질 확정 전")
+    + pltPanel + topCard + trendCard + lineCard + recentCard + qcCard;
+  host.onclick=e=>{ const c=e.target.closest("[data-t]"); if(c) go(c.dataset.t); };
+}
+function trendSvg(rows){
+  if(!rows.length) return `<div class="empty">데이터 없음</div>`;
+  const S=[["ev","수시기록","#2563EB"],["sn","업체통보","#EA580C"],["plt","팔레트 점검","#0D9488"]];
+  const W=680,H=210,L=32,R=6,T=10,B=24,n=rows.length,gw=(W-L-R)/n;
+  const max=Math.max(1,...rows.flatMap(r=>S.map(([k])=>+r[k]||0))); const top=max<=4?4:Math.ceil(max/4)*4;
+  const y=v=>T+(H-T-B)*(1-v/top), y0=y(0), bw=Math.min(11,(gw-10)/3);
+  let g="";
+  for(let i=0;i<=4;i++){ const v=top*i/4; g+=`<line x1="${L}" x2="${W-R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="${i?"#EEF2F6":"#94A3B8"}"/><text x="${L-6}" y="${(y(v)+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="#64748B">${v}</text>`; }
+  rows.forEach((r,i)=>{ const x0=L+i*gw+(gw-3*bw-4)/2, ds=String(r.d).slice(5,10).replace("-","/"), isT=i===n-1;
+    S.forEach(([k,,c],j)=>{ const v=+r[k]||0; if(!v) return; const x=x0+j*(bw+2), yt=y(v), rr=Math.min(4,bw/2,y0-yt);
+      g+=`<path d="M${x.toFixed(1)} ${y0} V${(yt+rr).toFixed(1)} Q${x.toFixed(1)} ${yt.toFixed(1)} ${(x+rr).toFixed(1)} ${yt.toFixed(1)} H${(x+bw-rr).toFixed(1)} Q${(x+bw).toFixed(1)} ${yt.toFixed(1)} ${(x+bw).toFixed(1)} ${(yt+rr).toFixed(1)} V${y0} Z" fill="${c}"/>`; });
+    if(i%2===(n-1)%2) g+=`<text x="${(L+i*gw+gw/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="10.5" fill="${isT?"#0F172A":"#64748B"}" font-weight="${isT?700:400}">${isT?"오늘":ds}</text>`;
+    g+=`<rect class="hit" x="${(L+i*gw).toFixed(1)}" y="${T}" width="${gw.toFixed(1)}" height="${(y0-T).toFixed(1)}" data-tip="${ds} · 수시기록 ${+r.ev||0} · 업체통보 ${+r.sn||0} · 팔레트 ${+r.plt||0}"/>`; });
+  return `<svg class="trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 14일 일별 기록 건수">${g}</svg>`;
+}
+// 차트 말풍선 (data-tip)
+(()=>{ let tip=null; document.addEventListener("mousemove",e=>{ const t=e.target.closest && e.target.closest("[data-tip]");
+  if(!t){ if(tip){ tip.remove(); tip=null; } return; }
+  if(!tip){ tip=document.createElement("div"); tip.className="tip"; document.body.appendChild(tip); }
+  tip.textContent=t.dataset.tip; tip.style.left=Math.min(e.clientX+14, innerWidth-tip.offsetWidth-8)+"px"; tip.style.top=(e.clientY+14)+"px"; }); })();
+function openPart(pid){
+  const p=window.__parts.find(x=>x.id===pid); if(!p||!p.groups.length) return;
+  const ids=p.groups.flatMap(g=>g.ids); let last=null; try{ last=localStorage.getItem("qms_part_"+p.id); }catch(e){} go(ids.includes(last)?last:ids[0]);
+}
+function buildChrome(){
+  const parts=window.__parts;
+  const label=id=>(TABS.find(t=>t.id===id)||{}).label||id, ic=id=>(TABS.find(t=>t.id===id)||{}).ic||"";
+  const sideBtn=id=>`<button type="button" data-t="${id}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic(id)}</svg><span>${esc(label(id))}</span><span class="bd" data-bd="${id}" hidden></span></button>`;
+  $("#topnav").innerHTML = `<button type="button" data-home="1">처음 화면</button>` + parts.filter(p=>p.groups.length||!PARTS.find(x=>x.id===p.id).groups.length)
+    .map(p=>`<button type="button" data-p="${p.id}" ${p.groups.length?"":"disabled"}>${esc(p.label)}</button>`).join("");
+  let h=`<button type="button" data-home="1"><svg viewBox="0 0 24 24" aria-hidden="true">${HOME_IC}</svg><span>처음 화면</span></button>`;
+  for(const p of parts){
+    const ids=p.groups.filter(g=>g.id!=="g_adm").flatMap(g=>g.ids);
+    if(!PARTS.find(x=>x.id===p.id).groups.length){ h+=`<div class="sec">${esc(p.label)}</div><button type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true">${p.ic}</svg><span>${esc(p.label)}</span><span class="bd" style="background:#F1F5F9;color:#94A3B8">준비 중</span></button>`; continue; }
+    if(!ids.length) continue;
+    h+=`<div class="sec">${esc(p.label)}</div>`+ids.map(sideBtn).join("");
+  }
+  const adm=((parts.find(p=>p.id==="qms")||{groups:[]}).groups.find(g=>g.id==="g_adm")||{ids:[]}).ids;
+  if(adm.length) h+=`<div class="sec">시스템 관리 · 관리자 전용</div>`+adm.map(sideBtn).join("");
+  h+=`<div class="foot">시험본 · 데이터는 회사 서버에만 저장<br>휴대폰은 같은 주소로 접속하면 휴대폰 화면으로 열립니다</div>`;
+  $("#side").innerHTML=h;
+  $("#side").hidden=false; $("#topnav").hidden=false;
+  const click=e=>{ const b=e.target.closest("button"); if(!b||b.disabled) return; if(b.dataset.home) return home(); if(b.dataset.p) return openPart(b.dataset.p); if(b.dataset.t) go(b.dataset.t); };
+  $("#side").onclick=click; $("#topnav").onclick=click;
+}
+function markNav(id){
+  const part=id==="home"?null:(window.__parts||[]).find(p=>p.groups.some(g=>g.ids.includes(id)));
+  document.querySelectorAll("#side button").forEach(b=>b.classList.toggle("on", id==="home" ? !!b.dataset.home : b.dataset.t===id));
+  document.querySelectorAll("#topnav button").forEach(b=>b.classList.toggle("on", id==="home" ? !!b.dataset.home : !!part && b.dataset.p===part.id));
 }
 function go(id, arg){
   current=id; try{ localStorage.setItem("qms_tab",id); }catch(e){}
+  $("#app").classList.remove("wide"); markNav(id);
   const part=(window.__parts||[]).find(p=>p.groups.some(g=>g.ids.includes(id)));
   if(part){ if(part!==window.__part) setPart(part); try{ localStorage.setItem("qms_part_"+part.id,id); }catch(e){} }
   const g=(window.__groups||[]).find(x=>x.ids.includes(id));
