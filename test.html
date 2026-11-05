@@ -147,6 +147,21 @@ nav.tabs{overflow-x:auto;scrollbar-width:none}
 .tobox{display:grid;gap:10px;padding:10px;border:2px solid #F59E0B;border-radius:8px;background:#FFFBEB}.tobox[hidden]{display:none}
 details.raw summary{cursor:pointer;color:#475569;font-size:13px}
 details.raw div{white-space:pre-wrap;font-size:13px;color:#334155;background:#F1F5F9;padding:8px;border-radius:6px;margin-top:4px}
+.parts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0 0 12px}
+.part{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-height:132px;padding:16px;border:1px solid #CBD5E1;border-radius:10px;background:#fff;font:inherit;text-align:left;cursor:pointer;color:#0F172A}
+.part b{font-size:18px}.part .muted{font-size:12.5px}
+.part .pic{width:44px;height:44px;border-radius:10px;background:#1E293B;display:flex;align-items:center;justify-content:center}
+.part .pic svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.part:disabled{opacity:.55;cursor:default}.part:disabled .pic{background:#94A3B8}
+.seg{display:inline-flex;border:1px solid #CBD5E1;border-radius:8px;overflow:hidden;flex:0 0 auto}
+.seg button{min-width:56px;min-height:44px;border:0;background:#fff;font:inherit;font-weight:700;color:#64748B}
+.seg button.ok.on{background:#15803D;color:#fff}.seg button.ng.on{background:#B91C1C;color:#fff}
+.irow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #E2E8F0}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:6px}
+.pgrid button{min-height:46px;border-radius:6px;border:1px solid transparent;font:inherit;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer}
+.c-ok{background:#DCFCE7;color:#166534;border-color:#86EFAC!important}.c-stop{background:#B91C1C;color:#fff}
+.c-un{background:#E2E8F0;color:#475569;border-color:#94A3B8!important;border-style:dashed!important}.c-clean{background:#FFEDD5;color:#9A3412;border-color:#FDBA74!important}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12.5px;margin:8px 0}.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px}
 </style>
 </head>
 <body>
@@ -189,7 +204,19 @@ const TABS = [
   {id:"line", label:"공정불량", roles:["admin","quality","production"], ic:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/>'},
   {id:"backup", label:"백업", roles:["admin"], ic:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/>'},
   {id:"users", label:"사용자", roles:["admin"], ic:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>'},
+  {id:"plt", label:"점검 입력", roles:["admin","quality","production"], ic:'<rect x="3" y="6" width="18" height="10" rx="1"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>'},
+  {id:"plth", label:"팔레트 조회", roles:["admin","quality","production"], ic:'<circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/>'},
+  {id:"plts", label:"현황·미회수", roles:["admin","quality","production"], ic:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'},
+  {id:"dtest", label:"일상시험", roles:["admin","production"], ic:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>'},
 ];
+// 대문 파트 (11-05 대표: 대문 하나 → 품질 QMS · 생산관리 · 생산 · 자재, 파트마다 항목을 하나씩 추가)
+const PARTS = [
+  {id:"qms", label:"품질 QMS", desc:"수시기록 · 업체통보 · PAB · 수입검사", groups:GROUPS, ic:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="m9 12 2 2 4-4"/>'},
+  {id:"pm", label:"생산관리", desc:"일상시험 의뢰 · 정산", groups:[{id:"g_pm", label:"일상시험", ids:["dtest"], ic:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>'}], ic:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'},
+  {id:"prod", label:"생산", desc:"팔레트 점검일지 · 관리대장", groups:[{id:"g_plt", label:"팔레트", ids:["plt","plth","plts"], ic:'<rect x="3" y="6" width="18" height="10" rx="1"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>'}], ic:'<rect x="3" y="6" width="18" height="10" rx="1"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>'},
+  {id:"mat", label:"자재", desc:"준비 중", groups:[], ic:'<rect x="3" y="7" width="18" height="13" rx="1"/><path d="M3 11h18M9 7V4h6v3"/>'},
+];
+const HOME_IC = '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>';
 const $ = (s, r=document) => r.querySelector(s);
 const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const n0 = v => (v===null||v===undefined||v==="") ? "-" : Number(v).toLocaleString("ko-KR");
@@ -258,7 +285,7 @@ function showLogin(note){
   me=null; $("#tabs").hidden=true; if($("#subnav")) $("#subnav").hidden=true; $("#btnLogout").hidden=true; $("#tblock").hidden=true; document.body.classList.add("is-login"); $("#whoami").textContent="품질관리 시스템";
   $("#app").innerHTML = `${WORD_SKETCH}<form class="panel login" id="fLogin" style="margin-top:12px">
     <div><h2 style="border:0;padding:0;font-size:22px">품질관리 시스템</h2>
-    <div class="tb"><div>수입검사 · 공식 PPM · 공정불량</div><div>IATF 16949</div></div></div>
+    <div class="tb"><div>품질 QMS · 생산관리 · 생산 · 자재</div><div>IATF 16949</div></div></div>
     <div id="lm">${note?`<div class="msg info">${esc(note)}</div>`:""}</div>
     <label>아이디 (또는 이메일)<input id="lid" autocomplete="username" autocapitalize="none" required></label>
     <label>비밀번호<input id="lpw" type="password" autocomplete="current-password" required></label>
@@ -284,24 +311,48 @@ async function boot(){
   $("#tblock").innerHTML = `<div>사용자</div><div>${esc(uname)}</div><div>권한</div><div>${esc(ROLE_KO[me.role]||me.role)}</div><div>일자</div><div>${today()}</div>`;
   $("#tblock").hidden=false; $("#btnLogout").hidden=false; document.body.classList.remove("is-login");
   const mine = TABS.filter(t=>t.roles.includes(me.role) || (t.id==="incoming" && (me.perms||[]).includes("incoming")));
-  const myGroups = GROUPS.map(g=>({...g, ids:g.ids.filter(id=>mine.some(t=>t.id===id))})).filter(g=>g.ids.length);
-  window.__groups = myGroups;
-  $("#tabs").innerHTML = myGroups.map(g=>`<button data-t="${g.ids[0]}" data-g="${g.id}"><svg viewBox="0 0 24 24" aria-hidden="true">${g.ic}</svg>${g.label}</button>`).join("");
+  window.__mine = mine;
+  window.__parts = PARTS.map(p=>({...p, groups:p.groups.map(g=>({...g, ids:g.ids.filter(id=>mine.some(t=>t.id===id))})).filter(g=>g.ids.length)}));
+  window.__part = null;
+  // 라인 벽 QR: go.html?plt=차종 → test.html#plt=차종 → 그 차종 팔레트 점검 입력으로 바로
+  const hm = location.hash.match(/^#plt=(.+)$/);
+  if(hm){ history.replaceState(null,"",location.pathname+location.search);
+    if(mine.some(t=>t.id==="plt")) return go("plt",{vehicle:decodeURIComponent(hm[1])}); }
+  home();
+}
+function setPart(p){
+  window.__part=p; window.__groups=p.groups;
+  $("#whoami").textContent = `${p.label} · ${ROLE_KO[me.role]||me.role}`;
+  $("#tabs").innerHTML = `<button data-home="1"><svg viewBox="0 0 24 24" aria-hidden="true">${HOME_IC}</svg>대문</button>`
+    + p.groups.map(g=>`<button data-t="${g.ids[0]}" data-g="${g.id}"><svg viewBox="0 0 24 24" aria-hidden="true">${g.ic}</svg>${g.label}</button>`).join("");
   $("#tabs").hidden=false;
-  $("#tabs").onclick = e => { const b=e.target.closest("button"); if(!b) return; const g=myGroups.find(x=>x.id===b.dataset.g);
-    let last=null; try{ last=localStorage.getItem("qms_tab_"+g.id); }catch(e2){} go(g.ids.includes(last)?last:g.ids[0]); };
-  let saved=null; try{ saved=localStorage.getItem("qms_tab"); }catch(e){}
-  go(mine.some(t=>t.id===saved) ? saved : mine[0].id);
+  $("#tabs").onclick = e => { const b=e.target.closest("button"); if(!b) return; if(b.dataset.home) return home();
+    const g=p.groups.find(x=>x.id===b.dataset.g); let last=null; try{ last=localStorage.getItem("qms_tab_"+g.id); }catch(e2){} go(g.ids.includes(last)?last:g.ids[0]); };
+}
+function home(){
+  current="home"; window.__part=null; window.__groups=[];
+  $("#tabs").hidden=true; $("#subnav").hidden=true;
+  $("#whoami").textContent = `통합 시스템 · ${ROLE_KO[me.role]||me.role}`;
+  const parts = window.__parts;
+  $("#app").innerHTML = `<section class="panel"><h2>대문 <span class="muted" style="font-size:13px;font-weight:400">업무를 고르세요</span></h2></section>
+    <div class="parts">${parts.map(p=>{ const n=p.groups.reduce((a,g)=>a+g.ids.length,0);
+      return `<button type="button" class="part" data-p="${p.id}" ${n?"":"disabled"}><span class="pic"><svg viewBox="0 0 24 24" aria-hidden="true">${p.ic}</svg></span>
+        <b>${esc(p.label)}</b><span class="muted">${n?esc(p.desc):(PARTS.find(x=>x.id===p.id).groups.length?"권한 없음":"준비 중")}</span></button>`; }).join("")}</div>`;
+  $("#app").querySelector(".parts").onclick = e => { const b=e.target.closest("[data-p]"); if(!b||b.disabled) return; const p=parts.find(x=>x.id===b.dataset.p);
+    const ids=p.groups.flatMap(g=>g.ids); let last=null; try{ last=localStorage.getItem("qms_part_"+p.id); }catch(e2){} go(ids.includes(last)?last:ids[0]); };
+  window.scrollTo(0,0);
 }
 function go(id, arg){
   current=id; try{ localStorage.setItem("qms_tab",id); }catch(e){}
+  const part=(window.__parts||[]).find(p=>p.groups.some(g=>g.ids.includes(id)));
+  if(part){ if(part!==window.__part) setPart(part); try{ localStorage.setItem("qms_part_"+part.id,id); }catch(e){} }
   const g=(window.__groups||[]).find(x=>x.ids.includes(id));
   if(g){ try{ localStorage.setItem("qms_tab_"+g.id,id); }catch(e){}
     document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.g===g.id));
     const sub=$("#subnav"); sub.hidden = g.ids.length<2;
     sub.innerHTML = g.ids.map(t=>`<button data-t="${t}" class="${t===id?"on":""}">${esc(TABS.find(x=>x.id===t).label)}</button>`).join("");
     sub.onclick = e => { const b=e.target.closest("button"); if(b) go(b.dataset.t); }; }
-  ({backup:viewBackup, report:viewReport, pab:viewPab, inbox:viewInbox, notice:viewNotice, nlist:viewNoticeList, material:viewMaterial, incoming:viewIncoming, inlist:viewInList, ppm:viewPpm, line:viewLine, users:viewUsers})[id](arg);
+  ({backup:viewBackup, report:viewReport, pab:viewPab, inbox:viewInbox, notice:viewNotice, nlist:viewNoticeList, material:viewMaterial, incoming:viewIncoming, inlist:viewInList, ppm:viewPpm, line:viewLine, users:viewUsers, plt:viewPlt, plth:viewPltHist, plts:viewPltStat, dtest:viewDtest})[id](arg);
   window.scrollTo(0,0);
 }
 
@@ -1324,6 +1375,235 @@ async function viewBackup(){
     b.disabled=false; b.textContent="💾 PC에 백업 받기 (엑셀 1개)";
   };
   load();
+}
+
+/* ---------- 생산: 팔레트 점검일지 · 관리대장 (prod 칸 — 품질 데이터와 분리) ----------
+   11-05 대표: 번호만 넣으면 청소·외관·기능 점검 완료 / 청소 3개월 · 미회수 1개월 (PC에서 변경) / SP3k 63개부터, 이후 차종 수평전개 */
+let PLT_TYPES=null, PLT_ITEMS=null;
+async function pltBase(force){
+  if(force || !PLT_TYPES) PLT_TYPES = await rpc("prod_pallet_types");
+  if(!PLT_ITEMS) PLT_ITEMS = await rpc("prod_pallet_items");
+  return {types:PLT_TYPES||[], items:PLT_ITEMS||[]};
+}
+function pltVeh(arg){
+  let v=arg && arg.vehicle; if(!v){ try{ v=localStorage.getItem("qms_plt_veh"); }catch(e){} }
+  const t = PLT_TYPES.find(x=>x.vehicle===v) || PLT_TYPES.find(x=>String(x.vehicle).toLowerCase()===String(v||"").toLowerCase()) || PLT_TYPES[0];
+  try{ localStorage.setItem("qms_plt_veh",t.vehicle); }catch(e){} return t;
+}
+const vehChips = (types, cur) => types.length>1 ? `<div class="chips" id="pv" style="margin-bottom:8px">${types.map(t=>`<button type="button" data-v="${esc(t.vehicle)}" class="${t.vehicle===cur?"on":""}">${esc(t.line_name||t.vehicle)}</button>`).join("")}</div>`
+  : `<div style="margin-bottom:8px"><span class="pill ok" style="font-size:14px">${esc(types[0].line_name||types[0].vehicle)}</span></div>`;
+const fmtD = v => v ? new Date(v).toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"}) : "기록 없음";
+const daysAgo = v => v ? Math.floor((Date.now()-new Date(v).getTime())/864e5) : null;
+const kstDay = v => new Date(new Date(v).getTime()+9*36e5).toISOString().slice(0,10);
+const normNo = x => { x=String(x).trim().toUpperCase(); return /^\d+$/.test(x) ? String(Number(x)) : x; };
+function parseNums(s){
+  const out=[];
+  for(const tok of String(s).split(/[\s,，.]+/)){
+    const m=tok.match(/^(\d+)\s*[-~]\s*(\d+)$/);
+    if(m){ let a=+m[1], b=+m[2]; if(b<a) [a,b]=[b,a]; if(b-a>200) continue; for(let i=a;i<=b;i++) out.push(String(i)); }
+    else if(tok.trim()) out.push(normNo(tok));
+  }
+  return out;
+}
+function pltNoBase(msgText){ $("#app").innerHTML=`<section class="panel"><h2>팔레트</h2><div class="msg err">${esc(msgText)}</div></section>`; }
+function pltState(p){ return p.stopped ? "stop" : p.unreturned ? "un" : p.clean_due ? "clean" : "ok"; }
+const PLT_STATE_KO = {ok:"정상", stop:"사용중지", un:"미회수", clean:"청소 필요"};
+
+/* 점검 입력: 번호만(기본) / NG 상세 */
+async function viewPlt(arg){
+  $("#app").innerHTML=`<div class="panel muted">불러오는 중…</div>`;
+  let base; try{ base=await pltBase(); }catch(e){ return pltNoBase(e.message); }
+  if(!base.types.length) return pltNoBase("등록된 차종이 없습니다. 관리자가 '현황·미회수' 화면에서 차종과 번호를 등록하세요.");
+  let t=pltVeh(arg), mode=(arg && arg.mode)||"quick", st=null; const nums=[]; const photos=[];
+  $("#app").innerHTML = `<section class="panel"><h2>팔레트 점검 입력</h2><div id="pvh">${vehChips(base.types,t.vehicle)}</div>
+    <div class="chips" id="pmode"><button type="button" data-m="quick">번호만 입력 · 청소 완료</button><button type="button" data-m="detail">NG 있음 · 상세 점검</button></div>
+    <label class="check"><input type="checkbox" id="ptest"> 시험용 기록 (정식 집계에서 빠짐)</label><div id="pm"></div></section>
+    <section class="panel" id="pbody"></section>`;
+  const isTest=()=>$("#ptest").checked;
+  const loadSt=async()=>{ try{ st=await rpc("prod_pallet_status",{p_vehicle:t.vehicle,p_include_test:isTest()}); }catch(e){ st=null; msg($("#pm"),"err",e.message); } };
+  const known=no=>!st || st.pallets.some(p=>p.no===no);
+  const doneToday=no=>{ const p=st && st.pallets.find(x=>x.no===no); return !!(p && p.last_seen && kstDay(p.last_seen)===today()); };
+
+  const renderQuick=()=>{
+    const todays = st ? st.pallets.filter(p=>p.last_seen && kstDay(p.last_seen)===today()) : [];
+    $("#pbody").innerHTML = `<div class="muted" style="margin-bottom:8px">청소한 순서대로 번호만 넣으세요. 저장하면 <b>청소·외관·기능 점검 완료</b>로 기록됩니다.<br>여러 개는 <b>3 7 12</b> 또는 <b>10-15</b>처럼 넣어도 됩니다.</div>
+      <div style="display:flex;gap:8px;align-items:stretch"><input id="pn" inputmode="numeric" enterkeyhint="done" placeholder="팔레트 번호" autocomplete="off" style="flex:1;font-size:24px;font-weight:700;min-height:56px">
+      <button class="btn primary" id="padd" type="button" style="min-width:84px">추가</button></div>
+      <div class="chips" id="pchips" style="margin:10px 0"></div>
+      <button class="btn accent" id="psave" type="button" style="width:100%;min-height:56px;font-size:17px" disabled>번호를 넣으세요</button>
+      <div id="pres" style="margin-top:8px"></div>
+      <h3 style="margin:16px 0 6px;font-size:15px">오늘 완료 <span class="muted" style="font-weight:400">${todays.length}개 / 전체 ${st?st.total:"-"}개</span></h3>
+      <div class="muted" style="word-break:keep-all">${todays.length?todays.map(p=>esc(p.no)).join(", "):"아직 없음"}</div>`;
+    const chips=()=>{ $("#pchips").innerHTML = nums.map((no,i)=>{ const bad=!known(no), dup=doneToday(no);
+        return `<button type="button" data-i="${i}" style="${bad?"border-color:#B91C1C;color:#B91C1C":dup?"color:#64748B;background:#F1F5F9":""}">${esc(no)}${bad?" · 대장에 없음":dup?" · 오늘 완료":""} ✕</button>`; }).join("");
+      const ok=nums.filter(n=>known(n)&&!doneToday(n)).length; const b=$("#psave");
+      b.disabled=!ok; b.textContent = ok ? `${ok}개 청소·점검 완료 저장` : (nums.length?"저장할 번호가 없습니다":"번호를 넣으세요"); };
+    const add=()=>{ const v=$("#pn").value; for(const n of parseNums(v)) if(!nums.includes(n)) nums.push(n); $("#pn").value=""; chips(); $("#pn").focus(); };
+    $("#padd").onclick=add; $("#pn").onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); add(); } };
+    $("#pchips").onclick=e=>{ const b=e.target.closest("[data-i]"); if(b){ nums.splice(+b.dataset.i,1); chips(); } };
+    $("#psave").onclick=async()=>{ const b=$("#psave"); const send=nums.filter(n=>known(n)&&!doneToday(n)); b.disabled=true; b.textContent="저장 중…";
+      try{ const r=await rpc("prod_pallet_quick_ok",{p_vehicle:t.vehicle,p_numbers:send,p_record_kind:isTest()?"TEST":"NORMAL"});
+        nums.length=0; await loadSt(); renderQuick();
+        msg($("#pres"),"ok",`저장 ${r.saved.length}개: ${r.saved.join(", ")||"-"}`+(r.already_today.length?` · 오늘 이미 완료 ${r.already_today.join(", ")}`:"")+(r.unknown.length?` · 대장에 없는 번호 ${r.unknown.join(", ")}`:"")+(isTest()?" (시험용)":""));
+      }catch(e){ msg($("#pres"),"err",e.message); chips(); } };
+    chips(); $("#pn").focus();
+  };
+
+  const renderDetail=()=>{
+    const vals={}; base.items.forEach(it=>vals[it.key]="OK"); photos.length=0;
+    let gprev=null;
+    $("#pbody").innerHTML = `<label>팔레트 번호<input id="dn" inputmode="numeric" autocomplete="off" style="font-size:24px;font-weight:700"></label><div id="dinfo"></div>
+      <div class="muted" style="margin:6px 0">기본은 모두 OK입니다. 이상 있는 항목만 <b>NG</b>를 누르세요.</div>
+      <div id="ditems">${base.items.map(it=>{ const h=it.group!==gprev?`<div style="margin-top:10px;font-weight:700;color:#1E293B">${esc(it.group)}</div>`:""; gprev=it.group;
+        return h+`<div class="irow"><span>${esc(it.label)}</span><span class="seg" data-k="${it.key}"><button type="button" class="ok on" data-v="OK">OK</button><button type="button" class="ng" data-v="NG">NG</button></span></div>`; }).join("")}</div>
+      <div id="dngbox" hidden style="margin-top:10px;padding:10px;border:2px solid #B91C1C;border-radius:8px;background:#FEF2F2">
+        <b style="color:#B91C1C">NG → 저장하면 이 팔레트는 '사용중지'로 표시됩니다</b>
+        <label>NG 내용 (필수)<textarea id="dng" rows="3" placeholder="예: 3번 캐스터 잠금 안 됨, 우측 상단 커버 찢어짐"></textarea></label>
+        <input type="file" id="dph" accept="image/*" capture="environment" hidden>
+        <button type="button" class="btn ghost" id="dphb" style="width:100%">📷 NG 사진 찍기 (필수 · 최대 4장)</button><div class="thumbs" id="dth" style="margin-top:8px"></div></div>
+      <button class="btn accent" id="dsave" type="button" style="width:100%;min-height:56px;font-size:17px;margin-top:12px">점검 저장</button><div id="dres" style="margin-top:8px"></div>`;
+    const anyNg=()=>Object.values(vals).includes("NG");
+    const sync=()=>{ $("#dngbox").hidden=!anyNg(); $("#dsave").textContent = anyNg() ? "NG 점검 저장 (사용중지)" : "점검 저장 (모두 OK)"; };
+    $("#ditems").onclick=e=>{ const b=e.target.closest(".seg button"); if(!b) return; const seg=b.parentElement; vals[seg.dataset.k]=b.dataset.v;
+      seg.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); sync(); };
+    const thumbs=()=>{ $("#dth").innerHTML=photos.map((p,i)=>`<div class="t"><img src="${p.url}" alt="NG 사진 ${i+1}"><button type="button" data-i="${i}">✕</button></div>`).join(""); $("#dphb").disabled=photos.length>=4; };
+    $("#dphb").onclick=()=>$("#dph").click();
+    $("#dph").onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+      try{ const b=await shrinkImage(f); photos.push({blob:b,url:URL.createObjectURL(b)}); thumbs(); }catch(err){ msg($("#dres"),"err",err.message); } };
+    $("#dth").onclick=e=>{ const b=e.target.closest("button[data-i]"); if(b){ photos.splice(+b.dataset.i,1); thumbs(); } };
+    let infoT=null;
+    $("#dn").oninput=()=>{ clearTimeout(infoT); infoT=setTimeout(async()=>{ const no=normNo($("#dn").value); if(!no){ $("#dinfo").innerHTML=""; return; }
+      if(!known(no)){ $("#dinfo").innerHTML=`<div class="msg err">${esc(t.line_name||t.vehicle)} 대장에 없는 번호입니다</div>`; return; }
+      try{ const h=await rpc("prod_pallet_history",{p_vehicle:t.vehicle,p_pallet_no:no,p_include_test:isTest()});
+        $("#dinfo").innerHTML=`<div class="muted" style="margin-top:4px">상태 <b>${esc(h.status)}</b> · 마지막 점검 ${fmtD(h.last_check)} · 마지막 청소 ${fmtD(h.last_clean)}${h.last_clean?` (${daysAgo(h.last_clean)}일 전)`:""}</div>`
+          + (doneToday(no)?`<div class="msg info">오늘 이미 점검한 팔레트입니다. 다시 저장하면 기록이 하나 더 남습니다.</div>`:"");
+      }catch(e){ $("#dinfo").innerHTML=""; } },300); };
+    $("#dsave").onclick=async()=>{ const no=normNo($("#dn").value); const b=$("#dsave");
+      if(!no) return msg($("#dres"),"err","팔레트 번호를 입력하세요");
+      if(!known(no)) return msg($("#dres"),"err","대장에 없는 번호입니다");
+      if(anyNg() && !$("#dng").value.trim()) return msg($("#dres"),"err","NG 내용을 입력하세요");
+      if(anyNg() && !photos.length) return msg($("#dres"),"err","NG 사진을 1장 이상 찍으세요");
+      b.disabled=true; b.textContent="저장 중…";
+      try{ const r=await rpc("prod_pallet_check_create",{p:{vehicle:t.vehicle,line_name:t.line_name||t.vehicle,pallet_no:no,items:vals,ng_note:anyNg()?$("#dng").value.trim():null,record_kind:isTest()?"TEST":"NORMAL"}});
+        let up=0;
+        if(photos.length){ const paths=[]; for(let i=0;i<photos.length;i++){ b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`; const path=`${r.uid}/plt/${r.id}/${Date.now()}_${i}.jpg`; await uploadPhoto(path,photos[i].blob); paths.push(path); }
+          up=await rpc("prod_pallet_attach",{p_id:r.id,p_paths:paths}); }
+        await loadSt(); renderDetail();
+        msg($("#dres"), r.judgment==="NG"?"err":"ok", `${no}번 저장 (#${r.id}) · 판정 ${r.judgment}${r.judgment==="NG"?" → 사용중지로 표시됨":""}${up?` · 사진 ${up}장`:""}${r.same_day_before?" · 오늘 "+r.same_day_before+"번째 재점검":""}${isTest()?" (시험용)":""}`);
+      }catch(e){ msg($("#dres"),"err","저장 실패: "+e.message); b.disabled=false; sync(); } };
+    sync();
+  };
+  const render=()=>{ document.querySelectorAll("#pmode button").forEach(b=>b.classList.toggle("on",b.dataset.m===mode)); (mode==="quick"?renderQuick:renderDetail)(); };
+  $("#pmode").onclick=e=>{ const b=e.target.closest("[data-m]"); if(b){ mode=b.dataset.m; render(); } };
+  $("#ptest").onchange=async()=>{ await loadSt(); render(); };
+  const pv=$("#pv"); if(pv) pv.onclick=async e=>{ const b=e.target.closest("[data-v]"); if(!b) return; t=pltVeh({vehicle:b.dataset.v}); nums.length=0;
+    pv.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); await loadSt(); render(); };
+  await loadSt(); render();
+}
+
+/* 팔레트 조회: 번호 → 이력 카드 */
+async function viewPltHist(arg){
+  $("#app").innerHTML=`<div class="panel muted">불러오는 중…</div>`;
+  let base; try{ base=await pltBase(); }catch(e){ return pltNoBase(e.message); }
+  if(!base.types.length) return pltNoBase("등록된 차종이 없습니다.");
+  let t=pltVeh(arg);
+  const lbl=Object.fromEntries(base.items.map(i=>[i.key,i.label]));
+  $("#app").innerHTML=`<section class="panel"><h2>팔레트 이력 조회</h2>${vehChips(base.types,t.vehicle)}
+    <div style="display:flex;gap:8px"><input id="hn" inputmode="numeric" placeholder="팔레트 번호" autocomplete="off" style="flex:1;font-size:24px;font-weight:700;min-height:56px" value="${esc((arg&&arg.no)||"")}">
+    <button class="btn primary" id="hb" type="button" style="min-width:84px">조회</button></div>
+    <label class="check"><input type="checkbox" id="htest"> 시험용 기록 포함</label><div id="hm"></div></section><div id="hcard"></div>`;
+  const show=async()=>{ const no=normNo($("#hn").value); if(!no) return; msg($("#hm"),"","");
+    try{ const h=await rpc("prod_pallet_history",{p_vehicle:t.vehicle,p_pallet_no:no,p_include_test:$("#htest").checked});
+      const cd=daysAgo(h.last_clean), sd=daysAgo(h.last_check);
+      const cleanDue = h.last_clean==null || cd>t.clean_cycle_days, unret = h.last_check==null || sd>t.unreturned_days;
+      $("#hcard").innerHTML=`<section class="panel"><h2>${esc(t.line_name||t.vehicle)} · ${esc(no)}번
+          <span class="pill ${h.status==="사용중지"?"ng":h.status==="사용가능"?"ok":"wait"}" style="font-size:14px">${esc(h.status)}</span></h2>
+        <div class="kpis"><div class="kpi"><div class="k">마지막 입고·점검</div><div class="v" style="font-size:19px">${fmtD(h.last_check)}</div><div class="muted">${sd==null?"":`${n0(sd)}일 전`}${unret?' · <b style="color:#B91C1C">미회수 의심</b>':""}</div></div>
+          <div class="kpi"><div class="k">마지막 청소</div><div class="v" style="font-size:19px">${fmtD(h.last_clean)}</div><div class="muted">${cd==null?"":`${n0(cd)}일 전`}${cleanDue?' · <b style="color:#C2410C">청소 필요</b>':""}</div></div>
+          <div class="kpi"><div class="k">기록</div><div class="v">${n0(h.rows.length)} 건</div><div class="muted">최근 30건까지 표시</div></div></div>
+        <div class="muted" style="margin-top:6px">기준: 청소 ${t.clean_cycle_days}일 · 미회수 ${t.unreturned_days}일</div></section>
+        <section class="panel"><h2>점검 이력</h2>${h.rows.length?h.rows.map(r=>{ const ngs=Object.entries(r.items||{}).filter(([k,v])=>v==="NG").map(([k])=>lbl[k]||k);
+          return `<div class="rep"><div style="display:flex;justify-content:space-between;gap:8px"><b>${fmtDT(r.at)}</b><span><span class="pill ${r.judgment==="NG"?"ng":"ok"}">${r.judgment}</span>${r.kind==="TEST"?' <span class="pill test">시험</span>':""}</span></div>
+            <div class="muted">${esc(r.line||"")} · ${esc(r.reporter||"")}</div>
+            ${ngs.length?`<div style="color:#B91C1C;margin-top:4px">NG: ${ngs.map(esc).join(", ")}</div>`:""}${r.ng_note?`<div style="margin-top:4px">${esc(r.ng_note)}</div>`:""}
+            ${r.photos&&r.photos.length?`<div style="margin-top:6px">${mediaHtml({photos:r.photos})}</div>`:""}</div>`; }).join(""):`<div class="muted">점검 기록이 없습니다.</div>`}</section>`;
+      fillPhotos($("#hcard"));
+    }catch(e){ msg($("#hm"),"err",e.message); } };
+  $("#hb").onclick=show; $("#hn").onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); show(); } }; $("#htest").onchange=show;
+  const pv=$("#pv"); if(pv) pv.onclick=e=>{ const b=e.target.closest("[data-v]"); if(!b) return; t=pltVeh({vehicle:b.dataset.v}); pv.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); $("#hcard").innerHTML=""; show(); };
+  if(arg && arg.no) show(); else $("#hn").focus();
+}
+
+/* 현황·미회수: 차종별 대장 한 장 (감사 대응용) */
+async function viewPltStat(arg){
+  $("#app").innerHTML=`<div class="panel muted">불러오는 중…</div>`;
+  let base; try{ base=await pltBase(true); }catch(e){ return pltNoBase(e.message); }
+  const admin = me.role==="admin";
+  if(!base.types.length && !admin) return pltNoBase("등록된 차종이 없습니다.");
+  let t = base.types.length ? pltVeh(arg) : null, st=null, filt="all";
+  $("#app").innerHTML=`<section class="panel"><h2>팔레트 현황 · 미회수</h2>${t?vehChips(base.types,t.vehicle):""}
+      <label class="check"><input type="checkbox" id="stest"> 시험용 기록 포함</label><div id="sm"></div><div id="sbody"></div></section>
+    ${admin?`<section class="panel"><h2>관리자 설정 <span class="muted" style="font-size:13px;font-weight:400">PC에서 조정</span></h2><div id="am"></div>
+      ${t?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label>청소 주기 (일)<input id="acd" type="number" min="1" max="3650" value="${t.clean_cycle_days}"></label>
+      <label>미회수 기준 (일)<input id="aud" type="number" min="1" max="3650" value="${t.unreturned_days}"></label></div>
+      <button class="btn" id="asave" type="button" style="width:100%">${esc(t.line_name||t.vehicle)} 기준 저장</button>`:""}
+      <h3 style="margin:16px 0 6px;font-size:15px">차종 추가 · 번호 등록 (수평전개)</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label>차종<input id="rv" placeholder="예: GN7"></label>
+        <label>라인<select id="rl">${LINES.map(l=>`<option>${esc(l)}</option>`).join("")}</select></label>
+        <label>시작 번호<input id="rf" type="number" min="1" value="1"></label><label>끝 번호<input id="rt" type="number" min="1" placeholder="예: 63"></label></div>
+      <div class="muted">이미 있는 차종에 넣으면 빠진 번호만 추가됩니다. 새 차종 기준은 청소 90일 · 미회수 30일로 시작합니다.</div>
+      <button class="btn ghost" id="rsave" type="button" style="width:100%;margin-top:6px">번호 등록</button></section>`:""}`;
+  const load=async()=>{ if(!t){ $("#sbody").innerHTML=`<div class="muted">등록된 차종이 없습니다. 아래에서 등록하세요.</div>`; return; }
+    try{ st=await rpc("prod_pallet_status",{p_vehicle:t.vehicle,p_include_test:$("#stest").checked}); render(); }catch(e){ msg($("#sm"),"err",e.message); } };
+  const render=()=>{
+    const ps=st.pallets.map(p=>({...p, s:pltState(p)}));
+    const cnt=k=>ps.filter(p=>p.s===k).length;
+    const list=ps.filter(p=>filt==="all"||(filt==="un"?p.unreturned:filt==="clean"?p.clean_due:filt==="stop"?p.stopped:true));
+    $("#sbody").innerHTML=`<div class="kpis" style="margin-top:6px">
+        <div class="kpi hl"><div class="k">등록</div><div class="v">${n0(st.total)} 개</div></div>
+        <div class="kpi"><div class="k">사용가능</div><div class="v" style="color:#15803D">${n0(st.total-st.stopped)} 개</div></div>
+        <div class="kpi"><div class="k">사용중지 (NG)</div><div class="v" style="color:#B91C1C">${n0(st.stopped)} 개</div></div>
+        <div class="kpi"><div class="k">청소 필요 (${st.clean_cycle_days}일)</div><div class="v" style="color:#C2410C">${n0(st.clean_due)} 개</div></div>
+        <div class="kpi"><div class="k">미회수 (${st.unreturned_days}일)</div><div class="v">${n0(st.unreturned)} 개</div><div class="muted">기록 없음 ${n0(st.never_seen)}개 포함</div></div></div>
+      <div class="chips" id="sf" style="margin:10px 0">${[["all","전체"],["un","미회수"],["clean","청소 필요"],["stop","사용중지"]].map(([k,l])=>`<button type="button" data-f="${k}" class="${filt===k?"on":""}">${l}</button>`).join("")}</div>
+      <div class="legend"><span><i class="c-ok"></i>정상</span><span><i class="c-clean"></i>청소 필요</span><span><i class="c-un"></i>미회수</span><span><i class="c-stop"></i>사용중지</span><span class="muted">번호를 누르면 이력</span></div>
+      <div class="pgrid" id="sg">${list.map(p=>`<button type="button" class="c-${p.s}" data-no="${esc(p.no)}" title="${PLT_STATE_KO[p.s]} · 마지막 ${fmtD(p.last_seen)}">${esc(p.no)}</button>`).join("")||'<span class="muted">해당 없음</span>'}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+        <button class="btn ghost" id="scopy" type="button">📋 미회수 번호 복사<br><small>물류사 회수 요청용</small></button>
+        <button class="btn ghost" id="sxls" type="button">📊 엑셀 받기<br><small>감사 대응 대장</small></button></div>
+      ${st.never_seen?`<div class="muted" style="margin-top:8px">아직 기록이 한 번도 없는 번호는 미회수·청소 필요로 표시됩니다. 청소한 번호를 입력할수록 줄어듭니다.</div>`:""}`;
+    $("#sf").onclick=e=>{ const b=e.target.closest("[data-f]"); if(b){ filt=b.dataset.f; render(); } };
+    $("#sg").onclick=e=>{ const b=e.target.closest("[data-no]"); if(b) go("plth",{vehicle:t.vehicle,no:b.dataset.no}); };
+    $("#scopy").onclick=async()=>{ const un=ps.filter(p=>p.unreturned);
+      const txt=`[엠솔루션] ${t.line_name||t.vehicle} 팔레트 회수 요청\n기준: ${st.unreturned_days}일 이상 입고 기록 없음 (${today()} 기준)\n수량: ${un.length}개\n번호: ${un.map(p=>p.no).join(", ")}\n확인 후 회수 부탁드립니다.`;
+      try{ await navigator.clipboard.writeText(txt); msg($("#sm"),"ok",`미회수 ${un.length}개 번호를 복사했습니다. 카톡·문자에 붙여넣으세요.`); }
+      catch(e){ msg($("#sm"),"info",txt); } };
+    $("#sxls").onclick=()=>{ const rows=[["엠솔루션 팔레트 관리대장"],["차종·라인",t.line_name||t.vehicle],["기준일",today()],["청소 주기(일)",st.clean_cycle_days],["미회수 기준(일)",st.unreturned_days],
+        ["등록",st.total],["사용가능",st.total-st.stopped],["사용중지",st.stopped],["청소 필요",st.clean_due],["미회수",st.unreturned],[],
+        ["번호","상태","마지막 입고·점검","경과일","마지막 청소","청소 경과일","미회수","청소 필요","사용중지"]];
+      for(const p of ps) rows.push([p.no,PLT_STATE_KO[p.s],p.last_seen?kstDay(p.last_seen):"기록 없음",p.last_seen?daysAgo(p.last_seen):"",p.last_clean?kstDay(p.last_clean):"기록 없음",p.last_clean?daysAgo(p.last_clean):"",p.unreturned?"Y":"",p.clean_due?"Y":"",p.stopped?"Y":""]);
+      saveBlob(makeXlsx([{name:"팔레트현황",rows}]),`엠솔루션_팔레트관리대장_${t.vehicle}_${today()}.xlsx`); };
+  };
+  $("#stest").onchange=load;
+  const pv=$("#pv"); if(pv) pv.onclick=e=>{ const b=e.target.closest("[data-v]"); if(b) viewPltStat({vehicle:b.dataset.v}); };
+  if(admin){
+    if(t) $("#asave").onclick=async()=>{ try{ await rpc("prod_pallet_type_set",{p_vehicle:t.vehicle,p_clean_days:+$("#acd").value,p_unreturned_days:+$("#aud").value});
+      PLT_TYPES=null; viewPltStat({vehicle:t.vehicle}); }catch(e){ msg($("#am"),"err",e.message); } };
+    $("#rsave").onclick=async()=>{ const v=$("#rv").value.trim(), f=+$("#rf").value, to=+$("#rt").value;
+      if(!v||!f||!to) return msg($("#am"),"err","차종과 시작·끝 번호를 넣으세요");
+      if(!confirm(`${v} 팔레트 ${f}~${to}번을 등록할까요?`)) return;
+      try{ const n=await rpc("prod_pallet_register",{p_vehicle:v,p_line:$("#rl").value,p_from:f,p_to:to,p_list:null}); PLT_TYPES=null;
+        await viewPltStat({vehicle:v}); msg($("#am"),"ok",`${v} 등록 완료 · 현재 ${n0(n)}개`); }catch(e){ msg($("#am"),"err",e.message); } };
+  }
+  load();
+}
+
+/* 생산관리: 일상시험 의뢰·정산 (자료 받기 전 자리만) */
+function viewDtest(){
+  $("#app").innerHTML=`<section class="panel"><h2>일상시험 의뢰 · 정산</h2>
+    <div class="msg info">준비 중입니다. 아래 3가지 자료를 받으면 이 칸에 화면을 붙입니다.</div>
+    <ol style="line-height:1.9;margin:10px 0 10px 18px"><li>수기 의뢰서 사진 1장</li><li>지금 채워 넣는 엑셀 원본 양식</li><li>원청 품질팀이 보내주는 파일 1개</li></ol>
+    <div class="muted">예정 흐름: 의뢰 내용 입력 → 월별 누적 → 원청 파일 올리면 줄 단위 자동 대조 (틀린 줄 · 빠진 줄 표시) → 확인 완료 → 제출용 엑셀</div></section>`;
 }
 
 /* ---------- 업체통보: 업체 연락처 목록 → 업체 화면 (수입검사·공식 PPM과 별개 데이터) ---------- */

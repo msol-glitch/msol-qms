@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>엠솔루션 QMS</title>
+<style>body{margin:0;font-family:system-ui,sans-serif;background:#F8FAFC;color:#0F172A;display:flex;align-items:center;justify-content:center;min-height:100vh}</style>
+</head><body><div>여는 중…</div>
+<script>
+// 라인 벽 QR 전용 입구. QR은 이 주소를 가리키므로, 정식본으로 옮길 때 TARGET만 바꾸면 QR을 다시 붙일 필요가 없습니다.
+var TARGET = "test.html";
+var q = new URLSearchParams(location.search), v = q.get("plt");
+location.replace(TARGET + (v ? "#plt=" + encodeURIComponent(v) : ""));
+</script></body></html>
