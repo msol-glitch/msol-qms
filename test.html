@@ -248,6 +248,9 @@ details.raw div{white-space:pre-wrap;font-size:13px;color:#2F3B36;background:#F2
 .pincard .pic{width:52px;height:52px;border-radius:12px;background:#1B4A3C;display:flex;align-items:center;justify-content:center;margin:0 auto}
 .pincard .pic svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .pincard input{font-size:28px;text-align:center;letter-spacing:.4em}
+.pincard input::placeholder{font-size:14px;letter-spacing:0}
+.pincard{width:min(380px,100%)}.pincard .btns button{white-space:nowrap}
+main.wide>.dash-head:first-child{margin-top:28px}
 .pincard .btns{display:grid;grid-template-columns:1fr 1fr}
 @media (min-width:1100px){.parts.teams{grid-template-columns:repeat(4,1fr)}.parts.teams .part{min-height:170px}}
 /* 아이콘 제거 — 글자와 가는 선으로만 (11-05 대표: 아이콘이 AI 같음) */
@@ -591,10 +594,37 @@ function pinPrompt(part, then){
   $("#pinx").onclick=close; d.onclick=e=>{ if(e.target===d) close(); };
   d.querySelector("form").onsubmit=async e=>{ e.preventDefault(); const b=$("#pinok"); b.disabled=true;
     try{ const r=await rpc("qms_team_unlock",{p_part:part.id,p_pin:$("#pinin").value});
+      if(r.ok && r.must_change){ const oldPin=$("#pinin").value; close(); return pinChange(part, oldPin, then); }
       if(r.ok){ const m=unlockMap(); m[part.id]=1; saveUnlock(m); close(); buildChrome(); then(); return; }
       msg($("#pinm"),"err",`비밀번호가 맞지 않습니다 (남은 횟수 ${r.left}번)`); $("#pinin").value=""; $("#pinin").focus();
     }catch(err){ msg($("#pinm"),"err",err.message); }
     b.disabled=false; };
+}
+// 팀 비밀번호 변경: 처음 받은 번호로 들어오면 반드시 / 이후에는 왼쪽 메뉴 '팀 비밀번호 바꾸기'로 언제든
+function pinChange(part, oldPin, then){
+  const first=!!oldPin;
+  const old=$("#pinov"); if(old) old.remove();
+  const d=document.createElement("div"); d.id="pinov"; d.className="pinov";
+  d.innerHTML=`<form class="pincard" novalidate><h2>${esc(PART_KO[part.id]||part.label)}</h2>
+    <div class="muted">${first?"처음 받은 비밀번호로 들어오셨습니다.<br>팀에서 쓸 새 비밀번호를 정하세요.":"팀 비밀번호를 바꿉니다."}</div>
+    ${first?"":`<input id="pc0" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="현재 비밀번호" aria-label="현재 비밀번호">`}
+    <input id="pc1" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="새 비밀번호 (숫자 4~8자리)" aria-label="새 비밀번호">
+    <input id="pc2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="새 비밀번호 한 번 더" aria-label="새 비밀번호 확인">
+    <div class="muted" style="font-size:12.5px">1234, 1111처럼 쉬운 번호는 쓸 수 없습니다. 바꾼 번호는 팀원에게만 알려 주세요.</div>
+    <div id="pcm"></div><div class="btns"><button type="button" class="btn ghost" id="pcx">취소</button><button class="btn primary" id="pcok">${first?"정하고 들어가기":"바꾸기"}</button></div></form>`;
+  document.body.appendChild(d); (first?$("#pc1"):$("#pc0")).focus();
+  const close=()=>d.remove();
+  $("#pcx").onclick=close;
+  d.querySelector("form").onsubmit=async e=>{ e.preventDefault();
+    const o=first?oldPin:$("#pc0").value, n1=$("#pc1").value.trim(), n2=$("#pc2").value.trim();
+    if(!/^\d{4,8}$/.test(n1)) return msg($("#pcm"),"err","새 비밀번호는 숫자 4~8자리로 넣으세요");
+    if(n1!==n2) return msg($("#pcm"),"err","새 비밀번호 두 번이 서로 다릅니다");
+    const b=$("#pcok"); b.disabled=true;
+    try{ const r=await rpc("qms_team_pin_change",{p_part:part.id,p_old:o,p_new:n1});
+      if(!r.ok){ msg($("#pcm"),"err",`${r.msg} (남은 횟수 ${r.left}번)`); b.disabled=false; return; }
+      const m=unlockMap(); m[part.id]=1; saveUnlock(m); close(); buildChrome();
+      if(then) then(); else msg($("#app").querySelector(".msgline")||$("#app").firstElementChild,"ok","팀 비밀번호를 바꿨습니다");
+    }catch(err){ msg($("#pcm"),"err",err.message); b.disabled=false; } };
 }
 function teamHome(){
   const parts=window.__parts.filter(p=>p.groups.length||!PARTS.find(x=>x.id===p.id).groups.length);
@@ -711,11 +741,13 @@ function buildChrome(){
   }
   const adm=((parts.find(p=>p.id==="qms")||{groups:[]}).groups.find(g=>g.id==="g_adm")||{ids:[]}).ids;
   if(adm.length) h+=`<div class="sec">시스템 관리 · 관리자 전용</div>`+adm.map(sideBtn).join("");
+  const opened=Object.keys(unlockMap()).filter(k=>k!=="_t" && (me.pin_parts||[]).includes(k));
+  if(!me.dashboard && opened.length) h+=opened.map(k=>`<button type="button" data-pchg="${k}" style="margin-top:6px"><span>${esc(PART_KO[k])} 비밀번호 바꾸기</span></button>`).join("");
   if(!me.dashboard && Object.keys(unlockMap()).some(k=>k!=="_t")) h+=`<button type="button" data-lock="1" style="margin-top:10px;border:1px solid #D9DCD6"><svg viewBox="0 0 24 24" aria-hidden="true">${LOCK_IC}</svg><span>지금 잠그기</span></button>`;
   h+=`<div class="foot">시험본 · 데이터는 회사 서버에만 저장<br>휴대폰은 같은 주소로 접속하면 휴대폰 화면으로 열립니다</div>`;
   $("#side").innerHTML=h;
   $("#side").hidden=false; $("#topnav").hidden=false;
-  const click=e=>{ const b=e.target.closest("button"); if(!b||b.disabled) return; if(b.dataset.home) return home(); if(b.dataset.lock) return lockAll("잠갔습니다."); if(b.dataset.p) return openPart(b.dataset.p); if(b.dataset.t) go(b.dataset.t); };
+  const click=e=>{ const b=e.target.closest("button"); if(!b||b.disabled) return; if(b.dataset.home) return home(); if(b.dataset.lock) return lockAll("잠갔습니다."); if(b.dataset.pchg) return pinChange(window.__parts.find(p=>p.id===b.dataset.pchg)||{id:b.dataset.pchg,label:PART_KO[b.dataset.pchg]}, null, null); if(b.dataset.p) return openPart(b.dataset.p); if(b.dataset.t) go(b.dataset.t); };
   $("#side").onclick=click; $("#topnav").onclick=click;
   if(current) markNav(current);
 }
@@ -960,18 +992,18 @@ async function viewUsers(){
     <div class="muted">관리자 권한은 이 화면에서 발급할 수 없습니다 (관리자 2명 제한).</div></form>
   <section class="panel"><h2>사용자 목록</h2><div class="muted">전체 현황 = 처음 화면의 전체 현황판(업체 불량·팔레트·최근 기록). 대표 외에는 지정한 사람만.</div><div id="ul2"></div></section>
   <section class="panel"><h2>팀 비밀번호 <span class="muted" style="font-size:13px;font-weight:400">PC 화면 전용</span></h2><div id="tpm"></div>
-    <div class="muted">PC에서 팀 화면에 들어갈 때 묻습니다. 숫자 4~8자리. 비밀번호를 정하지 않은 팀은 권한 있는 계정이면 바로 열립니다. 휴대폰 현장 입력에는 묻지 않습니다.</div>
+    <div class="muted">여기서 정하는 번호는 <b>초기 비밀번호</b>입니다 (예: 12345). 팀이 처음 들어올 때 새 비밀번호로 바꾸게 되고, 바뀐 번호는 대표님도 모릅니다. 대표·전체 현황 권한자는 비밀번호 없이 모든 팀을 봅니다. 팀이 번호를 잊으면 여기서 초기 비밀번호를 다시 저장하면 됩니다. 휴대폰 현장 입력에는 묻지 않습니다.</div>
     <div id="tpl"></div></section>`;
-  const pins = async () => { try{ const st=await rpc("qms_team_pin_status"); const on=Object.fromEntries(st.map(x=>[x.part,x.updated_at]));
-      $("#tpl").innerHTML = Object.entries(PART_KO).map(([k,l])=>`<div class="irow"><span><b>${esc(l)}</b><br><span class="muted" style="font-size:12.5px">${on[k]?`설정됨 · ${fmtDT(on[k])}`:"미설정 (잠금 없음)"}</span></span>
-        <span style="display:flex;gap:6px;align-items:center"><input type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="새 비밀번호" data-k="${k}" style="width:130px;min-height:42px">
+  const pins = async () => { try{ const st=await rpc("qms_team_pin_status"); const on=Object.fromEntries(st.map(x=>[x.part,x]));
+      $("#tpl").innerHTML = Object.entries(PART_KO).map(([k,l])=>`<div class="irow"><span><b>${esc(l)}</b><br><span class="muted" style="font-size:12.5px">${!on[k]?"미설정 (잠금 없음)":on[k].must_change?`초기 비밀번호 · 팀 변경 전 (${fmtDT(on[k].updated_at)})`:`팀이 변경함 · ${esc(on[k].changed_by||"")} · ${fmtDT(on[k].changed_at)}`}</span></span>
+        <span style="display:flex;gap:6px;align-items:center"><input type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="초기 비밀번호" data-k="${k}" style="width:130px;min-height:42px">
         <button type="button" class="btn" data-set="${k}" style="min-height:42px">저장</button>${on[k]?`<button type="button" class="btn ghost" data-clr="${k}" style="min-height:42px">해제</button>`:""}</span></div>`).join("");
     }catch(e){ msg($("#tpm"),"err",e.message); } };
   $("#tpl").onclick = async e => { const b=e.target.closest("[data-set],[data-clr]"); if(!b) return; const k=b.dataset.set||b.dataset.clr;
     const v=b.dataset.set ? document.querySelector(`#tpl input[data-k="${k}"]`).value.trim() : "";
     if(b.dataset.set && !/^\d{4,8}$/.test(v)) return msg($("#tpm"),"err","숫자 4~8자리로 넣으세요");
     if(b.dataset.clr && !confirm(`${PART_KO[k]} 비밀번호를 해제할까요?`)) return;
-    b.disabled=true; try{ await rpc("qms_team_pin_set",{p_part:k,p_pin:v||null}); msg($("#tpm"),"ok",`${PART_KO[k]} 비밀번호 ${v?"저장":"해제"}됨. 직원에게는 직접 전달하세요.`); pins(); }
+    b.disabled=true; try{ await rpc("qms_team_pin_set",{p_part:k,p_pin:v||null}); msg($("#tpm"),"ok",v?`${PART_KO[k]} 초기 비밀번호 저장됨. 팀에 전달하면 처음 들어올 때 새 번호로 바꿉니다.`:`${PART_KO[k]} 비밀번호 해제됨`); pins(); }
     catch(err){ msg($("#tpm"),"err",err.message); b.disabled=false; } };
   pins();
   const list = async () => {
