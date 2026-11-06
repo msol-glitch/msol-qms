@@ -169,7 +169,7 @@ details.raw div{white-space:pre-wrap;font-size:13px;color:#2F3B36;background:#F2
 .pclogo img{width:100%;height:100%;object-fit:contain;display:block}
 .loginlogo{display:block;width:200px;max-width:70%;height:auto;margin:0 0 4px}
 .brand .bt{display:flex;flex-direction:column;min-width:0}
-.tscroll{overflow-x:auto;margin:0 -2px}
+.tscroll{overflow-x:auto;margin:0 -2px}.sec2 .tscroll{margin:0}
 @media (max-width:1099px){.dtab .pcc{display:none}}
 @media (max-width:1099px){.pc-only{display:none!important}}
 .dash-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
@@ -390,6 +390,7 @@ nav.tabs button.on{color:#F4F1E8;border-top-color:#C8B88A}
   .tools2{margin:-4px 0 -10px}
   .sgrid{grid-template-columns:1.05fr 1.6fr 1fr;gap:40px 44px}
   .sec2.span2{grid-column:span 2}
+  .sec2.full{grid-column:1/-1}
 }
 .lt th,.lt td{padding-right:14px}.lt th:last-child,.lt td:last-child{padding-right:0}
 .lt.mx{font-size:12.5px}.lt.mx th,.lt.mx td{padding:7px 6px;white-space:nowrap}.lt.mx td.hv{background:#F4F1E8;font-weight:700;color:#123B2F}
@@ -421,7 +422,7 @@ const STATUS_KO = {draft:"검토대기",confirmed:"확정",void:"무효"};
 const GROUPS = [
   {id:"g_rec", label:"현장기록", ids:["report","incoming","pab","notice"], ic:'<path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4"/>'},
   {id:"g_view", label:"조회", ids:["inbox","nlist"], ic:'<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5 5h14l2 8v6H3v-6z"/>'},
-  {id:"g_in", label:"수입·공정", ids:["inlist","ppm","line","material"], ic:'<path d="M9 4h6v3H9z"/><path d="M8 5H5v16h14V5h-3"/><path d="m9 14 2 2 4-5"/>'},
+  {id:"g_in", label:"수입·공정", ids:["inhome","inup","inlist","ppm","line","material"], ic:'<path d="M9 4h6v3H9z"/><path d="M8 5H5v16h14V5h-3"/><path d="m9 14 2 2 4-5"/>'},
   {id:"g_adm", label:"관리", ids:["backup","users"], ic:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>'},
 ];
 const TABS = [
@@ -432,6 +433,8 @@ const TABS = [
   {id:"nlist", label:"통보이력", roles:["admin","quality","production"], ic:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/><circle cx="16" cy="6" r="2"/>'},
   {id:"material", label:"자재", roles:["admin","quality","production","materials"], ic:'<rect x="3" y="7" width="18" height="13" rx="1"/><path d="M3 11h18M9 7V4h6v3"/>'},
   {id:"incoming", label:"수입검사", roles:["admin","quality"], ic:'<path d="M9 4h6v3H9z"/><path d="M8 5H5v16h14V5h-3"/><path d="m9 14 2 2 4-5"/>'},
+  {id:"inhome", label:"수입검사 현황", roles:["admin","quality","materials"], ic:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'},
+  {id:"inup", label:"파일 올리기", roles:["admin","quality"], ic:'<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 20h16"/>'},
   {id:"inlist", label:"검사조회", roles:["admin","quality","materials"], ic:'<path d="M4 6h16M4 12h16M4 18h10"/>'},
   {id:"ppm", label:"공식PPM", roles:["admin","quality"], ic:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'},
   {id:"line", label:"공정불량", roles:["admin","quality","production"], ic:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/>'},
@@ -694,7 +697,7 @@ function home(){
   const parts=window.__parts, mine=window.__mine, has=id=>mine.some(t=>t.id===id);
   const dstr=new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"long"});
   let inc=false; try{ inc=localStorage.getItem("qms_home_test")==="1"; }catch(e){}
-  const QUICK=[["report","수시기록"],["notice","업체통보"],["pab","PAB 증빙"],["incoming","수입검사"],["plt","팔레트 점검"],["plts","팔레트 현황"],["inbox","접수함"],["nlist","통보이력"]].filter(([id])=>has(id));
+  const QUICK=[["report","수시기록"],["notice","업체통보"],["pab","PAB 증빙"],["inhome","수입검사"],["plt","팔레트 점검"],["plts","팔레트 현황"],["inbox","접수함"],["nlist","통보이력"]].filter(([id])=>has(id));
   $("#app").innerHTML = `<section class="hero2"><div class="ht"><div class="d">${dstr}</div><h1>오늘의 품질·생산 현황</h1><p>기록이 쌓여야 재발이 멈춥니다</p></div>
       <div class="fig" id="hfig"><div><small>이번 달 업체 불량</small><b>-</b></div></div></section>
     <nav class="quick2 pc-only">${QUICK.map(([id,l])=>`<button type="button" data-t="${id}">${l}</button>`).join("")}</nav>
@@ -745,10 +748,11 @@ async function loadDash(){
   host.innerHTML = rec + trend + plt + sup + recent + lines + qc;
   host.onclick=e=>{ const c=e.target.closest("[data-t]"); if(c) go(c.dataset.t); };
 }
-function trendSvg(rows){
+function trendSvg(rows, SER=SERIES){
+  const SERIES=SER;
   // 점 달력: 행 = 기록 종류, 열 = 날짜. 원 크기 = 건수, 숫자는 원 안에. 오른쪽은 14일 합계
   if(!rows.length) return `<div class="empty">데이터 없음</div>`;
-  const n=rows.length, LW=78, TW=58, W=470, RH=50, T=6, H=T+SERIES.length*RH+26, cw=(W-LW-TW)/n;
+  const n=rows.length, LW=78, TW=58, W=Math.max(470,LW+TW+n*24), step=Math.max(2,Math.ceil(n/12)), RH=50, T=6, H=T+SERIES.length*RH+26, cw=(W-LW-TW)/n;
   const max=Math.max(1,...rows.flatMap(r=>SERIES.map(([k])=>+r[k]||0))), rMax=Math.min(cw/2-2,19), rMin=8;
   let g="";
   rows.forEach((r,i)=>{ if(i===n-1) g+=`<rect x="${(LW+i*cw+1).toFixed(1)}" y="${T-4}" width="${(cw-2).toFixed(1)}" height="${SERIES.length*RH+4}" rx="4" fill="#F4F1E8"/>`; });
@@ -759,12 +763,12 @@ function trendSvg(rows){
       if(v){ const rr=rMin+(rMax-rMin)*Math.sqrt(v/max);
         g+=`<circle cx="${cx.toFixed(1)}" cy="${cy}" r="${rr.toFixed(1)}" fill="${c}"/><text x="${cx.toFixed(1)}" y="${cy+4}" text-anchor="middle" font-size="${v>9?10.5:11.5}" font-weight="700" fill="#fff">${v}</text>`; }
       else g+=`<circle cx="${cx.toFixed(1)}" cy="${cy}" r="2.2" fill="#C9CCC5"/>`;
-      g+=`<rect class="hit" x="${(LW+i*cw).toFixed(1)}" y="${cy-RH/2}" width="${cw.toFixed(1)}" height="${RH}" data-tip="${ds} · ${l} ${v}건"/>`; });
-    g+=`<text x="${W}" y="${cy+6}" text-anchor="end" font-size="20" font-weight="300" fill="#18201D">${tot}<tspan font-size="12" fill="#66706B" dx="2">건</tspan></text>`; });
+      g+=`<rect class="hit" x="${(LW+i*cw).toFixed(1)}" y="${cy-RH/2}" width="${cw.toFixed(1)}" height="${RH}" data-tip="${ds} · ${l} ${v}${(SERIES[j]||[])[3]||"건"}"/>`; });
+    g+=`<text x="${W}" y="${cy+6}" text-anchor="end" font-size="20" font-weight="300" fill="#18201D">${tot}<tspan font-size="12" fill="#66706B" dx="2">${(SERIES[j]||[])[3]||"건"}</tspan></text>`; });
   rows.forEach((r,i)=>{ const isT=i===n-1, ds=String(r.d).slice(5,10).replace("-","/");
-    if(isT || i%2===(n-1)%2) g+=`<text x="${(LW+i*cw+cw/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="10.5" fill="${isT?"#123B2F":"#8A928D"}" font-weight="${isT?700:400}">${isT?"오늘":ds}</text>`; });
-  g+=`<text x="${W}" y="${H-6}" text-anchor="end" font-size="10.5" fill="#8A928D">14일 합계</text>`;
-  return `<svg class="trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 14일 일별 기록 건수 점 달력">${g}</svg>`;
+    if(isT || ((n-1-i)%step===0 && n-1-i>=step)) g+=`<text x="${(LW+i*cw+cw/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="10.5" fill="${isT?"#123B2F":"#8A928D"}" font-weight="${isT?700:400}">${isT?"오늘":ds}</text>`; });
+  g+=`<text x="${W}" y="${H-6}" text-anchor="end" font-size="10.5" fill="#8A928D">${n}일 합계</text>`;
+  return `<svg class="trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 ${n}일 일별 점 달력">${g}</svg>`;
 }
 // 차트 말풍선 (data-tip)
 (()=>{ let tip=null; document.addEventListener("mousemove",e=>{ const t=e.target.closest && e.target.closest("[data-tip]");
@@ -783,7 +787,7 @@ function buildChrome(){
     .map(p=>`<button type="button" data-p="${p.id}" ${p.groups.length?"":"disabled"}>${esc(p.label)}</button>`).join("");
   let h=`<button type="button" data-home="1"><svg viewBox="0 0 24 24" aria-hidden="true">${HOME_IC}</svg><span>처음 화면</span></button>`;
   for(const p of parts){
-    const ids=p.groups.filter(g=>g.id!=="g_adm").flatMap(g=>g.ids);
+    const ids=p.groups.filter(g=>g.id!=="g_adm").flatMap(g=>g.ids).filter(id=>!(id==="incoming" && p.groups.some(g=>g.ids.includes("inhome"))));
     if(!PARTS.find(x=>x.id===p.id).groups.length){ h+=`<div class="sec">${esc(p.label)}</div><button type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true">${p.ic}</svg><span>${esc(p.label)}</span><span class="bd" style="background:#F2F1EC;color:#9AA39E">준비 중</span></button>`; continue; }
     if(!ids.length) continue;
     if(needPin(p.id)){ h+=`<div class="sec">${esc(p.label)}</div><button type="button" data-p="${p.id}"><svg viewBox="0 0 24 24" aria-hidden="true">${LOCK_IC}</svg><span>${esc(p.label)}</span><span class="bd" style="background:#F2F1EC;color:#4A5550">잠김</span></button>`; continue; }
@@ -820,7 +824,7 @@ function go(id, arg){
     const sub=$("#subnav"); sub.hidden = g.ids.length<2;
     sub.innerHTML = g.ids.map(t=>`<button data-t="${t}" class="${t===id?"on":""}">${esc(TABS.find(x=>x.id===t).label)}</button>`).join("");
     sub.onclick = e => { const b=e.target.closest("button"); if(b) go(b.dataset.t); }; }
-  ({backup:viewBackup, report:viewReport, pab:viewPab, inbox:viewInbox, notice:viewNotice, nlist:viewNoticeList, material:viewMaterial, incoming:viewIncoming, inlist:viewInList, ppm:viewPpm, line:viewLine, users:viewUsers, plt:viewPlt, plth:viewPltHist, plts:viewPltStat, dtest:viewDtest, dtmat:viewDtMatrix, dtcmp:viewDtCompare, dtmst:viewDtMaster})[id](arg);
+  ({backup:viewBackup, report:viewReport, pab:viewPab, inbox:viewInbox, notice:viewNotice, nlist:viewNoticeList, material:viewMaterial, incoming:viewIncoming, inlist:viewInList, ppm:viewPpm, line:viewLine, users:viewUsers, plt:viewPlt, plth:viewPltHist, plts:viewPltStat, dtest:viewDtest, dtmat:viewDtMatrix, dtcmp:viewDtCompare, dtmst:viewDtMaster, inhome:viewInHome, inup:viewInUpload})[id](arg);
   window.scrollTo(0,0);
 }
 
@@ -2217,6 +2221,163 @@ async function viewDtMatrix(arg){
 }
 
 /* xlsx 읽기 (외부 라이브러리 없이, 브라우저 내장 압축해제) */
+/* ---------- 수입검사: PC 현황 + 파일 올리기(열 맞추기) ----------
+   11-06 대표: 휴대폰은 지금 입력 화면 그대로, PC는 현황과 파일 매핑·누적 기록 관리.
+   원칙(전사 데이터 축적): 원자료 한 건씩 보관, 같은 파일·같은 기록은 다시 안 들어감, 개인 이름 열은 저장 안 함. */
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function inPeriod(k){ const t=new Date(); const y=t.getFullYear(), m=t.getMonth();
+  if(k==="last") return [ymd(new Date(y,m-1,1)), ymd(new Date(y,m,0))];
+  if(k==="q") return [ymd(new Date(y,m-2,1)), ymd(t)];
+  return [ymd(new Date(y,m,1)), ymd(t)]; }
+
+async function viewInHome(arg){
+  let pk=(arg&&arg.pk)||"this", [f,t]=inPeriod(pk);
+  const mine=window.__mine, has=id=>mine.some(x=>x.id===id);
+  $("#app").innerHTML=`<section class="panel"><h2>수입검사 현황</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div class="chips" id="ipk">${[["this","이번 달"],["last","지난 달"],["q","최근 3개월"]].map(([k,l])=>`<button type="button" data-k="${k}" class="${pk===k?"on":""}">${l}</button>`).join("")}</div>
+        <label style="max-width:160px">시작<input type="date" id="if" value="${f}"></label><label style="max-width:160px">끝<input type="date" id="it" value="${t}"></label>
+        <label class="check" style="margin:0 0 10px"><input type="checkbox" id="itest"> 시험용 포함</label></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${has("inup")?'<button type="button" class="btn" data-t="inup">수입검사 파일 올리기</button>':""}${has("incoming")?'<button type="button" class="btn ghost" data-t="incoming">한 건 직접 입력</button>':""}${has("inlist")?'<button type="button" class="btn ghost" data-t="inlist">검사 기록 조회</button>':""}</div>
+      <div id="im"></div></section><div id="ib" class="sgrid" style="margin-top:6px"></div>`;
+  $("#app").querySelector(".panel").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if(b) go(b.dataset.t); });
+  const load=async()=>{ let s; try{ s=await rpc("qms_incoming_dashboard",{p_from:$("#if").value,p_to:$("#it").value,p_include_test:$("#itest").checked}); }catch(e){ return msg($("#im"),"err",e.message); }
+    const ppmTxt = s.ppm==null?"-":n0(Math.round(s.ppm));
+    const kp=`<div class="kpis" style="margin-top:10px"><div class="kpi hl"><div class="k">검사 건수</div><div class="v">${n0(s.count)} 건</div></div>
+      <div class="kpi"><div class="k">검사수량</div><div class="v">${n0(s.inspected)} 개</div></div><div class="kpi"><div class="k">불량수량</div><div class="v" style="color:${s.reject?"#93302A":"inherit"}">${n0(s.reject)} 개</div></div>
+      <div class="kpi"><div class="k">불량률 (검사수량 기준)</div><div class="v">${ppmTxt} PPM</div></div><div class="kpi"><div class="k">NG 건수</div><div class="v">${n0(s.ng_count)} 건</div></div>
+      <div class="kpi"><div class="k">입고수량 대기</div><div class="v">${n0(s.waiting)} 건</div><div class="muted" style="font-size:12px">공식 PPM 집계 제외</div></div></div>`;
+    $("#im").innerHTML=kp+(s.count?"":`<div class="msg info">이 기간 기록이 없습니다. 기존 수입검사 파일을 올리면 여기에 쌓입니다.</div>`);
+    const sup=s.suppliers, tot=k=>sup.reduce((a,x)=>a+(+x[k]||0),0);
+    const supT=`<table class="lt"><thead><tr><th>업체</th><th class="r">건수</th><th class="r">입고</th><th class="r">검사</th><th class="r">불량</th><th class="r">PPM</th><th class="r">NG</th></tr></thead><tbody>
+      ${sup.map(x=>`<tr><td>${esc(x.supplier)}${x.core?' <span class="pill wait" style="font-size:11px">하우징·커버</span>':""}</td><td class="r">${n0(x.count)}</td><td class="r">${n0(x.received)}</td><td class="r">${n0(x.inspected)}</td>
+        <td class="r" style="${x.reject?"color:#93302A;font-weight:700":""}">${n0(x.reject)}</td><td class="r">${x.ppm==null?"-":n0(Math.round(x.ppm))}</td><td class="r">${n0(x.ng)}</td></tr>`).join("")}
+      <tr class="sum"><td>합계</td><td class="r">${n0(tot("count"))}</td><td class="r">${n0(tot("received"))}</td><td class="r">${n0(tot("inspected"))}</td><td class="r">${n0(tot("reject"))}</td><td class="r">${ppmTxt}</td><td class="r">${n0(tot("ng"))}</td></tr></tbody></table>`;
+    const dmax=Math.max(1,...s.defects.map(x=>x.qty));
+    const sec=(cls,title,sub,body)=>`<section class="sec2 ${cls}"><h2>${title}</h2><div class="sub">${sub}</div>${body}</section>`;
+    $("#ib").innerHTML = sec("full","업체별 현황","불량수량 많은 순 · PPM = 불량 ÷ 검사수량 × 1,000,000", sup.length?`<div class="tscroll">${supT}</div>`:`<div class="empty">기록 없음</div>`)
+      + sec("","불량 유형","불량수량 합계", s.defects.length?`<div class="hbars">${s.defects.map(x=>`<span>${esc(x.type)}</span><span class="bar"><i style="width:${(x.qty*100/dmax).toFixed(0)}%"></i></span><b>${n0(x.qty)}개</b>`).join("")}</div>`:`<div class="empty">불량 유형 기록 없음</div>`)
+      + sec("span2 pc-only","최근 30일","원이 클수록 그날 검사·불량이 많음 · 원에 올리면 날짜", trendSvg(s.daily||[],[["count","검사 건수","#123B2F","건"],["reject","불량수량","#93302A","개"]]))
+      + sec("","최근 불량 기록","최근 15건", s.recent_ng.length?s.recent_ng.map(r=>`<div class="rrow"><div class="rt">${dtShort(r.d)} · ${esc(r.supplier||"")}${r.test?' <span class="pill test">시험</span>':""}</div>
+          <div><b style="color:#93302A">${n0(r.reject)}</b>/${n0(r.inspected)} · <span style="font-family:var(--mono);font-size:13px">${esc(r.code||"")}</span> ${esc((Array.isArray(r.defects)?r.defects:[]).filter(d=>+d.qty>0).map(d=>d.type).join(", "))}</div></div>`).join(""):`<div class="empty">불량 기록 없음</div>`);
+  };
+  $("#ipk").onclick=e=>{ const b=e.target.closest("[data-k]"); if(!b) return; pk=b.dataset.k; [f,t]=inPeriod(pk); $("#if").value=f; $("#it").value=t; $("#ipk").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); load(); };
+  $("#if").onchange=$("#it").onchange=()=>{ $("#ipk").querySelectorAll("button").forEach(x=>x.classList.remove("on")); load(); };
+  $("#itest").onchange=load;
+  load();
+}
+
+const IN_FIELDS=[
+  {k:"work_date",l:"검사일자",req:1,kw:/검사\s*일|검사일자|일자|날짜|입고\s*일|date/i},
+  {k:"material_code",l:"품번",req:1,kw:/품번|part\s*no|자재\s*코드|품목\s*코드|^코드$/i},
+  {k:"inspected_qty",l:"검사수량",req:1,kw:/검사\s*수량|검사량|시료|샘플/},
+  {k:"defect_type",l:"불량유형",kw:/불량\s*유형|불량\s*내용|불량\s*명|불량\s*현상|현상/},
+  {k:"reject_qty",l:"불량수량",kw:/불량\s*수량|불량수|불량|NG\s*수량|NG/i},
+  {k:"received_qty",l:"입고수량",kw:/입고\s*수량|입고량|납품\s*수량|LOT\s*수량|입고/i},
+  {k:"supplier",l:"업체",kw:/업체|협력사|공급사|거래처/},
+  {k:"vehicle",l:"차종",kw:/차종/},
+  {k:"material_name",l:"품명",kw:/품명|자재명|품목명/},
+  {k:"color_code",l:"컬러",kw:/컬러|색상|color/i},
+  {k:"lot",l:"LOT",kw:/lot|로트/i},
+  {k:"judgment",l:"판정",kw:/판정|합부|결과/},
+  {k:"inspection_method",l:"검사방식",kw:/검사\s*방식|검사\s*방법/},
+  {k:"note",l:"비고",kw:/비고|특이/}];
+const IN_PERSONAL=/검사자|작성자|확인자|승인자|담당|성명|이름|서명|싸인|사인/;
+const colName=i=>{ let s=""; i++; while(i){ const k=(i-1)%26; s=String.fromCharCode(65+k)+s; i=Math.floor((i-1)/26); } return s; };
+function inDate(v, year){
+  if(v==null||v==="") return null;
+  if(typeof v==="number"){ if(v>20000&&v<80000){ const d=new Date(Math.round((v-25569)*864e5)); return ymd(new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())); } return null; }
+  const s=String(v).trim(); let m;
+  if((m=s.match(/^(\d{4})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})/))) return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
+  if((m=s.match(/^(\d{2})[-./](\d{1,2})[-./](\d{1,2})$/))) return `20${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
+  if((m=s.match(/^(\d{1,2})\s*[-./월]\s*(\d{1,2})\s*일?$/))) return `${year}-${m[1].padStart(2,"0")}-${m[2].padStart(2,"0")}`;
+  return s; }
+const inNum = v => v==null||v==="" ? "" : String(v).replace(/[,\s개EA]/gi,"");
+async function sha256(buf){ const h=await crypto.subtle.digest("SHA-256",buf); return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join(""); }
+
+async function viewInUpload(){
+  $("#app").innerHTML=`<section class="panel"><h2>수입검사 파일 올리기</h2>
+      <div class="muted">기존에 쓰던 수입검사 엑셀(일보·대장)을 그대로 올리면, 열을 맞춰 한 줄씩 기록으로 쌓습니다. <b>같은 파일·이미 있는 기록은 다시 들어가지 않고</b>, 오류가 있는 줄만 빼고 반영합니다. 검사자 등 사람 이름 열은 저장하지 않습니다.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
+        <input type="file" id="uf" accept=".xlsx" hidden><button type="button" class="btn primary" id="ub">엑셀 파일 고르기 (.xlsx)</button>
+        <label style="max-width:140px">날짜 연도<input type="number" id="uy" value="${new Date().getFullYear()}" title="파일 날짜가 '10/20'처럼 연도 없이 적혀 있을 때 쓸 연도"></label></div>
+      <div id="um"></div></section>
+    <section class="panel" id="umap" hidden></section><section class="panel" id="uchk" hidden></section>
+    <section class="panel"><h2>올린 파일 기록</h2><div id="uh" class="muted">불러오는 중…</div></section>`;
+  let wb=null, sheet=null, rows=null, hdr=0, map={}, file=null, sha="", maps=[], chk=null;
+  const hist=async()=>{ try{ const h=await rpc("qms_incoming_import_history",{p_limit:30});
+      $("#uh").innerHTML=h.length?`<div class="tscroll"><table class="lt"><thead><tr><th>올린 날짜</th><th>파일</th><th>양식</th><th class="r">줄</th><th class="r">반영</th><th class="r">오류</th><th class="r">중복</th><th>올린 사람</th><th>상태</th></tr></thead><tbody>
+        ${h.map(b=>`<tr><td class="nw">${fmtDT(b.at)}</td><td>${esc(b.file)}</td><td class="nw">${esc(b.mapping||"")}</td><td class="r">${n0(b.rows)}</td><td class="r"><b>${n0(b.imported||0)}</b></td>
+          <td class="r">${n0((b.summary||{}).invalid||0)}</td><td class="r">${n0((b.summary||{}).duplicate||0)}</td><td class="nw">${esc(b.by||"")}</td><td>${b.status==="IMPORTED"?'<span class="pill ok">반영</span>':'<span class="pill wait">검증만</span>'}</td></tr>`).join("")}</tbody></table></div>`:`<div class="muted">아직 올린 파일이 없습니다.</div>`;
+    }catch(e){ $("#uh").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; } };
+  try{ maps=await rpc("qms_import_mappings",{p_kind:"INCOMING"}); }catch(e){}
+  const headers=()=>(rows[hdr]||[]).map((v,i)=>({i, name:String(v==null?"":v).replace(/\s+/g," ").trim()}));
+  const sig=()=>headers().map(h=>h.name).join("|");
+  const guess=()=>{ map={}; const used=new Set(); const hs=headers().filter(h=>h.name&&!IN_PERSONAL.test(h.name));
+    for(const f of IN_FIELDS){ const h=hs.find(h=>!used.has(h.i)&&f.kw.test(h.name)); if(h){ map[f.k]=h.i; used.add(h.i); } } };
+  const findHeader=()=>{ let best=0, score=-1; for(let r=0;r<Math.min(rows.length,30);r++){ const rr=rows[r]||[]; let sc=0; rr.forEach(v=>{ const s=String(v==null?"":v); if(IN_FIELDS.some(f=>f.kw.test(s))) sc++; }); if(sc>score){ score=sc; best=r; } } hdr=best; };
+  const firstData=()=>{ for(let r=hdr+1;r<rows.length;r++){ const rr=rows[r]; if(rr&&rr.some(v=>v!=null&&v!=="")) return rr; } return []; };
+  const build=()=>{ const out=[], year=+$("#uy").value||new Date().getFullYear(), H=headers(); let blank=0;
+    for(let r=hdr+1;r<rows.length;r++){ const rr=rows[r]; if(!rr||!rr.some(v=>v!=null&&v!=="")){ if(++blank>=20) break; continue; } blank=0;
+      const g=k=>map[k]==null?"":rr[map[k]];
+      const code=String(g("material_code")==null?"":g("material_code")).trim();
+      if(!code&&!g("inspected_qty")) continue; if(/합계|소계|total/i.test(code)) continue;
+      const raw={}; H.forEach(h=>{ if(h.name&&!IN_PERSONAL.test(h.name)&&rr[h.i]!=null&&rr[h.i]!=="") raw[h.name]=String(rr[h.i]); });
+      out.push({_row:r+1, work_date:inDate(g("work_date"),year), material_code:code, inspected_qty:inNum(g("inspected_qty")), reject_qty:inNum(g("reject_qty")), received_qty:inNum(g("received_qty")),
+        supplier:String(g("supplier")||"").trim(), vehicle:String(g("vehicle")||"").trim(), material_name:String(g("material_name")||"").trim(), color_code:String(g("color_code")||"").trim(),
+        lot:String(g("lot")||"").trim(), judgment:String(g("judgment")||"").trim(), defect_type:String(g("defect_type")||"").trim(), inspection_method:String(g("inspection_method")||"").trim(), note:String(g("note")||"").trim(), raw}); }
+    return out; };
+  const showMap=()=>{ const H=headers(), fd=firstData(), personal=H.filter(h=>h.name&&IN_PERSONAL.test(h.name));
+    const saved=maps.find(m=>m.header_sig===sig());
+    $("#umap").hidden=false; $("#uchk").hidden=true;
+    $("#umap").innerHTML=`<h2>열 맞추기 <span class="muted" style="font-size:13px;font-weight:400">${esc(file.name)}</span></h2>
+      ${saved?`<div class="msg ok">저장된 양식 「${esc(saved.name)}」을 적용했습니다. 확인만 하고 다음으로 가면 됩니다.</div>`:`<div class="muted">제목줄을 보고 자동으로 맞췄습니다. 틀린 곳만 고르세요. <b>*</b> 는 꼭 있어야 하는 칸입니다.</div>`}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">${wb.sheets.length>1?`<label style="max-width:220px">시트<select id="ush">${wb.sheets.map(s=>`<option ${s===sheet?"selected":""}>${esc(s.name)}</option>`).join("")}</select></label>`:""}
+        <label style="max-width:140px">제목줄 (행)<input type="number" id="uhr" min="1" value="${hdr+1}"></label></div>
+      ${personal.length?`<div class="muted" style="margin-top:6px">사람 이름 열 ${personal.map(h=>`「${esc(h.name)}」`).join(" ")} 은 저장하지 않습니다 (데이터 축적 원칙).</div>`:""}
+      <div class="tscroll"><table class="lt" style="margin-top:8px"><thead><tr><th>기록 칸</th><th>파일의 열</th><th>첫 줄 값</th></tr></thead><tbody>
+      ${IN_FIELDS.map(f=>`<tr><td class="nw">${f.l}${f.req?" <b style='color:#93302A'>*</b>":""}</td><td><select data-k="${f.k}" style="min-width:220px"><option value="">(없음)</option>
+        ${H.filter(h=>h.name).map(h=>`<option value="${h.i}" ${map[f.k]===h.i?"selected":""} ${IN_PERSONAL.test(h.name)?"disabled":""}>${colName(h.i)}열 · ${esc(h.name)}</option>`).join("")}</select></td>
+        <td class="muted">${map[f.k]==null?"":esc(String((f.k==="work_date"?inDate(fd[map[f.k]],+$("#uy").value||new Date().getFullYear()):fd[map[f.k]])??""))}</td></tr>`).join("")}</tbody></table></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px"><label style="max-width:260px">이 양식 이름 (다음부터 자동)<input id="umn" value="${esc(saved?saved.name:file.name.replace(/\.xlsx$/i,"").replace(/[\d_\-.()\s]+$/,"").trim()||"수입검사 양식")}"></label>
+        <button type="button" class="btn accent" id="ugo" style="min-height:50px">검증하기</button></div><div id="umm"></div>`;
+    const sh=$("#ush"); if(sh) sh.onchange=async()=>{ sheet=wb.sheets.find(s=>s.name===sh.value); rows=await wb.read(sheet); findHeader(); const sv=maps.find(m=>m.header_sig===sig()); if(sv) map={...sv.mapping}; else guess(); showMap(); };
+    $("#uhr").onchange=()=>{ hdr=Math.max(0,(+$("#uhr").value||1)-1); const sv=maps.find(m=>m.header_sig===sig()); if(sv) map={...sv.mapping}; else guess(); showMap(); };
+    $("#umap").querySelectorAll("select[data-k]").forEach(s=>s.onchange=()=>{ const v=s.value; if(v===""){ delete map[s.dataset.k]; } else { map[s.dataset.k]=+v; } showMap(); });
+    $("#ugo").onclick=async()=>{ const miss=IN_FIELDS.filter(f=>f.req&&map[f.k]==null); if(miss.length) return msg($("#umm"),"err",`꼭 필요한 칸을 맞추세요: ${miss.map(f=>f.l).join(", ")}`);
+      const data=build(); if(!data.length) return msg($("#umm"),"err","읽을 줄이 없습니다. 제목줄 행 번호를 확인하세요.");
+      const b=$("#ugo"); b.disabled=true; b.textContent="검증 중…";
+      try{ const name=$("#umn").value.trim()||"수입검사 양식";
+        await rpc("qms_import_mapping_save",{p_kind:"INCOMING",p_name:name,p_sig:sig(),p_mapping:map}); maps=await rpc("qms_import_mappings",{p_kind:"INCOMING"});
+        chk=await rpc("qms_incoming_import_check",{p_filename:file.name,p_sha:sha,p_mapping_name:name,p_rows:data.map(({_row,...x})=>x)});
+        chk._rows=data.map(x=>x._row); showChk();
+      }catch(e){ msg($("#umm"),"err",e.message); } b.disabled=false; b.textContent="검증하기"; };
+  };
+  const showChk=()=>{ const s=chk.summary; $("#uchk").hidden=false; let filt="issue";
+    const render=()=>{ const list=chk.rows.filter(r=>filt==="all"||r.status!=="valid"||r.warnings.length);
+      $("#uchk").innerHTML=`<h2>검증 결과</h2>
+        <div class="kpis"><div class="kpi hl"><div class="k">반영 가능</div><div class="v">${n0(s.valid)} 줄</div></div><div class="kpi"><div class="k">오류 (빠짐)</div><div class="v" style="color:${s.invalid?"#93302A":"inherit"}">${n0(s.invalid)} 줄</div></div>
+          <div class="kpi"><div class="k">이미 있음 (빠짐)</div><div class="v">${n0(s.duplicate)} 줄</div></div><div class="kpi"><div class="k">자재마스터 없음</div><div class="v">${n0(s.no_master)} 줄</div><div class="muted" style="font-size:12px">반영은 됨</div></div>
+          <div class="kpi"><div class="k">입고수량 없음</div><div class="v">${n0(s.no_received)} 줄</div><div class="muted" style="font-size:12px">PPM 집계 대기</div></div></div>
+        <div class="chips" id="ucf" style="margin:10px 0"><button type="button" data-f="issue" class="${filt==="issue"?"on":""}">확인할 줄만</button><button type="button" data-f="all" class="${filt==="all"?"on":""}">전체</button></div>
+        <div class="tscroll" style="max-height:420px;overflow:auto"><table class="lt"><thead><tr><th>파일 행</th><th>상태</th><th>날짜</th><th>품번</th><th>업체</th><th class="r">입고</th><th class="r">검사</th><th class="r">불량</th><th>내용</th></tr></thead><tbody>
+        ${list.map(r=>{ const d=r.data; return `<tr><td>${chk._rows[r.n-1]}</td><td class="nw">${r.status==="valid"?'<span class="pill ok">반영</span>':r.status==="duplicate"?'<span class="pill wait">이미 있음</span>':'<span class="pill ng">오류</span>'}</td>
+          <td class="nw">${esc(d.work_date||"")}</td><td style="font-family:var(--mono);font-size:12.5px">${esc(d.material_code||"")}</td><td class="nw">${esc(d.supplier||"")}</td><td class="r">${esc(d.received_qty||"")}</td><td class="r">${esc(d.inspected_qty||"")}</td><td class="r">${esc(d.reject_qty||"")}</td>
+          <td style="font-size:12.5px">${[...r.errors.map(x=>`<span style="color:#93302A">${esc(x)}</span>`),...r.warnings.map(x=>`<span class="muted">${esc(x)}</span>`)].join("<br>")}</td></tr>`; }).join("")||'<tr><td colspan="9" class="muted">확인할 줄이 없습니다</td></tr>'}</tbody></table></div>
+        <button type="button" class="btn accent" id="ucm" style="width:100%;min-height:52px;margin-top:10px" ${s.valid?"":"disabled"}>${n0(s.valid)}줄 기록으로 반영</button><div id="ucmm"></div>`;
+      $("#ucf").onclick=e=>{ const b=e.target.closest("[data-f]"); if(b){ filt=b.dataset.f; render(); } };
+      $("#ucm").onclick=async()=>{ if(!confirm(`${s.valid}줄을 수입검사 기록으로 반영할까요? 오류·중복 ${s.invalid+s.duplicate}줄은 빠집니다.`)) return;
+        try{ const r=await rpc("qms_incoming_import_commit",{p_batch_id:chk.batch_id}); $("#umap").hidden=true; $("#uchk").innerHTML=`<div class="msg ok">${n0(r.imported)}줄을 반영했습니다. 「${esc(file.name)}」</div><button type="button" class="btn" id="ugohome">수입검사 현황 보기</button>`;
+          $("#ugohome").onclick=()=>go("inhome"); hist(); }catch(e){ msg($("#ucmm"),"err",e.message); } };
+    }; render(); $("#uchk").scrollIntoView({behavior:"smooth"}); };
+  $("#ub").onclick=()=>$("#uf").click();
+  $("#uf").onchange=async e=>{ file=e.target.files[0]; e.target.value=""; if(!file) return; msg($("#um"),"info","읽는 중…");
+    try{ const buf=await file.arrayBuffer(); sha=await sha256(buf); wb=await readXlsx(new File([buf],file.name)); sheet=wb.sheets[0]; rows=await wb.read(sheet); findHeader();
+      const sv=maps.find(m=>m.header_sig===sig()); if(sv) map={...sv.mapping}; else guess(); msg($("#um"),"",""); showMap();
+    }catch(err){ msg($("#um"),"err",err.message); } };
+  hist();
+}
+
 async function readXlsx(file){
   const buf=new Uint8Array(await file.arrayBuffer()), dv=new DataView(buf.buffer), td=new TextDecoder();
   let e=buf.length-22; while(e>=0 && dv.getUint32(e,true)!==0x06054b50) e--; if(e<0) throw new Error("엑셀(xlsx) 파일이 아닙니다. 예전 xls 파일은 엑셀에서 'xlsx로 저장' 후 올려주세요.");
