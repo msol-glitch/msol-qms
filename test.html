@@ -391,6 +391,8 @@ nav.tabs button.on{color:#F4F1E8;border-top-color:#C8B88A}
   .sgrid{grid-template-columns:1.05fr 1.6fr 1fr;gap:40px 44px}
   .sec2.span2{grid-column:span 2}
 }
+.lt th,.lt td{padding-right:14px}.lt th:last-child,.lt td:last-child{padding-right:0}
+.lt.mx{font-size:12.5px}.lt.mx th,.lt.mx td{padding:7px 6px;white-space:nowrap}.lt.mx td.hv{background:#F4F1E8;font-weight:700;color:#123B2F}
 </style>
 </head>
 <body>
@@ -438,12 +440,15 @@ const TABS = [
   {id:"plt", label:"점검 입력", roles:["admin","quality","production"], ic:'<rect x="3" y="6" width="18" height="10" rx="1"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>'},
   {id:"plth", label:"팔레트 조회", roles:["admin","quality","production"], ic:'<circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/>'},
   {id:"plts", label:"현황·미회수", roles:["admin","quality","production"], ic:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'},
-  {id:"dtest", label:"일상시험", roles:["admin","production"], ic:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>'},
+  {id:"dtest", label:"의뢰 입력", roles:["admin","production"], ic:''},
+  {id:"dtmat", label:"월 집계표", roles:["admin","production"], ic:''},
+  {id:"dtcmp", label:"원청 대조", roles:["admin","production"], ic:''},
+  {id:"dtmst", label:"기준정보", roles:["admin","production"], ic:''},
 ];
 // 대문 파트 (11-05 대표: 대문 하나 → 품질 QMS · 생산관리 · 생산 · 자재, 파트마다 항목을 하나씩 추가)
 const PARTS = [
   {id:"qms", label:"품질 QMS", desc:"수시기록 · 업체통보 · PAB · 수입검사", groups:GROUPS, ic:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="m9 12 2 2 4-4"/>'},
-  {id:"pm", label:"생산관리", desc:"일상시험 의뢰 · 정산", groups:[{id:"g_pm", label:"일상시험", ids:["dtest"], ic:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>'}], ic:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'},
+  {id:"pm", label:"생산관리", desc:"일상시험 의뢰 · 정산", groups:[{id:"g_pm", label:"일상시험", ids:["dtest","dtmat","dtcmp","dtmst"], ic:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>'}], ic:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'},
   {id:"prod", label:"생산", desc:"팔레트 점검일지 · 관리대장", groups:[{id:"g_plt", label:"팔레트", ids:["plt","plth","plts"], ic:'<rect x="3" y="6" width="18" height="10" rx="1"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>'}], ic:'<rect x="3" y="6" width="18" height="10" rx="1"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>'},
   {id:"mat", label:"자재", desc:"준비 중", groups:[], ic:'<rect x="3" y="7" width="18" height="13" rx="1"/><path d="M3 11h18M9 7V4h6v3"/>'},
 ];
@@ -815,7 +820,7 @@ function go(id, arg){
     const sub=$("#subnav"); sub.hidden = g.ids.length<2;
     sub.innerHTML = g.ids.map(t=>`<button data-t="${t}" class="${t===id?"on":""}">${esc(TABS.find(x=>x.id===t).label)}</button>`).join("");
     sub.onclick = e => { const b=e.target.closest("button"); if(b) go(b.dataset.t); }; }
-  ({backup:viewBackup, report:viewReport, pab:viewPab, inbox:viewInbox, notice:viewNotice, nlist:viewNoticeList, material:viewMaterial, incoming:viewIncoming, inlist:viewInList, ppm:viewPpm, line:viewLine, users:viewUsers, plt:viewPlt, plth:viewPltHist, plts:viewPltStat, dtest:viewDtest})[id](arg);
+  ({backup:viewBackup, report:viewReport, pab:viewPab, inbox:viewInbox, notice:viewNotice, nlist:viewNoticeList, material:viewMaterial, incoming:viewIncoming, inlist:viewInList, ppm:viewPpm, line:viewLine, users:viewUsers, plt:viewPlt, plth:viewPltHist, plts:viewPltStat, dtest:viewDtest, dtmat:viewDtMatrix, dtcmp:viewDtCompare, dtmst:viewDtMaster})[id](arg);
   window.scrollTo(0,0);
 }
 
@@ -1813,7 +1818,7 @@ function makeXlsx(sheets){
   const col=i=>{ let s=""; i++; while(i){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; };
   const sheetXml=rows=>`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows.map((r,ri)=>`<row r="${ri+1}">${r.map((v,ci)=>{ const ref=col(ci)+(ri+1);
       if(v===null||v===undefined||v==="") return ""; if(typeof v==="number"&&isFinite(v)) return `<c r="${ref}"><v>${v}</v></c>`;
-      if(typeof v==="boolean") return `<c r="${ref}" t="b"><v>${v?1:0}</v></c>`; const t=String(v).slice(0,32000);
+      if(typeof v==="boolean") return `<c r="${ref}" t="b"><v>${v?1:0}</v></c>`; if(typeof v==="object"&&v.f) return `<c r="${ref}"><f>${x(v.f)}</f></c>`; const t=String(v).slice(0,32000);
       return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${x(t)}</t></is></c>`; }).join("")}</row>`).join("")}</sheetData></worksheet>`;
   const files=[
     {name:"[Content_Types].xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`},
@@ -2080,12 +2085,263 @@ async function viewPltStat(arg){
   load();
 }
 
-/* 생산관리: 일상시험 의뢰·정산 (자료 받기 전 자리만) */
-function viewDtest(){
-  $("#app").innerHTML=`<section class="panel"><h2>일상시험 의뢰 · 정산</h2>
-    <div class="msg info">준비 중입니다. 아래 3가지 자료를 받으면 이 칸에 화면을 붙입니다.</div>
-    <ol style="line-height:1.9;margin:10px 0 10px 18px"><li>수기 의뢰서 사진 1장</li><li>지금 채워 넣는 엑셀 원본 양식</li><li>원청 품질팀이 보내주는 파일 1개</li></ol>
-    <div class="muted">예정 흐름: 의뢰 내용 입력 → 월별 누적 → 원청 파일 올리면 줄 단위 자동 대조 (틀린 줄 · 빠진 줄 표시) → 확인 완료 → 제출용 엑셀</div></section>`;
+
+/* ---------- 생산관리: 일상시험 의뢰·정산 (pm 칸) ----------
+   11-06 대표: GPT로 하던 M-TEST 인수인계 → 수파베이스에서 사용.
+   원칙(인수인계서): 구분(LHD/RHD)·시험명은 사람이 직접 고르고, 품번은 그 조건에 맞는 것만 보여줌(서버도 불일치 거부 → 18번 같은 오류 전파 차단).
+   총수량이 같아도 날짜+품번 단위로 전부 대조. 손글씨 자동 인식은 외부 AI가 필요해 넣지 않음(사진은 서명 증빙으로 보관). */
+const DT_SUB = [["dtest","의뢰 입력"],["dtmat","월 집계표"],["dtcmp","원청 대조"],["dtmst","기준정보"]];
+let DT_PARTS=null;
+async function dtParts(force){ if(force||!DT_PARTS) DT_PARTS=await rpc("pm_dtest_parts",{p_all:false}); return DT_PARTS; }
+function dtPeriod(v){ if(v){ try{ localStorage.setItem("qms_dt_period",v); }catch(e){} return v; }
+  let p=null; try{ p=localStorage.getItem("qms_dt_period"); }catch(e){}
+  if(!p){ const d=new Date(); p=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; } return p; }
+const dtMonthInput = per => `<label style="max-width:200px">기준 월<input type="month" id="dtper" value="${per}"></label>`;
+const dtShort = d => { const x=String(d).slice(5,10).split("-"); return `${x[0]}/${x[1]}`; };
+const TEST_SHORT = t => t.replace("밀링스코어링 잔존량","밀링잔존량").replace("PAB융착력테스트","PAB융착력");
+
+async function viewDtest(arg){
+  $("#app").innerHTML=`<div class="panel muted">불러오는 중…</div>`;
+  let parts; try{ parts=await dtParts(); }catch(e){ $("#app").innerHTML=`<section class="panel"><div class="msg err">${esc(e.message)}</div></section>`; return; }
+  let per=dtPeriod(arg&&arg.period), data=null, edit=null;
+  const tests=[...new Set(parts.map(p=>p.test_name))], cars=[...new Set(parts.map(p=>p.car))];
+  let st={date:null, side:null, test:null, car:null, part:null, qty:1};
+  try{ const k=JSON.parse(sessionStorage.getItem("qms_dt_keep")||"null"); if(k){ st.date=k.date; st.car=k.car; } }catch(e){}
+  $("#app").innerHTML=`<section class="panel"><h2>일상시험 의뢰 입력</h2>
+      <div class="muted">수기 의뢰대장 한 줄 = 한 건. <b>구분과 시험명은 매번 직접</b> 고르고, 품번은 그 조건에 맞는 것만 나옵니다. 사인은 종이 대장에 받고, 대장 사진은 아래에 올려 증빙으로 둡니다.</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">${dtMonthInput(per)}<label class="check" style="margin:0 0 10px"><input type="checkbox" id="dttest"> 시험용 기록</label></div>
+      <div id="dtm"></div>
+      <div id="dtform"></div></section>
+    <section class="panel"><h2 id="dtlh">${per} 의뢰 목록</h2><div id="dtsum"></div><div id="dtlist"></div></section>
+    <section class="panel"><h2>수기 의뢰대장 사진 <span class="muted" style="font-size:13px;font-weight:400">사인 증빙 · 장마다 한 장씩</span></h2>
+      <input type="file" id="dtph" accept="image/*" hidden><button type="button" class="btn ghost" id="dtphb">대장 사진 올리기</button><div id="dtphm"></div><div id="dtphs" style="margin-top:8px"></div></section>`;
+  const isTest=()=>$("#dttest").checked;
+  const form=()=>{
+    const opts=parts.filter(p=>(!st.side||p.side===st.side)&&(!st.test||p.test_name===st.test)&&(!st.car||p.car===st.car));
+    const ready=st.side&&st.test;
+    const nextSeq = data ? (Math.max(0,...data.rows.map(r=>r.seq_no))+1) : 1;
+    $("#dtform").innerHTML=`<div style="display:grid;grid-template-columns:110px 1fr;gap:10px;margin-top:12px;align-items:center">
+        <span class="muted">순번</span><input id="dfseq" type="number" min="1" value="${st.seq||(edit?edit.seq_no:nextSeq)}" style="max-width:120px">
+        <span class="muted">날짜</span><input id="dfdate" type="date" value="${edit?edit.work_date:(st.date||today())}" min="${per}-01" max="${per}-31" style="max-width:200px">
+        <span class="muted">차종</span><div class="chips" id="dfcar">${cars.map(c=>`<button type="button" data-v="${esc(c)}" class="${st.car===c?"on":""}">${esc(c)}</button>`).join("")}</div>
+        <span class="muted">구분</span><div class="chips" id="dfside">${["LHD","RHD"].map(c=>`<button type="button" data-v="${c}" class="${st.side===c?"on":""}" style="min-width:90px;font-weight:700">${c}</button>`).join("")}</div>
+        <span class="muted">시험명</span><div class="chips" id="dftest">${tests.map(c=>`<button type="button" data-v="${esc(c)}" class="${st.test===c?"on":""}">${esc(TEST_SHORT(c))}</button>`).join("")}</div>
+        <span class="muted">품번</span><div class="chips" id="dfpart">${!ready?'<span class="muted">구분과 시험명을 먼저 고르세요</span>':opts.length?opts.map(p=>`<button type="button" data-v="${p.id}" class="${st.part===p.id?"on":""}" style="font-family:var(--mono)">${esc(p.part_no)}<span class="muted" style="font-family:inherit;margin-left:6px">${esc(p.car)}</span></button>`).join(""):'<span class="msg err" style="margin:0">맞는 품번이 기준정보에 없습니다. 차종·구분·시험명을 다시 확인하거나 기준정보에 등록하세요.</span>'}</div>
+        <span class="muted">수량</span><input id="dfqty" type="number" min="1" max="99" value="${st.qty||(edit?edit.qty:1)}" style="max-width:120px">
+        <span class="muted">비고</span><input id="dfnote" value="${esc(st.note!=null?st.note:(edit?edit.note||"":""))}" placeholder="선택">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="btn accent" id="dfsave" style="flex:1;min-height:52px">${edit?`${edit.seq_no}번 고쳐서 저장`:"저장"}</button>${edit?'<button type="button" class="btn ghost" id="dfcancel">취소</button>':""}</div>`;
+  };
+  const pickRow=(id,key,conv=x=>x)=>{ $("#dtform").querySelector(id).onclick=e=>{ const b=e.target.closest("[data-v]"); if(!b) return; const v=conv(b.dataset.v); st[key]= st[key]===v?null:v; if(key!=="part") st.part=null; keepDate(); form(); bind(); }; };
+  const keepDate=()=>{ const d=$("#dfdate"); if(!d) return; st.date=d.value; st.seq=$("#dfseq").value; st.qty=+$("#dfqty").value||1; st.note=$("#dfnote").value; };
+  const bind=()=>{
+    pickRow("#dfcar","car"); pickRow("#dfside","side"); pickRow("#dftest","test"); pickRow("#dfpart","part",Number);
+    $("#dfsave").onclick=async()=>{ keepDate();
+      if(!st.side) return msg($("#dtm"),"err","구분(LHD/RHD)을 고르세요");
+      if(!st.test) return msg($("#dtm"),"err","시험명을 고르세요");
+      if(!st.part) return msg($("#dtm"),"err","품번을 고르세요 (대장에 적힌 품번·컬러와 같은 것)");
+      const b=$("#dfsave"); b.disabled=true;
+      try{ const r=await rpc("pm_dtest_entry_save",{p:{id:edit?edit.id:null,seq_no:+$("#dfseq").value||null,work_date:$("#dfdate").value,side:st.side,test_name:st.test,car:st.car,part_id:st.part,qty:+$("#dfqty").value||1,note:$("#dfnote").value.trim(),record_kind:isTest()?"TEST":"NORMAL"}});
+        msg($("#dtm"),"ok",`${r.seq_no}번 저장 · ${dtShort(r.work_date)} ${r.car} ${r.side} ${r.part_no} ${TEST_SHORT(r.test_name)} ${r.qty}개`);
+        try{ sessionStorage.setItem("qms_dt_keep",JSON.stringify({date:st.date,car:st.car})); }catch(e){}
+        // 다음 줄: 날짜·차종만 유지, 구분·시험명·품번은 다시 고르게 (전 줄 값이 그대로 넘어가 생기는 오류 방지)
+        st.side=null; st.test=null; st.part=null; st.qty=1; st.seq=null; st.note=null; edit=null;
+        if(r.work_date.slice(0,7)!==per){ per=dtPeriod(r.work_date.slice(0,7)); $("#dtper").value=per; }
+        await load();
+      }catch(e){ msg($("#dtm"),"err",e.message); b.disabled=false; } };
+    const c=$("#dfcancel"); if(c) c.onclick=()=>{ edit=null; st.side=st.test=null; st.part=null; st.seq=null; st.note=null; st.qty=1; form(); bind(); };
+  };
+  const load=async()=>{
+    try{ data=await rpc("pm_dtest_entries",{p_period:per,p_include_test:isTest()}); }catch(e){ return msg($("#dtm"),"err",e.message); }
+    $("#dtlh").textContent=`${per} 의뢰 목록`;
+    const rows=data.rows, tot=rows.reduce((a,r)=>a+r.qty,0), amt=rows.reduce((a,r)=>a+r.qty*r.unit_price,0);
+    const conf=rows.length&&rows.every(r=>r.status==="확정");
+    $("#dtsum").innerHTML=`<div class="kpis"><div class="kpi hl"><div class="k">건수</div><div class="v">${n0(rows.length)} 건</div></div>
+        <div class="kpi"><div class="k">수량 합계</div><div class="v">${n0(tot)} 개</div></div><div class="kpi"><div class="k">금액</div><div class="v">${n0(amt)} 원</div></div>
+        <div class="kpi"><div class="k">상태</div><div class="v" style="font-size:18px">${rows.length?(conf?"확정":"작성 중"):"-"}</div></div></div>
+      ${data.seq_gaps.length?`<div class="msg err">빠진 순번: ${data.seq_gaps.join(", ")} — 대장과 비교해 확인하세요</div>`:""}
+      ${me.role==="admin"&&rows.length?`<button type="button" class="btn ${conf?"ghost":""}" id="dtconf" style="margin:8px 0">${conf?"확정 풀기":"이번 달 확정 (대조 끝난 뒤)"}</button>`:""}`;
+    $("#dtlist").innerHTML=rows.length?`<div class="tscroll"><table class="lt"><thead><tr><th>순번</th><th>날짜</th><th>차종</th><th>구분</th><th>품번</th><th>시험명</th><th class="r">수량</th><th>입력</th><th></th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td><b>${r.seq_no}</b></td><td class="nw">${dtShort(r.work_date)}</td><td class="nw">${esc(r.car)}</td><td><b>${r.side}</b></td><td style="font-family:var(--mono);font-size:13px">${esc(r.part_no)}</td>
+        <td class="nw">${esc(TEST_SHORT(r.test_name))}</td><td class="r">${r.qty}</td><td class="nw muted">${esc(r.by)}${r.kind==="TEST"?' <span class="pill test">시험</span>':""}${r.status==="확정"?' <span class="pill ok">확정</span>':""}</td>
+        <td class="nw">${r.status!=="확정"||me.role==="admin"?`<button type="button" class="chip" data-ed="${r.id}">고치기</button> <button type="button" class="chip" data-del="${r.id}">삭제</button>`:""}</td></tr>`).join("")}
+      <tr class="sum"><td colspan="6">합계 ${n0(rows.length)}건</td><td class="r">${n0(tot)}</td><td colspan="2" class="r">${n0(amt)}원</td></tr></tbody></table></div>`:`<div class="empty">이 달 기록이 없습니다</div>`;
+    $("#dtlist").onclick=async e=>{ const ed=e.target.closest("[data-ed]"), del=e.target.closest("[data-del]");
+      if(ed){ edit=rows.find(r=>r.id==ed.dataset.ed); st={date:edit.work_date,side:edit.side,test:edit.test_name,car:edit.car,part:edit.part_id,qty:edit.qty,seq:edit.seq_no,note:edit.note}; form(); bind(); $("#dtform").scrollIntoView({behavior:"smooth"}); }
+      if(del){ const r=rows.find(x=>x.id==del.dataset.del); if(!confirm(`${r.seq_no}번 (${dtShort(r.work_date)} ${r.side} ${r.part_no})을 삭제할까요?`)) return;
+        try{ await rpc("pm_dtest_entry_delete",{p_id:r.id}); load(); }catch(err){ msg($("#dtm"),"err",err.message); } } };
+    const cf=$("#dtconf"); if(cf) cf.onclick=async()=>{ if(!confirm(conf?"확정을 풀까요?":`${per} 기록 ${rows.length}건을 확정할까요? 확정 후에는 관리자만 고칠 수 있습니다.`)) return;
+      try{ await rpc("pm_dtest_confirm",{p_period:per,p_on:!conf}); load(); }catch(err){ msg($("#dtm"),"err",err.message); } };
+    $("#dtphs").innerHTML=data.photos.length?mediaHtml({photos:data.photos.map(p=>p.path)}):`<div class="muted">올린 사진이 없습니다</div>`; fillPhotos($("#dtphs"));
+    form(); bind();
+  };
+  $("#dtper").onchange=()=>{ per=dtPeriod($("#dtper").value); edit=null; st.seq=null; load(); };
+  $("#dttest").onchange=load;
+  $("#dtphb").onclick=()=>$("#dtph").click();
+  $("#dtph").onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+    try{ msg($("#dtphm"),"info","올리는 중…"); const b=await shrinkImage(f,2400,0.85); const path=`${myUid()}/dtest/${per}/${Date.now()}.jpg`;
+      await uploadPhoto(path,b); await rpc("pm_dtest_photo_add",{p_period:per,p_path:path,p_page:(data?data.photos.length:0)+1}); msg($("#dtphm"),"ok","사진을 올렸습니다"); load();
+    }catch(err){ msg($("#dtphm"),"err",err.message); } };
+  form(); bind(); load();
+}
+
+/* 월 집계표: 기존 월별 엑셀과 같은 모양 (품번 행 × 1~31일 열, 합계·총금액) */
+async function viewDtMatrix(arg){
+  let per=dtPeriod(arg&&arg.period);
+  $("#app").innerHTML=`<section class="panel"><h2>월 집계표</h2><div class="muted">기존 「일상시험 샘플 소요량」 엑셀과 같은 모양입니다. 입력한 의뢰가 날짜별로 자동 합산됩니다.</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">${dtMonthInput(per)}<label class="check" style="margin:0 0 10px"><input type="checkbox" id="mxt"> 시험용 포함</label>
+    <button type="button" class="btn" id="mxx" style="margin-bottom:6px">엑셀 받기</button></div><div id="mxm"></div><div id="mxb"></div></section>`;
+  let rows=[];
+  const days=()=>{ const [y,m]=per.split("-").map(Number); return new Date(y,m,0).getDate(); };
+  const load=async()=>{ try{ rows=await rpc("pm_dtest_matrix",{p_period:per,p_include_test:$("#mxt").checked}); }catch(e){ return msg($("#mxm"),"err",e.message); }
+    const D=days(), sum=r=>Object.values(r.days).reduce((a,b)=>a+b,0);
+    const tq=rows.reduce((a,r)=>a+sum(r),0), ta=rows.reduce((a,r)=>a+sum(r)*r.unit_price,0);
+    const dayTot=d=>rows.reduce((a,r)=>a+(r.days[d]||0),0);
+    $("#mxb").innerHTML=`<div class="kpis" style="margin:10px 0"><div class="kpi hl"><div class="k">합계 수량</div><div class="v">${n0(tq)} 개</div></div><div class="kpi"><div class="k">총금액</div><div class="v">${n0(ta)} 원</div></div></div>
+      <div class="tscroll"><table class="lt mx"><thead><tr><th>차종</th><th>구분</th><th>품번</th><th>시험명</th><th class="r">단가</th>${Array.from({length:D},(_,i)=>`<th class="r">${i+1}</th>`).join("")}<th class="r">합계</th><th class="r">총금액</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td class="nw">${esc(r.car)}</td><td>${r.side}</td><td class="nw" style="font-family:var(--mono);font-size:12.5px">${esc(r.part_no)}</td><td class="nw">${esc(TEST_SHORT(r.test_name))}</td><td class="r">${n0(r.unit_price)}</td>
+        ${Array.from({length:D},(_,i)=>`<td class="r ${r.days[i+1]?"hv":""}">${r.days[i+1]||""}</td>`).join("")}<td class="r"><b>${n0(sum(r))}</b></td><td class="r">${n0(sum(r)*r.unit_price)}</td></tr>`).join("")}
+      <tr class="sum"><td colspan="5">합계</td>${Array.from({length:D},(_,i)=>`<td class="r">${dayTot(i+1)||""}</td>`).join("")}<td class="r">${n0(tq)}</td><td class="r">${n0(ta)}</td></tr></tbody></table></div>`;
+  };
+  $("#mxx").onclick=()=>{ const D=days(), [y,m]=per.split("-");
+    const col=i=>{ let s=""; i++; while(i){ const k=(i-1)%26; s=String.fromCharCode(65+k)+s; i=Math.floor((i-1)/26); } return s; };
+    const head=["업체명","차종","구분","품번","시험명","단가",...Array.from({length:D},(_,i)=>`${+m}/${String(i+1).padStart(2,"0")}`),"합계","총금액"];
+    const out=[[`${y}년 ${+m}월 일상시험 샘플 소요량 (밀링·융착 - 엠솔루션)`],[],head];
+    const first=4; rows.forEach((r,ri)=>{ const rn=first+ri, dc0=col(6), dcN=col(5+D);
+      out.push([r.customer||"(주)엠솔루션",r.car,r.side,r.part_no,r.test_name,r.unit_price,...Array.from({length:D},(_,i)=>r.days[i+1]||""),{f:`SUM(${dc0}${rn}:${dcN}${rn})`},{f:`F${rn}*${col(6+D)}${rn}`}]); });
+    const last=first+rows.length-1;
+    out.push(["합계","","","","","",...Array.from({length:D},(_,i)=>({f:`SUM(${col(6+i)}${first}:${col(6+i)}${last})`})),{f:`SUM(${col(6+D)}${first}:${col(6+D)}${last})`},{f:`SUM(${col(7+D)}${first}:${col(7+D)}${last})`}]);
+    saveBlob(makeXlsx([{name:`${+m}월`,rows:out}]),`일상시험_샘플소요량_${per}.xlsx`); };
+  $("#dtper").onchange=()=>{ per=dtPeriod($("#dtper").value); load(); }; $("#mxt").onchange=load;
+  load();
+}
+
+/* xlsx 읽기 (외부 라이브러리 없이, 브라우저 내장 압축해제) */
+async function readXlsx(file){
+  const buf=new Uint8Array(await file.arrayBuffer()), dv=new DataView(buf.buffer), td=new TextDecoder();
+  let e=buf.length-22; while(e>=0 && dv.getUint32(e,true)!==0x06054b50) e--; if(e<0) throw new Error("엑셀(xlsx) 파일이 아닙니다. 예전 xls 파일은 엑셀에서 'xlsx로 저장' 후 올려주세요.");
+  const n=dv.getUint16(e+10,true); let p=dv.getUint32(e+16,true); const files={};
+  for(let i=0;i<n;i++){ const method=dv.getUint16(p+10,true), csize=dv.getUint32(p+20,true), nl=dv.getUint16(p+28,true), xl=dv.getUint16(p+30,true), cl=dv.getUint16(p+32,true), lo=dv.getUint32(p+42,true);
+    files[td.decode(buf.subarray(p+46,p+46+nl))]={method,csize,lo}; p+=46+nl+xl+cl; }
+  const get=async name=>{ const f=files[name]; if(!f) return null; const s=f.lo+30+dv.getUint16(f.lo+26,true)+dv.getUint16(f.lo+28,true), data=buf.subarray(s,s+f.csize);
+    if(f.method===0) return td.decode(data);
+    if(typeof DecompressionStream==="undefined") throw new Error("이 브라우저는 엑셀 읽기를 지원하지 않습니다. 크롬이나 엣지 최신판을 쓰세요.");
+    return td.decode(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer()); };
+  const P=new DOMParser(), X=s=>P.parseFromString(s,"application/xml"), tags=(d,t)=>[...d.getElementsByTagNameNS("*",t)];
+  const wb=X(await get("xl/workbook.xml")), rels=X(await get("xl/_rels/workbook.xml.rels")), rel={};
+  tags(rels,"Relationship").forEach(r=>rel[r.getAttribute("Id")]=r.getAttribute("Target"));
+  const ssx=await get("xl/sharedStrings.xml"), ss=ssx?tags(X(ssx),"si").map(si=>tags(si,"t").map(t=>t.textContent).join("")):[];
+  const sheets=tags(wb,"sheet").map(s=>{ const rid=s.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships","id")||s.getAttribute("r:id"); let t=rel[rid]||"";
+    return {name:s.getAttribute("name"), path:t.startsWith("/")?t.slice(1):"xl/"+t.replace(/^\.\//,"")}; });
+  const colIdx=ref=>{ const m=ref.match(/^([A-Z]+)/); let n2=0; for(const ch of m[1]) n2=n2*26+ch.charCodeAt(0)-64; return n2-1; };
+  const read=async sh=>{ const d=X(await get(sh.path)); const rows=[];
+    for(const r of tags(d,"row")){ const ri=+r.getAttribute("r")-1, arr=[];
+      for(const c of tags(r,"c")){ const t=c.getAttribute("t"), v=tags(c,"v")[0]; let val=null;
+        if(t==="s") val=v?ss[+v.textContent]:null; else if(t==="inlineStr") val=tags(c,"t").map(x=>x.textContent).join(""); else if(v) val=(t==="str"||t==="e")?v.textContent:(isNaN(+v.textContent)?v.textContent:+v.textContent);
+        arr[colIdx(c.getAttribute("r"))]=val; }
+      rows[ri]=arr; }
+    return rows; };
+  return {sheets, read};
+}
+// 원청 엑셀 → 날짜·품번·수량 목록. 날짜 머리줄(1~31일 / 10/01 / 날짜값)을 찾아 열을 맞춤
+function dtParseSheet(rows, per, parts){
+  const [Y,M]=per.split("-").map(Number), D=new Date(Y,M,0).getDate();
+  const dayOf=v=>{ if(v==null||v==="") return null;
+    if(typeof v==="number"){ if(v>30000&&v<80000){ const d=new Date(Math.round((v-25569)*864e5)); return (d.getUTCFullYear()===Y&&d.getUTCMonth()+1===M)?d.getUTCDate():-1; } return (Number.isInteger(v)&&v>=1&&v<=D)?v:null; }
+    const s=String(v).trim(); let m=s.match(/^(\d{1,2})\s*[\/.\-월]\s*(\d{1,2})\s*일?$/); if(m) return +m[1]===M&&+m[2]<=D?+m[2]:-1;
+    m=s.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})/); if(m) return (+m[1]===Y&&+m[2]===M)?+m[3]:-1;
+    m=s.match(/^(\d{1,2})\s*일?$/); if(m&&+m[1]>=1&&+m[1]<=D) return +m[1]; return null; };
+  let hdr=-1, map=null;
+  rows.forEach((r,ri)=>{ if(hdr>=0||!r) return; const mm={}; let cnt=0; r.forEach((v,ci)=>{ const d=dayOf(v); if(d&&d>0){ mm[ci]=d; cnt++; } });
+    const ds=Object.values(mm); if(cnt>=Math.min(10,D)&&new Set(ds).size===cnt&&ds.includes(1)){ hdr=ri; map=mm; } });
+  if(hdr<0) throw new Error(`${M}월 날짜 머리줄(1일~${D}일)을 찾지 못했습니다. 다른 시트를 고르거나, 날짜가 ${M}월인지 확인하세요.`);
+  const norm=s=>String(s||"").toUpperCase().replace(/\s+/g,""), byNo={}; parts.forEach(p=>byNo[norm(p.part_no)+"|"+p.test_name]=p);
+  const partNos=new Set(parts.map(p=>norm(p.part_no)));
+  const hrow=rows[hdr]||[], testCol=hrow.findIndex(v=>/시험/.test(String(v||""))), partCol=hrow.findIndex(v=>/품번|PART/i.test(String(v||"")));
+  const out=[], unknown=[], seen={};
+  for(let ri=hdr+1; ri<rows.length; ri++){ const r=rows[ri]; if(!r) continue;
+    let pc=partCol>=0&&r[partCol]?partCol:r.findIndex(v=>partNos.has(norm(v)));
+    if(pc<0) pc=r.findIndex((v,ci)=>!(ci in map)&&/^[A-Z0-9_]{2,}-[A-Z0-9]{3,}$/i.test(String(v||"").trim()));
+    if(pc<0) continue; const pno=String(r[pc]).trim(); if(!/[0-9]/.test(pno)||/합계|소계|TOTAL/i.test(pno)) continue;
+    const tname=testCol>=0?String(r[testCol]||"").trim():"";
+    let qsum=0; for(const [ci,d] of Object.entries(map)){ const q=r[ci]; if(typeof q==="number"&&q!==0){ out.push({d:`${per}-${String(d).padStart(2,"0")}`,part_no:pno,test_name:tname,qty:q}); qsum+=q; } }
+    const known=partNos.has(norm(pno)); const k=pno+"|"+tname; seen[k]=(seen[k]||0)+qsum; if(!known&&!unknown.includes(pno)) unknown.push(pno); }
+  return {rows:out, header_row:hdr+1, day_cols:Object.keys(map).length, unknown, by_part:seen};
+}
+
+async function viewDtCompare(arg){
+  let per=dtPeriod(arg&&arg.period), parsed=null, fileName="";
+  $("#app").innerHTML=`<section class="panel"><h2>원청 대조</h2>
+      <div class="muted">원청이 최종 입력한 엑셀을 올리면, 우리 의뢰 기록과 <b>날짜·품번별로 하나하나</b> 비교합니다. 총수량이 같아도 날짜·구분·시험명이 다르면 모두 잡습니다.</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">${dtMonthInput(per)}
+        <input type="file" id="cpf" accept=".xlsx" hidden><button type="button" class="btn" id="cpb" style="margin-bottom:6px">원청 엑셀 올리기 (.xlsx)</button>
+        <button type="button" class="btn ghost" id="cprun" style="margin-bottom:6px">대조 다시 보기</button></div><div id="cpm"></div></section>
+    <section class="panel" id="cpprev" hidden></section><section class="panel" id="cpres" hidden></section>`;
+  const parts=await dtParts().catch(e=>{ msg($("#cpm"),"err",e.message); return []; });
+  const showPrev=(wb,sh)=>{ $("#cpprev").hidden=false;
+    const P=parsed; const known=Object.entries(P.by_part).filter(([k,q])=>q);
+    $("#cpprev").innerHTML=`<h2>읽은 내용 확인 <span class="muted" style="font-size:13px;font-weight:400">${esc(fileName)}</span></h2>
+      ${wb.sheets.length>1?`<label>시트<select id="cpsh">${wb.sheets.map(s=>`<option ${s===sh?"selected":""}>${esc(s.name)}</option>`).join("")}</select></label>`:""}
+      <div class="muted">날짜 머리줄 ${P.header_row}행 · 날짜 ${P.day_cols}칸 · 수량 있는 칸 ${P.rows.length}개 · 합계 ${n0(P.rows.reduce((a,r)=>a+r.qty,0))}개</div>
+      ${P.unknown.length?`<div class="msg err">기준정보에 없는 품번 ${P.unknown.length}개: ${P.unknown.map(esc).join(", ")} — 저장은 되지만 대조에서 '기준정보에 없는 품번'으로 표시됩니다. 0/O, _/- 표기를 확인하세요.</div>`:""}
+      <table class="lt"><thead><tr><th>품번</th><th>시험명</th><th class="r">원청 수량</th></tr></thead><tbody>${known.map(([k,q])=>`<tr><td style="font-family:var(--mono)">${esc(k.split("|")[0])}</td><td>${esc(TEST_SHORT(k.split("|")[1]||""))}</td><td class="r">${n0(q)}</td></tr>`).join("")}</tbody></table>
+      <button type="button" class="btn accent" id="cpsave" style="width:100%;min-height:50px;margin-top:10px">이 내용으로 ${per} 원청 자료 저장하고 대조</button>`;
+    const sel=$("#cpsh"); if(sel) sel.onchange=async()=>{ const s=wb.sheets.find(x=>x.name===sel.value); try{ parsed=dtParseSheet(await wb.read(s),per,parts); showPrev(wb,s); }catch(e){ msg($("#cpm"),"err",e.message); } };
+    $("#cpsave").onclick=async()=>{ if(!confirm(`${per} 원청 자료를 이 파일 내용으로 바꿉니다 (이전 업로드는 대체). 진행할까요?`)) return;
+      try{ const r=await rpc("pm_dtest_customer_save",{p_period:per,p_file:fileName,p_rows:parsed.rows}); msg($("#cpm"),"ok",`원청 자료 ${r.rows}칸 저장`); $("#cpprev").hidden=true; run(); }catch(e){ msg($("#cpm"),"err",e.message); } };
+  };
+  $("#cpb").onclick=()=>$("#cpf").click();
+  $("#cpf").onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return; fileName=f.name; msg($("#cpm"),"info","읽는 중…");
+    try{ const wb=await readXlsx(f); const want=`${+per.split("-")[1]}월`;
+      let sh=wb.sheets.find(s=>s.name.replace(/\s/g,"")===want)||wb.sheets.find(s=>s.name.includes(want))||wb.sheets[0], lastErr=null;
+      for(const s of [sh,...wb.sheets.filter(x=>x!==sh)]){ try{ parsed=dtParseSheet(await wb.read(s),per,parts); sh=s; lastErr=null; break; }catch(err){ lastErr=lastErr||err; } }
+      if(lastErr) throw lastErr; msg($("#cpm"),"",""); showPrev(wb,sh);
+    }catch(err){ msg($("#cpm"),"err",err.message); } };
+  const KIND_CLS={"LHD/RHD 반전 의심":"ng","날짜 이동 의심":"wait","시험명 오기 의심":"ng","원청에 없음 (누락)":"ng","당사 기록에 없음 (원청 초과)":"wait","수량 차이":"wait","기준정보에 없는 품번":"test"};
+  const run=async()=>{ let c; try{ c=await rpc("pm_dtest_compare",{p_period:per}); }catch(e){ return msg($("#cpm"),"err",e.message); }
+    $("#cpres").hidden=false; const mm=c.mismatch;
+    $("#cpres").innerHTML=`<h2>${per} 대조 결과</h2>
+      ${!c.customer_rows?`<div class="msg info">이 달 원청 자료가 아직 없습니다. 원청 엑셀을 올리세요.</div>`:""}
+      <div class="kpis"><div class="kpi hl"><div class="k">당사 수량</div><div class="v">${n0(c.manual_total)} 개</div></div><div class="kpi"><div class="k">원청 수량</div><div class="v">${n0(c.customer_total)} 개</div></div>
+        <div class="kpi"><div class="k">비교한 칸</div><div class="v">${n0(c.cells_checked)} 칸</div></div><div class="kpi"><div class="k">불일치</div><div class="v" style="color:${mm.length?"#93302A":"#1E5C43"}">${n0(mm.length)} 칸</div></div></div>
+      ${c.customer_rows?(mm.length?(c.manual_total===c.customer_total?`<div class="msg err">총수량은 ${n0(c.manual_total)}개로 같지만 항목별로 ${mm.length}칸이 다릅니다.</div>`:""):`<div class="msg ok">날짜·품번별로 모두 일치합니다 (${n0(c.cells_checked)}칸).</div>`):""}
+      ${mm.length?`<div class="tscroll"><table class="lt"><thead><tr><th>원인 추정</th><th>날짜</th><th>차종</th><th>구분</th><th>품번</th><th>시험명</th><th class="r">당사</th><th class="r">원청</th><th class="r">차이</th><th>대장 순번</th></tr></thead><tbody>
+        ${mm.map(x=>`<tr><td class="nw"><span class="pill ${KIND_CLS[x.kind]||""}">${esc(x.kind)}</span></td><td class="nw">${dtShort(x.d)}</td><td class="nw">${esc(x.car||"")}</td><td><b>${esc(x.side||"")}</b></td><td style="font-family:var(--mono);font-size:13px">${esc(x.part_no)}</td>
+          <td class="nw">${esc(TEST_SHORT(x.test_name||""))}</td><td class="r">${x.manual}</td><td class="r">${x.customer}</td><td class="r"><b>${x.diff>0?"+":""}${x.diff}</b></td><td>${x.seqs.length?x.seqs.join(", ")+"번":"-"}</td></tr>`).join("")}</tbody></table></div>
+        <div class="muted" style="margin-top:6px">원인은 같은 날·주변 날짜의 반대 차이를 보고 추정한 것입니다. 최종 판단은 대장 사진과 순번으로 확인하세요.</div>
+        <button type="button" class="btn ghost" id="cpx" style="margin-top:8px">불일치 목록 엑셀</button>`:""}
+      <h3 style="margin:16px 0 6px;font-size:15px">품번별 합계</h3><table class="lt"><thead><tr><th>품번</th><th>시험명</th><th>구분</th><th class="r">당사</th><th class="r">원청</th></tr></thead><tbody>
+        ${c.by_part.map(x=>`<tr><td style="font-family:var(--mono);font-size:13px">${esc(x.part_no)}</td><td>${esc(TEST_SHORT(x.test_name||""))}</td><td>${esc(x.side||"")}</td><td class="r">${x.manual}</td><td class="r" style="${x.manual!==x.customer?"color:#93302A;font-weight:700":""}">${x.customer}</td></tr>`).join("")}</tbody></table>`;
+    const bx=$("#cpx"); if(bx) bx.onclick=()=>saveBlob(makeXlsx([{name:"불일치",rows:[["원인 추정","날짜","차종","구분","품번","시험명","당사","원청","차이","대장 순번"],...mm.map(x=>[x.kind,x.d,x.car||"",x.side||"",x.part_no,x.test_name||"",x.manual,x.customer,x.diff,x.seqs.join(", ")])]}]),`일상시험_원청대조_${per}.xlsx`);
+  };
+  $("#cprun").onclick=run; $("#dtper").onchange=()=>{ per=dtPeriod($("#dtper").value); $("#cpprev").hidden=true; run(); };
+  run();
+}
+
+/* 기준정보: 품번·시험명·단가 (월별 엑셀의 행) */
+async function viewDtMaster(){
+  $("#app").innerHTML=`<section class="panel"><h2>일상시험 기준정보</h2><div class="muted">월별 엑셀의 품번 행입니다. 처음 값은 GPT 인수인계서의 집계표 표시값이라 <b>원본 엑셀과 한 번 대조</b>가 필요합니다. 품번의 0/O, _/- 는 프로그램이 같다고 보지 않으니 원청 표기 그대로 넣으세요.</div><div id="msm"></div><div id="msl"></div></section>
+    ${me.role==="admin"?`<section class="panel"><h2 id="msfh">품번 추가</h2><div id="msf"></div></section>`:""}`;
+  let all=[];
+  const load=async()=>{ try{ all=await rpc("pm_dtest_parts",{p_all:true}); DT_PARTS=null; }catch(e){ return msg($("#msm"),"err",e.message); }
+    $("#msl").innerHTML=`<div class="tscroll"><table class="lt"><thead><tr><th>차종</th><th>구분</th><th>품번</th><th>시험명</th><th>컬러</th><th class="r">단가</th><th>상태</th>${me.role==="admin"?"<th></th>":""}</tr></thead><tbody>
+      ${all.map(p=>`<tr style="${p.active?"":"opacity:.5"}"><td>${esc(p.car)}</td><td><b>${p.side}</b></td><td style="font-family:var(--mono)">${esc(p.part_no)}</td><td>${esc(TEST_SHORT(p.test_name))}</td><td>${esc(p.color||"")}</td><td class="r">${n0(p.unit_price)}원</td>
+        <td>${p.active?'<span class="pill ok">사용</span>':'<span class="pill">중지</span>'}</td>${me.role==="admin"?`<td><button type="button" class="chip" data-ed="${p.id}">고치기</button></td>`:""}</tr>`).join("")}</tbody></table></div>`;
+    $("#msl").onclick=e=>{ const b=e.target.closest("[data-ed]"); if(b) fill(all.find(p=>p.id==b.dataset.ed)); };
+  };
+  const fill=p=>{ if(me.role!=="admin") return; p=p||{};
+    $("#msfh").textContent=p.id?`품번 고치기 · ${p.part_no}`:"품번 추가";
+    $("#msf").innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
+      <label>차종<input id="mf_car" value="${esc(p.car||"")}"></label><label>구분<select id="mf_side"><option ${p.side==="LHD"?"selected":""}>LHD</option><option ${p.side==="RHD"?"selected":""}>RHD</option></select></label>
+      <label>품번<input id="mf_no" value="${esc(p.part_no||"")}" style="font-family:var(--mono)"></label><label>시험명<input id="mf_test" value="${esc(p.test_name||"")}" list="mf_tests"></label>
+      <label>컬러<input id="mf_color" value="${esc(p.color||"")}"></label><label>단가(원)<input id="mf_price" type="number" min="0" value="${p.unit_price??""}"></label>
+      <label>업체명<input id="mf_cust" value="${esc(p.customer||"")}"></label>${p.id?`<label>상태<select id="mf_act"><option value="true" ${p.active?"selected":""}>사용</option><option value="false" ${!p.active?"selected":""}>중지</option></select></label>`:""}</div>
+      <datalist id="mf_tests">${[...new Set(all.map(x=>x.test_name))].map(t=>`<option value="${esc(t)}">`).join("")}</datalist>
+      <div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn primary" id="mf_save">${p.id?"고쳐서 저장":"추가"}</button>${p.id?'<button type="button" class="btn ghost" id="mf_new">새로 추가로</button>':""}</div>`;
+    $("#mf_save").onclick=async()=>{ try{ await rpc("pm_dtest_part_save",{p:{id:p.id||null,car:$("#mf_car").value,side:$("#mf_side").value,part_no:$("#mf_no").value,test_name:$("#mf_test").value,color:$("#mf_color").value,unit_price:+$("#mf_price").value||0,customer:$("#mf_cust").value,active:p.id?$("#mf_act").value==="true":true}});
+      msg($("#msm"),"ok","저장했습니다"); fill(null); load(); }catch(e){ msg($("#msm"),"err",e.message); } };
+    const nb=$("#mf_new"); if(nb) nb.onclick=()=>fill(null); };
+  await load(); fill(null);
 }
 
 /* ---------- 업체통보: 업체 연락처 목록 → 업체 화면 (수입검사·공식 PPM과 별개 데이터) ---------- */
