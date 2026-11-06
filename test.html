@@ -549,9 +549,11 @@ async function boot(){
   buildChrome();
   // 라인 벽 QR: go.html?plt=차종 → test.html#plt=차종 → 그 차종 팔레트 점검 입력으로 바로
   const hm = location.hash.match(/^#plt=(.+)$/);
-  if(hm){ history.replaceState(null,"",location.pathname+location.search);
-    if(mine.some(t=>t.id==="plt")) return go("plt",{vehicle:decodeURIComponent(hm[1])}); }
-  home();
+  if(hm) history.replaceState(null,"",location.pathname+location.search);
+  const start=()=>{ if(hm && mine.some(t=>t.id==="plt")) return go("plt",{vehicle:decodeURIComponent(hm[1])}); home(); };
+  // 11-06 대표: 전체 현황 권한자(대표·이성희 과장)도 들어올 때 개인 비밀번호 한 번 (서버도 30분 확인 없으면 현황 데이터 거부)
+  if(me.dashboard && !dashOpen()) return dashGate(start);
+  start();
 }
 function setPart(p){
   window.__part=p; window.__groups=p.groups;
@@ -572,11 +574,14 @@ const isPC = () => matchMedia("(min-width:1100px)").matches;
 function unlockMap(){ try{ const m=JSON.parse(sessionStorage.getItem("qms_unlock")||"{}"); return (Date.now()-(m._t||0) > UNLOCK_IDLE) ? {} : m; }catch(e){ return {}; } }
 function saveUnlock(m){ m._t=Date.now(); try{ sessionStorage.setItem("qms_unlock",JSON.stringify(m)); }catch(e){} }
 function needPin(pid){ return !!me && isPC() && !me.dashboard && (me.pin_parts||[]).includes(pid) && !unlockMap()[pid]; }
-function lockAll(note){ try{ sessionStorage.removeItem("qms_unlock"); }catch(e){} if(!me) return; buildChrome(); home(); if(note) setTimeout(()=>{ const h=$(".dash-head"); if(h) h.insertAdjacentHTML("afterend",`<div class="msg info">${esc(note)}</div>`); },0); }
+function lockAll(note){ try{ sessionStorage.removeItem("qms_unlock"); }catch(e){} if(!me) return;
+  if(me.dashboard){ rpc("qms_dash_lock").catch(()=>{}); return dashGate(()=>home()); } buildChrome(); home(); if(note) setTimeout(()=>{ const h=$(".dash-head"); if(h) h.insertAdjacentHTML("afterend",`<div class="msg info">${esc(note)}</div>`); },0); }
 (()=>{ let last=0;
   const touch=()=>{ const n=Date.now(); if(n-last<15000) return; last=n; const m=unlockMap(); if(Object.keys(m).some(k=>k!=="_t")) saveUnlock(m); };
   ["pointerdown","keydown"].forEach(ev=>document.addEventListener(ev,touch,{passive:true}));
-  setInterval(()=>{ if(!me || me.dashboard) return; let raw=null; try{ raw=sessionStorage.getItem("qms_unlock"); }catch(e){}
+  setInterval(()=>{ if(!me) return;
+    if(me.dashboard){ if(!$("#pinov.gate") && !dashOpen()){ try{ sessionStorage.removeItem("qms_unlock"); }catch(e){} rpc("qms_dash_lock").catch(()=>{}); dashGate(()=>home()); } return; }
+    let raw=null; try{ raw=sessionStorage.getItem("qms_unlock"); }catch(e){}
     if(raw && !Object.keys(unlockMap()).some(k=>k!=="_t")){ const part=(window.__parts||[]).find(p=>p.groups.some(g=>g.ids.includes(current)));
       if(part && needPin(part.id)) lockAll("30분 동안 사용이 없어 잠겼습니다."); else { try{ sessionStorage.removeItem("qms_unlock"); }catch(e){} buildChrome(); } } },30000);
   matchMedia("(min-width:1100px)").addEventListener("change",()=>{ if(!me || !window.__parts) return; buildChrome();
@@ -626,6 +631,45 @@ function pinChange(part, oldPin, then){
       if(then) then(); else msg($("#app").querySelector(".msgline")||$("#app").firstElementChild,"ok","팀 비밀번호를 바꿨습니다");
     }catch(err){ msg($("#pcm"),"err",err.message); b.disabled=false; } };
 }
+function dashOpen(){ return !!unlockMap().dash; }
+function dashGate(then){
+  const old=$("#pinov"); if(old) old.remove();
+  $("#app").innerHTML=""; $("#tabs").hidden=true; $("#subnav").hidden=true; $("#side").hidden=true; $("#topnav").hidden=true;
+  const setMode=!me.has_pin;
+  const d=document.createElement("div"); d.id="pinov"; d.className="pinov gate";
+  d.innerHTML=`<form class="pincard" novalidate><h2>개인 비밀번호</h2>
+    <div class="muted">${setMode?"전체 현황을 보는 계정입니다.<br>처음 한 번, 본인만 아는 비밀번호를 정하세요.":"전체 현황을 보는 계정입니다.<br>들어올 때마다 본인 비밀번호를 넣습니다."}</div>
+    <input id="dg1" type="password" inputmode="numeric" autocomplete="${setMode?"new-password":"off"}" maxlength="8" placeholder="${setMode?"새 비밀번호 (숫자 4~8자리)":"비밀번호"}" aria-label="개인 비밀번호">
+    ${setMode?`<input id="dg2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="한 번 더" aria-label="개인 비밀번호 확인"><div class="muted" style="font-size:12.5px">1234, 1111처럼 쉬운 번호는 쓸 수 없습니다. 팀 비밀번호와 다른 번호를 쓰세요.</div>`:""}
+    <div id="dgm"></div><div class="btns"><button type="button" class="btn ghost" id="dgx">로그아웃</button><button class="btn primary" id="dgok">${setMode?"정하고 들어가기":"들어가기"}</button></div></form>`;
+  document.body.appendChild(d); $("#dg1").focus();
+  $("#dgx").onclick=()=>{ d.remove(); $("#btnLogout").click(); };
+  d.querySelector("form").onsubmit=async e=>{ e.preventDefault(); const b=$("#dgok"); const v=$("#dg1").value.trim();
+    if(!/^\d{4,8}$/.test(v)) return msg($("#dgm"),"err","숫자 4~8자리로 넣으세요");
+    if(setMode && v!==$("#dg2").value.trim()) return msg($("#dgm"),"err","두 번 넣은 번호가 서로 다릅니다");
+    b.disabled=true;
+    try{ const r = setMode ? await rpc("qms_my_pin_set",{p_old:null,p_new:v}) : await rpc("qms_dash_unlock",{p_pin:v});
+      if(r.need_set){ me.has_pin=false; return dashGate(then); }
+      if(!r.ok){ msg($("#dgm"),"err",`${r.msg||"비밀번호가 맞지 않습니다"} (남은 횟수 ${r.left}번)`); $("#dg1").value=""; $("#dg1").focus(); b.disabled=false; return; }
+      me.has_pin=true; const m=unlockMap(); m.dash=1; saveUnlock(m); d.remove(); buildChrome(); then();
+    }catch(err){ msg($("#dgm"),"err",err.message); b.disabled=false; } };
+}
+function myPinChange(){
+  const old=$("#pinov"); if(old) old.remove();
+  const d=document.createElement("div"); d.id="pinov"; d.className="pinov";
+  d.innerHTML=`<form class="pincard" novalidate><h2>개인 비밀번호 바꾸기</h2>
+    <input id="mp0" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="현재 비밀번호" aria-label="현재 비밀번호">
+    <input id="mp1" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="새 비밀번호 (숫자 4~8자리)" aria-label="새 비밀번호">
+    <input id="mp2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="한 번 더" aria-label="새 비밀번호 확인">
+    <div id="mpm"></div><div class="btns"><button type="button" class="btn ghost" id="mpx">취소</button><button class="btn primary" id="mpok">바꾸기</button></div></form>`;
+  document.body.appendChild(d); $("#mp0").focus(); $("#mpx").onclick=()=>d.remove();
+  d.querySelector("form").onsubmit=async e=>{ e.preventDefault(); const n1=$("#mp1").value.trim();
+    if(!/^\d{4,8}$/.test(n1)) return msg($("#mpm"),"err","새 비밀번호는 숫자 4~8자리");
+    if(n1!==$("#mp2").value.trim()) return msg($("#mpm"),"err","새 비밀번호 두 번이 서로 다릅니다");
+    try{ const r=await rpc("qms_my_pin_set",{p_old:$("#mp0").value,p_new:n1});
+      if(!r.ok) return msg($("#mpm"),"err",`${r.msg} (남은 횟수 ${r.left}번)`);
+      d.remove(); }catch(err){ msg($("#mpm"),"err",err.message); } };
+}
 function teamHome(){
   const parts=window.__parts.filter(p=>p.groups.length||!PARTS.find(x=>x.id===p.id).groups.length);
   const uname=(me.email||"").replace("@"+LOGIN_DOMAIN,"");
@@ -664,7 +708,8 @@ const SERIES=[["ev","수시기록","#18805C"],["sn","업체통보","#B5822A"],["
 async function loadDash(){
   const host=$("#dash"); if(!host) return;
   let s; try{ s=await rpc("qms_home_summary",{p_include_test:$("#htest").checked}); }
-  catch(e){ host.innerHTML=`<div class="msg err">${esc(e.message)}</div>`; return; }
+  catch(e){ if(/PIN_REQUIRED/.test(e.message)){ try{ sessionStorage.removeItem("qms_unlock"); }catch(e2){} return dashGate(()=>home()); }
+    host.innerHTML=`<div class="msg err">${esc(e.message)}</div>`; return; }
   if(current!=="home") return;
   const mine=window.__mine, has=id=>mine.some(t=>t.id===id);
   const E=s.events, N=s.notices, P=s.pallets||[], I=s.incoming, B=s.pab;
@@ -743,11 +788,12 @@ function buildChrome(){
   if(adm.length) h+=`<div class="sec">시스템 관리 · 관리자 전용</div>`+adm.map(sideBtn).join("");
   const opened=Object.keys(unlockMap()).filter(k=>k!=="_t" && (me.pin_parts||[]).includes(k));
   if(!me.dashboard && opened.length) h+=opened.map(k=>`<button type="button" data-pchg="${k}" style="margin-top:6px"><span>${esc(PART_KO[k])} 비밀번호 바꾸기</span></button>`).join("");
+  if(me.dashboard) h+=`<button type="button" data-mypin="1" style="margin-top:10px"><span>개인 비밀번호 바꾸기</span></button><button type="button" data-lock="1" style="margin-top:6px;border:1px solid #D9DCD6"><span>지금 잠그기</span></button>`;
   if(!me.dashboard && Object.keys(unlockMap()).some(k=>k!=="_t")) h+=`<button type="button" data-lock="1" style="margin-top:10px;border:1px solid #D9DCD6"><svg viewBox="0 0 24 24" aria-hidden="true">${LOCK_IC}</svg><span>지금 잠그기</span></button>`;
   h+=`<div class="foot">시험본 · 데이터는 회사 서버에만 저장<br>휴대폰은 같은 주소로 접속하면 휴대폰 화면으로 열립니다</div>`;
   $("#side").innerHTML=h;
   $("#side").hidden=false; $("#topnav").hidden=false;
-  const click=e=>{ const b=e.target.closest("button"); if(!b||b.disabled) return; if(b.dataset.home) return home(); if(b.dataset.lock) return lockAll("잠갔습니다."); if(b.dataset.pchg) return pinChange(window.__parts.find(p=>p.id===b.dataset.pchg)||{id:b.dataset.pchg,label:PART_KO[b.dataset.pchg]}, null, null); if(b.dataset.p) return openPart(b.dataset.p); if(b.dataset.t) go(b.dataset.t); };
+  const click=e=>{ const b=e.target.closest("button"); if(!b||b.disabled) return; if(b.dataset.home) return home(); if(b.dataset.lock) return lockAll("잠갔습니다."); if(b.dataset.mypin) return myPinChange(); if(b.dataset.pchg) return pinChange(window.__parts.find(p=>p.id===b.dataset.pchg)||{id:b.dataset.pchg,label:PART_KO[b.dataset.pchg]}, null, null); if(b.dataset.p) return openPart(b.dataset.p); if(b.dataset.t) go(b.dataset.t); };
   $("#side").onclick=click; $("#topnav").onclick=click;
   if(current) markNav(current);
 }
@@ -1010,11 +1056,14 @@ async function viewUsers(){
     try{ const {users} = await adminFn({action:"list"}); const pm = await rpc("qms_user_perms_list").catch(()=>({}));
       $("#ul2").innerHTML = `<div class="tablewrap"><table><thead><tr><th>이름</th><th>아이디</th><th>권한</th><th>수입검사 입력</th><th>전체 현황</th><th>백업 계정</th><th>상태</th><th></th></tr></thead><tbody>${users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.login)}</td><td>${esc(ROLE_KO[u.role]||u.role)}</td>
         <td>${["admin","quality"].includes(u.role)?'<span class="muted">기본 허용</span>':`<label class="check" style="margin:0"><input type="checkbox" class="pin" data-u="${esc(u.user_id)}" ${(pm[u.user_id]||[]).includes("incoming")?"checked":""}> 허용</label>`}</td>
-        <td>${u.role==="admin"?'<span class="muted">기본 허용</span>':`<label class="check" style="margin:0"><input type="checkbox" class="pin" data-p="dashboard" data-u="${esc(u.user_id)}" ${(pm[u.user_id]||[]).includes("dashboard")?"checked":""}> 허용</label>`}</td>
+        <td>${u.role==="admin"?'<span class="muted">기본 허용</span>':`<label class="check" style="margin:0"><input type="checkbox" class="pin" data-p="dashboard" data-u="${esc(u.user_id)}" ${(pm[u.user_id]||[]).includes("dashboard")?"checked":""}> 허용</label>${(pm[u.user_id]||[]).includes("dashboard")?` <button type="button" class="chip" data-pinreset="${esc(u.user_id)}" style="min-height:30px;font-size:12px">개인 비밀번호 초기화</button>`:""}`}</td>
         <td>${u.role==="admin"?'<span class="muted">-</span>':`<label class="check" style="margin:0"><input type="checkbox" class="pin" data-p="backup" data-u="${esc(u.user_id)}" ${(pm[u.user_id]||[]).includes("backup")?"checked":""}> 백업 전용</label>`}</td>
         <td>${u.active?'<span class="pill ok">사용</span>':'<span class="pill">중지</span>'}</td><td>${u.role==="admin"?"":`<button class="btn ghost" data-u="${esc(u.user_id)}" data-a="${u.active?0:1}">${u.active?"중지":"사용"}</button>`}</td></tr>`).join("")}</tbody></table></div>`;
     }catch(e){ msg($("#ul2"),"err",e.message); }
   };
+  $("#ul2").addEventListener("click", async e => { const b=e.target.closest("[data-pinreset]"); if(!b) return;
+    if(!confirm("이 사람의 개인 비밀번호를 초기화할까요? 다음에 들어올 때 본인이 새로 정합니다.")) return;
+    try{ await rpc("qms_user_pin_reset",{p_user:b.dataset.pinreset}); msg($("#um"),"ok","개인 비밀번호를 초기화했습니다. 다음 접속 때 본인이 새로 정합니다."); }catch(err){ msg($("#um"),"err",err.message); } });
   $("#ul2").onchange = async e => { const c=e.target.closest(".pin"); if(!c) return; c.disabled=true;
     const pp=c.dataset.p||"incoming";
     try{ await rpc("qms_user_set_perm",{p_user:c.dataset.u,p_perm:pp,p_on:c.checked}); msg($("#um"),"ok",`${({backup:"백업 계정",dashboard:"전체 현황",incoming:"수입검사 입력"})[pp]} 권한 ${c.checked?"부여":"해제"}됨`); }
