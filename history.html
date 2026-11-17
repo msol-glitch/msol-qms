@@ -64,8 +64,14 @@ label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--mute
 #lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;z-index:99}#lightbox img{max-width:100%;max-height:100%}
 .click{cursor:pointer}.click:hover{background:#FAF8F2}.tx.clip{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .big{display:flex;flex-direction:column;gap:10px}.big img{width:100%;height:auto;border:1px solid var(--rule);border-radius:3px;cursor:zoom-in}
+.mini{font:inherit;font-size:13px;border:1px solid #C9C6B8;background:#fff;border-radius:3px;padding:5px 10px;color:var(--ink);cursor:pointer;margin-top:4px}.mwrap{display:flex;flex-direction:column;gap:4px}
 .note{background:#F4F1E8;border-radius:3px;padding:8px 10px;white-space:pre-wrap}
 .paste{background:#EEF4F0;border:1px dashed var(--ok);color:var(--ink);padding:8px 12px;border-radius:3px;font-size:13.5px}
+@media(min-width:900px){main,.hb{max-width:1180px}}
+.tw{overflow-x:auto;border:1px solid var(--rule)}.ht{border-collapse:collapse;width:100%;font-size:14px}
+.ht th{background:var(--ink);color:#fff;text-align:left;padding:10px;font-weight:600;white-space:nowrap}.ht th.n,.ht td.n{text-align:right}
+.ht td{padding:10px;border-top:1px solid var(--rule);white-space:nowrap}.ht td.ell{max-width:420px;overflow:hidden;text-overflow:ellipsis}
+.ht tbody tr{cursor:pointer}.ht tbody tr:nth-child(even) td{background:#FAF9F5}.ht tbody tr:hover td{background:#EEF4F0}.mono{font-variant-numeric:tabular-nums;color:var(--muted)}
 .trial{background:#FFF7E6;border:1px dashed #E2B35A;color:#7A5410;padding:8px 12px;font-size:13px;border-radius:3px}
 </style>
 </head>
@@ -154,6 +160,7 @@ document.addEventListener("dragover",e=>{if(pasteTarget)e.preventDefault();});
 document.addEventListener("drop",e=>{if(!pasteTarget)return;e.preventDefault();const fs=imgFiles(e.dataTransfer?.files);if(fs.length)pasteTarget(fs);});
 const MAX_FILES=10;
 const IS_PC=matchMedia("(pointer:fine)").matches;
+const WIDE=matchMedia("(min-width:900px)").matches;
 function jwtMeta(){try{const b=atob(session.access_token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"));return JSON.parse(new TextDecoder().decode(Uint8Array.from(b,c=>c.charCodeAt(0)))).user_metadata||{};}catch(e){return {};}}
 function showChangePw(){
   $("#app").innerHTML=`<form class="panel" id="fc"><h2>내 비밀번호 정하기</h2><div class="muted">처음 들어오셨습니다. 앞으로 쓸 비밀번호를 정하세요 (8자 이상).</div>
@@ -260,6 +267,7 @@ function viewWrite(){
 
 /* ---------- 이력 보기: 차종별 누적 타임라인 ---------- */
 function viewList(){
+  $("#body").onclick=null;
   let kf="", rows=[];
   $("#body").innerHTML=`<div class="panel">
     <div class="row"><label>기간<select id="per"><option value="90">최근 3개월</option><option value="365" selected>최근 1년</option><option value="1825">최근 5년</option></select></label>
@@ -273,34 +281,48 @@ function viewList(){
     const base=rows.filter(mine);const cnt=k=>base.filter(r=>k?r.event_category===k:true).length;
     $("#kp").innerHTML=`<div class="kpi hl"><div class="k">${esc(veh)} 전체</div><div class="v">${cnt("").toLocaleString("ko-KR")}건</div></div>`+KINDS.map(k=>`<div class="kpi"><div class="k">${k.label}</div><div class="v">${cnt(k.v).toLocaleString("ko-KR")}</div></div>`).join("");
     const v=base.filter(r=>(!kf||r.event_category===kf)&&(!q||`${r.raw_text} ${r.line_name} ${r.supplier||""} ${r.defect_type||""}`.toLowerCase().includes(q)));
+    if(WIDE){ $("#ls").innerHTML=v.length?`<div class="tw"><table class="ht"><thead><tr><th>번호</th><th>날짜</th><th>차종 / 라인</th><th>구분</th><th>내용</th><th class="n">자료</th><th>작성</th><th>상태</th></tr></thead><tbody>${v.map(r=>{const c=KIND_KO[r.event_category]?r.event_category:"etc";
+        return `<tr class="item-row" data-id="${r.id}"><td class="mono">#${r.id}</td><td>${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"})}</td><td>${esc(r.vehicle||veh)} · ${esc(r.line_name)}</td>
+        <td><span class="pill ${esc(c)}">${esc(KIND_KO[r.event_category]||r.event_category)}</span></td><td class="ell">${esc(r.raw_text)}</td><td class="n">${r.media.length?"📎 "+r.media.length:""}${r.notes?.length?" 💬 "+r.notes.length:""}</td>
+        <td>${esc(r.reporter_name||r.reporter)}</td><td>${r.record_kind==="TEST"?'<span class="pill test">연습</span> ':""}${r.edited||r.corrections?'<span class="pill etc">정정됨</span>':""}</td></tr>`;}).join("")}</tbody></table></div>`:`<div class="muted">기록이 없습니다.</div>`; return; }
     $("#ls").innerHTML=v.length?v.map(r=>{const c=KIND_KO[r.event_category]?r.event_category:"etc";
       const img=r.media.filter(m=>!(m.mime||"").startsWith("audio"));
       return `<div class="item ${esc(c)} click" data-id="${r.id}"><div class="hd"><b>#${r.id}</b>${fmt(r.occurred_at)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(KIND_KO[r.event_category]||r.event_category)}</span>${r.record_kind==="TEST"?'<span class="pill test">연습</span>':""} · ${esc(r.reporter_name||r.reporter)}</div>
       <div style="display:flex;gap:10px">${img.length?`<div class="thumbs"><img data-path="${esc(img[0].path)}" alt="첨부"></div>`:""}<div class="tx clip">${esc(r.raw_text)}</div></div>
-      <div class="muted">${r.media.length?`📎 자료 ${r.media.length}`:""}${r.notes?.length?` · 💬 덧붙임 ${r.notes.length}`:""} <b style="color:var(--ink)">› 열기</b></div></div>`;}).join(""):`<div class="muted">기록이 없습니다.</div>`;
+      <div class="muted">${r.media.length?`📎 자료 ${r.media.length}`:""}${r.notes?.length?` · 💬 덧붙임 ${r.notes.length}`:""}${r.edited||r.corrections?" · 정정됨":""} <b style="color:var(--ink)">› 열기</b></div></div>`;}).join(""):`<div class="muted">기록이 없습니다.</div>`;
     fill($("#ls"),true);};
   const load=async()=>{msg($("#lm"),"info","불러오는 중…");
     try{rows=await rpc("qms_history_list",{p_vehicle:veh==="공통"?null:veh,p_lines:veh==="공통"?null:VEH[veh],p_from:ymd(Date.now()-$("#per").value*864e5),p_to:ymd(new Date()),p_include_test:$("#it").checked,p_limit:1000});msg($("#lm"),"","");draw();}
     catch(e){msg($("#lm"),"err",e.message);}};
   $("#kf").onclick=e=>{const b=e.target.closest("button");if(!b)return;kf=b.dataset.v;[...$("#kf").children].forEach(x=>x.classList.toggle("on",x===b));draw();};
-  $("#ls").onclick=e=>{const it=e.target.closest(".item[data-id]");if(!it)return;const r=rows.find(x=>x.id==it.dataset.id);if(r)viewDetail(r,load);};
+  $("#ls").onclick=e=>{const it=e.target.closest(".item[data-id],tr[data-id]");if(!it)return;const r=rows.find(x=>x.id==it.dataset.id);if(r)viewDetail(r,load);};
   $("#q").oninput=draw;$("#per").onchange=load;$("#it").onchange=load;load();
 }
 async function fill(host,noZoom){
   for(const el of host.querySelectorAll("[data-path]")){try{el.src=await fileUrl(el.dataset.path);if(el.tagName==="IMG"&&!noZoom)el.onclick=()=>{const d=document.createElement("div");d.id="lightbox";d.innerHTML=`<img src="${el.src}" alt="">`;d.onclick=()=>d.remove();document.body.appendChild(d);};}catch(e){el.replaceWith(Object.assign(document.createElement("span"),{className:"muted",textContent:"열람 불가"}));}}
 }
-/* ---------- 상세: 기본 내용 + 모든 사진 + 덧붙이기(매핑) ---------- */
+/* ---------- 상세: 기본 내용 + 모든 사진 + 덧붙이기(매핑) + 정정 ---------- */
+/* 정정 원칙: 지우지 않는다. 화면엔 최신·유효 자료만, 원래 내용·뺀 자료는 '정정 이력'에 사유와 함께 남는다. */
 function viewDetail(r,reload){
   const c=KIND_KO[r.event_category]?r.event_category:"etc";let add=[];
+  const boss=["admin","quality"].includes(me.role);
+  const canText=boss||r.mine;
+  const refresh=async(note)=>{const rows=await rpc("qms_history_list",{p_vehicle:veh==="공통"?null:veh,p_lines:veh==="공통"?null:VEH[veh],p_from:ymd(new Date(r.occurred_at)),p_to:ymd(new Date()),p_include_test:true,p_limit:1000});
+    viewDetail(rows.find(x=>x.id===r.id)||r,reload);if(note)msg($("#dm0"),"ok",note);};
+  const ask=t=>{const v=prompt(t+"\n정정 사유를 적어주세요 (2자 이상)");return v&&v.trim().length>=2?v.trim():null;};
   $("#body").innerHTML=`<div class="panel">
-    <button type="button" class="btn ghost" id="dback">← 목록으로</button>
-    <div class="hd muted"><b style="color:var(--fg)">#${r.id}</b> · ${fmt(r.occurred_at)} · ${esc(r.vehicle||veh)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(KIND_KO[r.event_category]||r.event_category)}</span> · 작성 ${esc(r.reporter_name||r.reporter)}</div>
-    <div class="tx" style="font-size:16px;white-space:pre-wrap">${esc(r.raw_text)}</div>
-    ${r.media.length?`<div class="big">${r.media.map(m=>(m.mime||"").startsWith("audio")?`<audio controls data-path="${esc(m.path)}" style="width:100%"></audio>`:`<img data-path="${esc(m.path)}" alt="첨부">`).join("")}</div>`:`<div class="muted">첨부 자료 없음</div>`}
-    ${(r.notes||[]).map(n=>`<div class="note"><div class="muted">💬 ${esc(n.by)} · ${fmt(n.at)}</div>${esc(n.note)}</div>`).join("")}
+    <button type="button" class="btn ghost" id="dback">← 목록으로</button><div id="dm0"></div>
+    <div class="hd muted"><b style="color:var(--fg)">#${r.id}</b> · ${fmt(r.occurred_at)} · ${esc(r.vehicle||veh)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(KIND_KO[r.event_category]||r.event_category)}</span> · 작성 ${esc(r.reporter_name||r.reporter)}${r.edited?' <span class="pill etc">정정됨</span>':""}</div>
+    <div id="tbox"><div class="tx" style="font-size:16px;white-space:pre-wrap">${esc(r.raw_text)}</div>
+      ${canText?`<button type="button" class="mini" id="tedit">✏️ 본문 정정</button>`:""}</div>
+    ${r.media.length?`<div class="big">${r.media.map(m=>`<div class="mwrap">${(m.mime||"").startsWith("audio")?`<audio controls data-path="${esc(m.path)}" style="width:100%"></audio>`:`<img data-path="${esc(m.path)}" alt="첨부">`}
+      ${boss||r.mine||m.mine?`<button type="button" class="mini" data-hide="${esc(m.path)}">이 자료 빼기</button>`:""}</div>`).join("")}</div>`:`<div class="muted">첨부 자료 없음</div>`}
+    ${(r.notes||[]).map(n=>`<div class="note" data-nid="${n.id}"><div class="muted">💬 ${esc(n.by)} · ${fmt(n.at)}</div><div class="nt">${esc(n.note)}</div>
+      ${boss||n.mine?`<button type="button" class="mini" data-nedit="${n.id}">✏️ 고치기</button> <button type="button" class="mini" data-nhide="${n.id}">빼기</button>`:""}</div>`).join("")}
+    ${r.corrections?`<button type="button" class="mini" id="chg">🕘 정정 이력 ${r.corrections}건 보기</button><div id="chgl"></div>`:""}
   </div>
   <div class="panel"><h2>자료 덧붙이기</h2>
-    <div class="muted">원청에 올린 변경점·카톡·사진을 이 기록에 붙입니다. 붙인 자료는 지워지지 않고 계속 쌓입니다.</div>
+    <div class="muted">원청에 올린 변경점·카톡·사진을 이 기록에 붙입니다. 잘못 붙인 건 '빼기'로 정정합니다(사유 남음).</div>
     ${IS_PC?`<div class="paste">💡 스크린샷 찍고 <b>Ctrl+V</b> (또는 파일 끌어놓기)</div>`:""}
     <label class="btn ghost" style="flex-direction:row;justify-content:center;align-items:center;color:var(--ink)">📷 사진·스크린샷 고르기<input type="file" id="df" accept="image/*" multiple hidden></label>
     <div class="thumbs" id="dth"></div>
@@ -308,6 +330,30 @@ function viewDetail(r,reload){
     <div id="dm"></div><button class="btn" id="ds">덧붙이기 저장</button></div>`;
   fill($("#body"));window.scrollTo(0,0);
   $("#dback").onclick=()=>{pasteTarget=null;viewList();};
+  // 본문 정정: 원문은 서버에 그대로 남고, 정정본이 화면에 보임
+  if($("#tedit")) $("#tedit").onclick=()=>{$("#tbox").innerHTML=`<label>정정할 내용<textarea id="tt" maxlength="5000">${esc(r.raw_text)}</textarea></label>
+      <label>유형<select id="tc">${KINDS.map(k=>`<option value="${esc(k.v)}" ${k.v===r.event_category?"selected":""}>${k.label}</option>`).join("")}</select></label>
+      <label>정정 사유<input id="tr" placeholder="예) 수치 오기, 원청 회신으로 원인 확정"></label>
+      <div class="row"><button type="button" class="btn" id="tsave">정정 저장</button><button type="button" class="btn ghost" id="tcancel">취소</button></div><div id="tm"></div>`;
+    $("#tcancel").onclick=()=>viewDetail(r,reload);
+    $("#tsave").onclick=async()=>{const rs=$("#tr").value.trim();if(rs.length<2) return msg($("#tm"),"err","정정 사유를 적어주세요");
+      try{await rpc("qms_history_correct",{p:{action:"text",event_id:r.id,text:$("#tt").value,event_category:$("#tc").value,reason:rs}});await refresh("본문 정정 완료 (원래 내용은 정정 이력에 남음)");}catch(e){msg($("#tm"),"err",e.message);}};};
+  $("#body").onclick=async e=>{const b=e.target.closest("button[data-hide],button[data-nhide],button[data-nedit],button[data-restore]");if(!b)return;
+    try{
+      if(b.dataset.hide){const rs=ask("이 자료를 화면에서 뺍니다.");if(!rs)return;await rpc("qms_history_correct",{p:{action:"hide_media",path:b.dataset.hide,reason:rs}});await refresh("자료를 뺐습니다 (정정 이력에 남음)");}
+      else if(b.dataset.restore){const rs=ask("뺀 자료를 다시 보이게 합니다.");if(!rs)return;await rpc("qms_history_correct",{p:{action:"restore_media",path:b.dataset.restore,reason:rs}});await refresh("자료를 복원했습니다");}
+      else if(b.dataset.nhide){const rs=ask("이 메모를 화면에서 뺍니다.");if(!rs)return;await rpc("qms_history_correct",{p:{action:"hide_note",note_id:+b.dataset.nhide,reason:rs}});await refresh("메모를 뺐습니다");}
+      else if(b.dataset.nedit){const box=b.closest(".note");const old=box.querySelector(".nt").textContent;
+        box.innerHTML=`<label>고친 메모<textarea class="ne" maxlength="3000">${esc(old)}</textarea></label><label>정정 사유<input class="nr"></label><div class="row"><button type="button" class="btn ns">저장</button><button type="button" class="btn ghost nc">취소</button></div><div class="nm"></div>`;
+        box.querySelector(".nc").onclick=()=>viewDetail(r,reload);
+        box.querySelector(".ns").onclick=async()=>{const rs=box.querySelector(".nr").value.trim();if(rs.length<2) return msg(box.querySelector(".nm"),"err","정정 사유를 적어주세요");
+          try{await rpc("qms_history_correct",{p:{action:"edit_note",note_id:+b.dataset.nedit,note:box.querySelector(".ne").value,reason:rs}});await refresh("메모 정정 완료");}catch(err){msg(box.querySelector(".nm"),"err",err.message);}};}
+    }catch(err){msg($("#dm0"),"err",err.message);}};
+  if($("#chg")) $("#chg").onclick=async()=>{try{const L=await rpc("qms_history_changes",{p_event_id:r.id});
+    $("#chgl").innerHTML=L.map(x=>`<div class="note"><div class="muted">${esc(x.kind)} · ${esc(x.by)} · ${fmt(x.at)} · 사유: ${esc(x.reason)}</div>
+      ${x.before?`<div><span class="muted">원래:</span> <s>${esc(x.before)}</s></div>`:""}${x.after?`<div><span class="muted">정정:</span> ${esc(x.after)}</div>`:""}
+      ${x.path?`<img data-path="${esc(x.path)}" alt="" style="max-width:160px;opacity:.6">${me.role==="admin"?` <button type="button" class="mini" data-restore="${esc(x.path)}">복원</button>`:""}`:""}</div>`).join("");fill($("#chgl"));}
+    catch(e){msg($("#chgl"),"err",e.message);}};
   const draw=()=>{$("#dth").innerHTML=add.map((p,i)=>`<div class="t"><img src="${p.url}" alt=""><button type="button" data-i="${i}">×</button></div>`).join("");};
   $("#dth").onclick=e=>{const b=e.target.closest("button[data-i]");if(!b)return;const [p]=add.splice(+b.dataset.i,1);URL.revokeObjectURL(p.url);draw();};
   pasteTarget=async fs=>{fs=fs.slice(0,MAX_FILES-add.length);for(const f of fs){try{const b=await shrink(f,2560,.9);add.push({blob:b,url:URL.createObjectURL(b)});}catch(err){msg($("#dm"),"err",err.message);}}draw();msg($("#dm"),"ok",`${add.length}장 붙음 — [덧붙이기 저장]을 누르세요`);};
@@ -317,9 +363,7 @@ function viewDetail(r,reload){
     try{const uid=jwtSub();const paths=[];
       for(let i=0;i<add.length;i++){b.textContent=`올리는 중 ${i+1}/${add.length}`;const p=`${uid}/sf/${r.id}/${Date.now()}_m${i+1}.jpg`;await upload(p,add[i].blob,"image/jpeg");paths.push(p);}
       await rpc("qms_history_attach",{p_event_id:r.id,p_paths:paths,p_note:note||null});
-      add.forEach(p=>URL.revokeObjectURL(p.url));pasteTarget=null;
-      const rows=await rpc("qms_history_list",{p_vehicle:veh==="공통"?null:veh,p_lines:veh==="공통"?null:VEH[veh],p_from:ymd(new Date(r.occurred_at)),p_to:ymd(new Date()),p_include_test:true,p_limit:1000});
-      const nr=rows.find(x=>x.id===r.id)||r;viewDetail(nr,reload);msg($("#dm"),"ok","덧붙이기 저장 완료");}
+      add.forEach(p=>URL.revokeObjectURL(p.url));pasteTarget=null;await refresh("덧붙이기 저장 완료");}
     catch(err){msg($("#dm"),"err","저장 실패: "+err.message);b.disabled=false;b.textContent="덧붙이기 저장";}};
 }
 $("#staff").onclick=viewStaff;
