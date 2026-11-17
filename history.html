@@ -8,6 +8,12 @@
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#123B2F">
 <title>㈜엠솔루션 이력관리 데이터센터</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="이력관리">
 <style>
 /* 차종 이력장 (시험본 v0.4, 2026-11-17) — QMS와 같은 서버·같은 로그인·같은 기록표(qms.shopfloor_events)를 쓴다. 새 DB 표 없음. */
 :root{--ink:#123B2F;--ink2:#1B4A3C;--brass:#B49A5E;--paper:#F7F5EF;--rule:#E4E2DA;--fg:#18201D;--muted:#66706B;
@@ -145,7 +151,11 @@ function showLogin(note){
   <label>이름<input id="li" autocomplete="username" autocapitalize="none" placeholder="예) 홍길동" required></label>
   <label>비밀번호<input id="lp" type="password" autocomplete="current-password" required></label>
   <button class="btn" id="lb">들어가기</button>
-  <div class="muted">처음이면 대표에게 받은 초기 비밀번호를 넣으세요. 들어가면 바로 본인 비밀번호로 바꿉니다.</div></form>`;
+  <div class="muted">처음이면 대표에게 받은 초기 비밀번호를 넣으세요. 들어가면 바로 본인 비밀번호로 바꿉니다.</div>
+  <details class="muted"><summary>📲 휴대폰·PC에 앱처럼 설치하기</summary>
+  <div style="line-height:1.7;margin-top:6px"><b>아이폰</b>: 사파리로 열기 → 아래 공유 버튼 → '홈 화면에 추가'<br>
+  <b>안드로이드</b>: 크롬으로 열기 → 오른쪽 위 ⋮ → '홈 화면에 추가' (또는 '앱 설치')<br>
+  <b>PC</b>: 크롬·엣지 주소창 오른쪽 설치 아이콘(⊕) 또는 ⋮ → '앱 설치' → 바탕화면에 아이콘 생김</div></details></form>`;
   $("#fl").onsubmit=async e=>{e.preventDefault();const b=$("#lb");b.disabled=true;msg($("#lm"),"","");
     try{const {email}=await staff({action:"lookup",q:$("#li").value.trim()});
       saveSession(await authCall("password",{email,password:$("#lp").value}));await boot();}
