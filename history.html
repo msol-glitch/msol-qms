@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#123B2F">
 <title>차종 이력장 · 엠솔루션</title>
 <style>
-/* 차종 이력장 (시험본 v0.1, 2026-11-17) — QMS와 같은 서버·같은 로그인·같은 기록표(qms.shopfloor_events)를 쓴다. 새 DB 표 없음. */
+/* 차종 이력장 (시험본 v0.2, 2026-11-17) — QMS와 같은 서버·같은 로그인·같은 기록표(qms.shopfloor_events)를 쓴다. 새 DB 표 없음. */
 :root{--ink:#123B2F;--ink2:#1B4A3C;--brass:#B49A5E;--paper:#F7F5EF;--rule:#E4E2DA;--fg:#18201D;--muted:#66706B;
   --ok:#2F6B4F;--ok-soft:#E5EFE8;--ng:#9E2B25;--ng-soft:#F6E6E3;--wait:#8A6420;--wait-soft:#F4ECDC;--test:#4B4F8C;--test-soft:#E9E9F2;
   --sans:"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;color-scheme:light}
@@ -65,7 +65,7 @@ label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--mute
 </style>
 </head>
 <body>
-<header><div class="hb"><div><b>차종 이력장</b><small id="who">엠솔루션 · 시험본 v0.1</small></div><div class="sp"></div><button id="out" hidden>로그아웃</button></div></header>
+<header><div class="hb"><div><b>차종 이력장</b><small id="who">엠솔루션 · 시험본 v0.2</small></div><div class="sp"></div><button id="out" hidden>로그아웃</button></div></header>
 <main id="app"></main>
 <script>
 "use strict";
@@ -134,14 +134,16 @@ function showLogin(note){
 $("#out").onclick=()=>{saveSession(null);showLogin();};
 
 /* ---------- 상태 ---------- */
-let veh=VEHS.includes(store.get("hist_veh"))?store.get("hist_veh"):"KA4";
+/* 주소 뒤 ?v=SP3k 로 열면 그 차종이 바로 선택됨 (라인 게시판 QR·바로가기용) */
+const qv=new URLSearchParams(location.search).get("v");
+let veh=VEHS.includes(qv)?qv:(VEHS.includes(store.get("hist_veh"))?store.get("hist_veh"):"KA4");
 let tab="write";
 async function boot(){
   if(!session) return showLogin();
   try{me=await rpc("qms_me");}catch(e){return showLogin(e.message);}
   if(!me||!me.role) return showLogin("이 계정은 QMS 사용자 등록이 안 되어 있습니다. 관리자에게 요청하세요.");
   if(!["admin","quality","production"].includes(me.role)) return showLogin("이 계정 권한으로는 이력장을 쓸 수 없습니다.");
-  $("#who").textContent=`${(me.email||"").split("@")[0]} · 시험본 v0.1`;$("#out").hidden=false;render();
+  $("#who").textContent=`${(me.email||"").split("@")[0]} · 시험본 v0.2`;$("#out").hidden=false;render();
 }
 function render(){
   $("#app").innerHTML=`<div class="trial">시험본입니다. 기록은 QMS 현장기록과 같은 곳에 쌓입니다. 시험 기간에는 '시험 기록'이 기본으로 켜져 있어 공식 집계에서 빠집니다.</div>
@@ -224,7 +226,7 @@ function viewList(){
     <div class="kpis" id="kp"></div>
     <div class="chips" id="kf"><button type="button" data-v="" class="on">전체</button>${KINDS.map(k=>`<button type="button" data-v="${esc(k.v)}">${k.label}</button>`).join("")}</div>
     <div id="lm"></div><div id="ls" style="display:flex;flex-direction:column;gap:8px"></div></div>`;
-  const mine=r=>veh==="공통"?(!r.vehicle):(r.vehicle===veh||(!r.vehicle&&VEH[veh].includes(r.line_name)));
+  const mine=()=>true; /* 차종 거르기는 서버(qms_history_list)에서 */
   const draw=()=>{const q=$("#q").value.trim().toLowerCase();
     const base=rows.filter(mine);const cnt=k=>base.filter(r=>k?r.event_category===k:true).length;
     $("#kp").innerHTML=`<div class="kpi hl"><div class="k">${esc(veh)} 전체</div><div class="v">${cnt("").toLocaleString("ko-KR")}건</div></div>`+KINDS.map(k=>`<div class="kpi"><div class="k">${k.label}</div><div class="v">${cnt(k.v).toLocaleString("ko-KR")}</div></div>`).join("");
@@ -235,8 +237,7 @@ function viewList(){
       ${r.media.length?`<div class="thumbs">${r.media.map(m=>(m.mime||"").startsWith("audio")?`<audio controls data-path="${esc(m.path)}" style="width:100%"></audio>`:`<img data-path="${esc(m.path)}" alt="첨부">`).join("")}</div>`:""}</div>`;}).join(""):`<div class="muted">기록이 없습니다.</div>`;
     fill($("#ls"));};
   const load=async()=>{msg($("#lm"),"info","불러오는 중…");
-    try{rows=await rpc("qms_field_report_list",{p_from:ymd(Date.now()-$("#per").value*864e5),p_to:ymd(new Date()),p_include_test:$("#it").checked,p_limit:1000});msg($("#lm"),"","");
-      if(me.role==="production") msg($("#lm"),"info","현재 권한(생관)으로는 본인이 쓴 기록만 보입니다.");draw();}
+    try{rows=await rpc("qms_history_list",{p_vehicle:veh==="공통"?null:veh,p_lines:veh==="공통"?null:VEH[veh],p_from:ymd(Date.now()-$("#per").value*864e5),p_to:ymd(new Date()),p_include_test:$("#it").checked,p_limit:1000});msg($("#lm"),"","");draw();}
     catch(e){msg($("#lm"),"err",e.message);}};
   $("#kf").onclick=e=>{const b=e.target.closest("button");if(!b)return;kf=b.dataset.v;[...$("#kf").children].forEach(x=>x.classList.toggle("on",x===b));draw();};
   $("#q").oninput=draw;$("#per").onchange=load;$("#it").onchange=load;load();
