@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#123B2F">
 <title>차종 이력장 · 엠솔루션</title>
 <style>
-/* 차종 이력장 (시험본 v0.2, 2026-11-17) — QMS와 같은 서버·같은 로그인·같은 기록표(qms.shopfloor_events)를 쓴다. 새 DB 표 없음. */
+/* 차종 이력장 (시험본 v0.3, 2026-11-17) — QMS와 같은 서버·같은 로그인·같은 기록표(qms.shopfloor_events)를 쓴다. 새 DB 표 없음. */
 :root{--ink:#123B2F;--ink2:#1B4A3C;--brass:#B49A5E;--paper:#F7F5EF;--rule:#E4E2DA;--fg:#18201D;--muted:#66706B;
   --ok:#2F6B4F;--ok-soft:#E5EFE8;--ng:#9E2B25;--ng-soft:#F6E6E3;--wait:#8A6420;--wait-soft:#F4ECDC;--test:#4B4F8C;--test-soft:#E9E9F2;
   --sans:"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;color-scheme:light}
@@ -65,7 +65,7 @@ label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--mute
 </style>
 </head>
 <body>
-<header><div class="hb"><div><b>차종 이력장</b><small id="who">엠솔루션 · 시험본 v0.2</small></div><div class="sp"></div><button id="out" hidden>로그아웃</button></div></header>
+<header><div class="hb"><div><b>차종 이력장</b><small id="who">엠솔루션 · 시험본 v0.3</small></div><div class="sp"></div><button id="out" hidden>로그아웃</button></div></header>
 <main id="app"></main>
 <script>
 "use strict";
@@ -104,11 +104,12 @@ async function authCall(g,body){
 }
 async function token(){
   if(!session) throw new Error("로그인이 필요합니다");
-  if(session.expires_at-Date.now()/1000<60){try{saveSession(await authCall("refresh_token",{refresh_token:session.refresh_token}));}catch(e){saveSession(null);showLogin("다시 로그인하세요");throw e;}}
+  if(session.expires_at-Date.now()/1000<60){try{saveSession(await authCall("refresh_token",{refresh_token:session.refresh_token}));}catch(e){saveSession(null);showLogin("로그인이 만료되었습니다. 다시 로그인하세요.");throw e;}}
   return session.access_token;
 }
 async function rpc(name,args={}){
-  let r;try{r=await fetch(`${SB_URL}/rest/v1/rpc/${name}`,{method:"POST",headers:{apikey:SB_KEY,Authorization:`Bearer ${await token()}`,"Content-Type":"application/json"},body:JSON.stringify(args)});}
+  const tk=await token(); /* 로그인 만료는 여기서 따로 처리 — 인터넷 오류로 잘못 표시되지 않게 */
+  let r;try{r=await fetch(`${SB_URL}/rest/v1/rpc/${name}`,{method:"POST",headers:{apikey:SB_KEY,Authorization:`Bearer ${tk}`,"Content-Type":"application/json"},body:JSON.stringify(args)});}
   catch(e){throw new Error("서버에 연결할 수 없습니다. 인터넷(LTE) 연결을 확인하세요.");}
   const j=await r.json().catch(()=>null);
   if(!r.ok){const m=j?.message||`오류 ${r.status}`;throw new Error(m==="Unauthorized"?"이 기능을 쓸 권한이 없습니다 (관리자에게 권한 요청)":m);}
@@ -140,10 +141,10 @@ let veh=VEHS.includes(qv)?qv:(VEHS.includes(store.get("hist_veh"))?store.get("hi
 let tab="write";
 async function boot(){
   if(!session) return showLogin();
-  try{me=await rpc("qms_me");}catch(e){return showLogin(e.message);}
+  try{me=await rpc("qms_me");}catch(e){if(!session) return; return showLogin(e.message);}
   if(!me||!me.role) return showLogin("이 계정은 QMS 사용자 등록이 안 되어 있습니다. 관리자에게 요청하세요.");
   if(!["admin","quality","production"].includes(me.role)) return showLogin("이 계정 권한으로는 이력장을 쓸 수 없습니다.");
-  $("#who").textContent=`${(me.email||"").split("@")[0]} · 시험본 v0.2`;$("#out").hidden=false;render();
+  $("#who").textContent=`${(me.email||"").split("@")[0]} · 시험본 v0.3`;$("#out").hidden=false;render();
 }
 function render(){
   $("#app").innerHTML=`<div class="trial">시험본입니다. 기록은 QMS 현장기록과 같은 곳에 쌓입니다. 시험 기간에는 '시험 기록'이 기본으로 켜져 있어 공식 집계에서 빠집니다.</div>
