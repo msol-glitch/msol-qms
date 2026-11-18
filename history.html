@@ -68,6 +68,8 @@ label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--mute
 .pill{display:inline-block;font-size:12px;font-weight:700;border-radius:3px;padding:1px 7px}
 .pill.불량{background:var(--ng-soft);color:var(--ng)}.pill.경험·노하우{background:var(--ok-soft);color:var(--ok)}.pill.변동점\(4M\){background:var(--wait-soft);color:var(--wait)}.pill.기타,.pill.etc{background:#EEE;color:#555}.pill.test{background:var(--test-soft);color:var(--test)}
 #lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;z-index:99}#lightbox img{max-width:100%;max-height:100%}
+.heic{width:72px;height:72px;display:flex;align-items:center;justify-content:center;text-align:center;background:#E9E6DC;border:1px solid var(--rule);border-radius:3px;font-size:12px;font-weight:700;color:var(--muted);line-height:1.3}
+.big-heic{width:100%;height:auto;padding:16px;text-decoration:none;color:var(--ink)}
 .vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
 .click{cursor:pointer}.click:hover{background:#FAF8F2}.tx.clip{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .big{display:flex;flex-direction:column;gap:10px}.big img{width:100%;height:auto;border:1px solid var(--rule);border-radius:3px;cursor:zoom-in}
@@ -140,14 +142,19 @@ async function upload(path,blob,type){
 const cache={};
 async function fileUrl(p){if(cache[p])return cache[p];const r=await fetch(`${SB_URL}/storage/v1/object/authenticated/${BUCKET}/${p}`,{headers:{apikey:SB_KEY,Authorization:`Bearer ${await token()}`}});if(!r.ok)throw new Error("열람 불가");return cache[p]=URL.createObjectURL(await r.blob());}
 /* 사진 줄이기: 큰 폰 사진(5천만 화소 등)도 되도록 ① createImageBitmap ② Image ③ 원본 그대로(10MB 이하 JPG·PNG·WEBP) 순서로 시도 */
-const OK_TYPES=["image/jpeg","image/png","image/webp"];
+const OK_TYPES=["image/jpeg","image/png","image/webp","image/heic","image/heif"];
+const isHeic=t=>/heic|heif/i.test(t||"");
+function fixType(f){if(f.type)return f;const m=/\.(heic|heif)$/i.exec(f.name||"");return m?new File([f],f.name,{type:"image/"+m[1].toLowerCase()}):f;}
+/* HEIC(삼성·아이폰 고효율 사진)는 브라우저가 못 줄임 → 원본 그대로 보관(증빙 유지). 미리보기 대신 'HEIC 사진' 칸 + 내려받기 */
+const thumb=p=>isHeic(p.type)?`<div class="heic">HEIC<br>사진</div>`:`<img src="${p.url}" alt="">`;
 function toJpeg(src,w,h,max,q){const s=Math.min(1,max/Math.max(w,h));const c=document.createElement("canvas");c.width=Math.max(1,Math.round(w*s));c.height=Math.max(1,Math.round(h*s));
   c.getContext("2d").drawImage(src,0,0,c.width,c.height);return new Promise((ok,no)=>c.toBlob(b=>b&&b.size>0?ok(b):no(new Error("변환 실패")),"image/jpeg",q));}
 async function shrink(file,max=1600,q=.8){
+  file=fixType(file);
   if(window.createImageBitmap){try{const bm=await createImageBitmap(file);try{return await toJpeg(bm,bm.width,bm.height,max,q);}finally{bm.close&&bm.close();}}catch(e){}}
   try{return await new Promise((ok,no)=>{const u=URL.createObjectURL(file),i=new Image();i.onload=()=>{toJpeg(i,i.naturalWidth,i.naturalHeight,max,q).then(ok,no).finally(()=>URL.revokeObjectURL(u));};i.onerror=()=>{URL.revokeObjectURL(u);no(new Error("열 수 없음"));};i.src=u;});}catch(e){}
   if(OK_TYPES.includes(file.type)&&file.size<=10*1024*1024) return file;
-  throw new Error(`이 사진은 올릴 수 없습니다 (${file.type||"형식 모름"}, ${(file.size/1048576).toFixed(1)}MB). 휴대폰 카메라 설정에서 '고효율(HEIC)' 대신 JPG로 찍거나, 화면 캡처로 다시 올려주세요.`);
+  throw new Error(`이 사진은 올릴 수 없습니다 (${file.type||"형식 모름"}, ${(file.size/1048576).toFixed(1)}MB, 10MB 이하만 가능). [📷 촬영] 버튼으로 바로 찍거나 화면 캡처로 올려주세요.`);
 }
 
 async function staff(body,auth){
@@ -237,7 +244,8 @@ function viewWrite(){
       <label>어디서 옮겨 왔나<select id="ps"><option>카톡</option><option>사진</option><option>기억</option><option>기타 문서</option></select></label>
     </div>
     <div class="row">
-      <label class="btn ghost" style="flex-direction:row;justify-content:center;align-items:center;color:var(--ink)">📷 사진<input type="file" id="pf" accept="image/*" multiple class="vh"></label>
+      <label class="btn ghost" style="flex-direction:row;justify-content:center;align-items:center;color:var(--ink)">📷 촬영<input type="file" id="pc" accept="image/*" capture="environment" class="vh"></label>
+      <label class="btn ghost" style="flex-direction:row;justify-content:center;align-items:center;color:var(--ink)">🖼 앨범<input type="file" id="pf" accept="image/*" multiple class="vh"></label>
       <button type="button" class="btn ghost" id="rb">🎤 녹음</button>
     </div>
     ${IS_PC?`<div class="paste">💡 PC: 스크린샷 찍고 <b>Ctrl+V</b> 하면 여기 바로 붙습니다 (파일 끌어놓기도 됨)</div>`:""}<div id="pm"></div><div class="thumbs" id="th"></div><div id="au"></div>
@@ -248,12 +256,13 @@ function viewWrite(){
   $("#kd").onclick=e=>{const b=e.target.closest("button");if(!b)return;kind=b.dataset.v;[...$("#kd").children].forEach(x=>x.classList.toggle("on",x===b));};
   $("#ln").onclick=e=>{const b=e.target.closest("button");if(!b)return;line=b.dataset.v;store.set("hist_line_"+veh,line);[...$("#ln").children].forEach(x=>x.classList.toggle("on",x===b));};
   $("#past").onchange=e=>{$("#pastbox").hidden=!e.target.checked;};
-  const drawTh=()=>{$("#th").innerHTML=photos.map((p,i)=>`<div class="t"><img src="${p.url}" alt="사진${i+1}"><button type="button" data-i="${i}" aria-label="삭제">×</button></div>`).join("");};
+  const drawTh=()=>{$("#th").innerHTML=photos.map((p,i)=>`<div class="t">${thumb(p)}<button type="button" data-i="${i}" aria-label="삭제">×</button></div>`).join("");};
   $("#th").onclick=e=>{const b=e.target.closest("button[data-i]");if(!b)return;const [p]=photos.splice(+b.dataset.i,1);URL.revokeObjectURL(p.url);drawTh();};
   const addFiles=async fs=>{fs=fs.slice(0,MAX_FILES-photos.length);if(!fs.length) return msg($("#pm"),"err",`사진은 ${MAX_FILES}장까지`);msg($("#pm"),"info","사진 처리 중…");
     let bad="";for(const f of fs){try{const b=await shrink(f,2560,.9);photos.push({blob:b,url:URL.createObjectURL(b),type:b.type||"image/jpeg"});}catch(err){bad=err.message;}}drawTh();msg($("#pm"),bad?"err":"ok",bad||`사진 ${photos.length}장 붙음 — 유형 고르고 저장`);};
   pasteTarget=addFiles;
   $("#pf").onchange=e=>{const fs=[...e.target.files];e.target.value="";addFiles(fs);};
+  $("#pc").onchange=e=>{const fs=[...e.target.files];e.target.value="";addFiles(fs);};
   const drawAu=()=>{$("#au").innerHTML=audio?`<div style="display:flex;gap:8px;align-items:center"><audio controls src="${audio.url}" style="flex:1"></audio><button type="button" class="btn ghost" id="ad">삭제</button></div>`:"";if(audio)$("#ad").onclick=()=>{URL.revokeObjectURL(audio.url);audio=null;drawAu();};};
   $("#rb").onclick=async()=>{const b=$("#rb");
     if(rec&&rec.state==="recording"){rec.stop();return;}
@@ -276,7 +285,7 @@ function viewWrite(){
       const r=await rpc("qms_field_report_create",{p:{line_name:line,vehicle:veh==="공통"?null:veh,event_category:kind,raw_text:text,occurred_at:occurred,
         has_photo:photos.length>0,has_audio:!!audio,record_kind:$("#tst").checked?"TEST":"NORMAL"}});
       id=r.id;const paths=[];
-      for(let i=0;i<photos.length;i++){b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`;const ty=photos[i].type||"image/jpeg";const ext={"image/png":"png","image/webp":"webp"}[ty]||"jpg";const p=`${r.uid}/sf/${id}/${Date.now()}_${i+1}.${ext}`;await upload(p,photos[i].blob,ty);paths.push(p);}
+      for(let i=0;i<photos.length;i++){b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`;const ty=photos[i].type||"image/jpeg";const ext={"image/png":"png","image/webp":"webp","image/heic":"heic","image/heif":"heif"}[ty]||"jpg";const p=`${r.uid}/sf/${id}/${Date.now()}_${i+1}.${ext}`;await upload(p,photos[i].blob,ty);paths.push(p);}
       if(audio){b.textContent="음성 올리는 중";const p=`${r.uid}/sf/${id}/${Date.now()}_voice.${AUDIO_EXT[audio.mime]||"webm"}`;await upload(p,audio.blob,audio.mime);paths.push(p);}
       if(paths.length) await rpc("qms_history_attach",{p_event_id:id,p_paths:paths});
       photos.forEach(p=>URL.revokeObjectURL(p.url));if(audio)URL.revokeObjectURL(audio.url);
@@ -306,7 +315,7 @@ function viewList(){
         <td><span class="pill ${esc(c)}">${esc(KIND_KO[r.event_category]||r.event_category)}</span></td><td class="ell">${esc(r.raw_text)}</td><td class="n">${r.media.length?"📎 "+r.media.length:""}${r.notes?.length?" 💬 "+r.notes.length:""}</td>
         <td>${esc(r.reporter_name||r.reporter)}</td><td>${r.record_kind==="TEST"?'<span class="pill test">연습</span> ':""}${r.edited||r.corrections?'<span class="pill etc">정정됨</span>':""}</td></tr>`;}).join("")}</tbody></table></div>`:`<div class="muted">기록이 없습니다.</div>`; return; }
     $("#ls").innerHTML=v.length?v.map(r=>{const c=KIND_KO[r.event_category]?r.event_category:"etc";
-      const img=r.media.filter(m=>!(m.mime||"").startsWith("audio"));
+      const img=r.media.filter(m=>!(m.mime||"").startsWith("audio")&&!isHeic(m.mime));
       return `<div class="item ${esc(c)} click" data-id="${r.id}"><div class="hd"><b>#${r.id}</b>${fmt(r.occurred_at)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(KIND_KO[r.event_category]||r.event_category)}</span>${r.record_kind==="TEST"?'<span class="pill test">연습</span>':""} · ${esc(r.reporter_name||r.reporter)}</div>
       <div style="display:flex;gap:10px">${img.length?`<div class="thumbs"><img data-path="${esc(img[0].path)}" alt="첨부"></div>`:""}<div class="tx clip">${esc(r.raw_text)}</div></div>
       <div class="muted">${r.media.length?`📎 자료 ${r.media.length}`:""}${r.notes?.length?` · 💬 덧붙임 ${r.notes.length}`:""}${r.edited||r.corrections?" · 정정됨":""} <b style="color:var(--ink)">› 열기</b></div></div>`;}).join(""):`<div class="muted">기록이 없습니다.</div>`;
@@ -319,7 +328,7 @@ function viewList(){
   $("#q").oninput=draw;$("#per").onchange=load;$("#it").onchange=load;load();
 }
 async function fill(host,noZoom){
-  for(const el of host.querySelectorAll("[data-path]")){try{el.src=await fileUrl(el.dataset.path);if(el.tagName==="IMG"&&!noZoom)el.onclick=()=>{const d=document.createElement("div");d.id="lightbox";d.innerHTML=`<img src="${el.src}" alt="">`;d.onclick=()=>d.remove();document.body.appendChild(d);};}catch(e){el.replaceWith(Object.assign(document.createElement("span"),{className:"muted",textContent:"열람 불가"}));}}
+  for(const el of host.querySelectorAll("[data-path]")){try{if(el.dataset.dl){el.href=await fileUrl(el.dataset.path);el.download=el.dataset.path.split("/").pop();continue;}el.src=await fileUrl(el.dataset.path);if(el.tagName==="IMG"&&!noZoom)el.onclick=()=>{const d=document.createElement("div");d.id="lightbox";d.innerHTML=`<img src="${el.src}" alt="">`;d.onclick=()=>d.remove();document.body.appendChild(d);};}catch(e){el.replaceWith(Object.assign(document.createElement("span"),{className:"muted",textContent:"열람 불가"}));}}
 }
 /* ---------- 상세: 기본 내용 + 모든 사진 + 덧붙이기(매핑) + 정정 ---------- */
 /* 정정 원칙: 지우지 않는다. 화면엔 최신·유효 자료만, 원래 내용·뺀 자료는 '정정 이력'에 사유와 함께 남는다. */
@@ -335,7 +344,7 @@ function viewDetail(r,reload){
     <div class="hd muted"><b style="color:var(--fg)">#${r.id}</b> · ${fmt(r.occurred_at)} · ${esc(r.vehicle||veh)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(KIND_KO[r.event_category]||r.event_category)}</span> · 작성 ${esc(r.reporter_name||r.reporter)}${r.edited?' <span class="pill etc">정정됨</span>':""}</div>
     <div id="tbox"><div class="tx" style="font-size:16px;white-space:pre-wrap">${esc(r.raw_text)}</div>
       ${canText?`<button type="button" class="mini" id="tedit">✏️ 본문 정정</button>`:""}</div>
-    ${r.media.length?`<div class="big">${r.media.map(m=>`<div class="mwrap">${(m.mime||"").startsWith("audio")?`<audio controls data-path="${esc(m.path)}" style="width:100%"></audio>`:`<img data-path="${esc(m.path)}" alt="첨부">`}
+    ${r.media.length?`<div class="big">${r.media.map(m=>`<div class="mwrap">${(m.mime||"").startsWith("audio")?`<audio controls data-path="${esc(m.path)}" style="width:100%"></audio>`:isHeic(m.mime)?`<a class="heic big-heic" data-path="${esc(m.path)}" data-dl="1">HEIC 사진 (이 화면에선 미리보기 불가) · 눌러서 내려받기</a>`:`<img data-path="${esc(m.path)}" alt="첨부">`}
       ${boss||r.mine||m.mine?`<button type="button" class="mini" data-hide="${esc(m.path)}">이 자료 빼기</button>`:""}</div>`).join("")}</div>`:`<div class="muted">첨부 자료 없음</div>`}
     ${(r.notes||[]).map(n=>`<div class="note" data-nid="${n.id}"><div class="muted">💬 ${esc(n.by)} · ${fmt(n.at)}</div><div class="nt">${esc(n.note)}</div>
       ${boss||n.mine?`<button type="button" class="mini" data-nedit="${n.id}">✏️ 고치기</button> <button type="button" class="mini" data-nhide="${n.id}">빼기</button>`:""}</div>`).join("")}
@@ -374,14 +383,14 @@ function viewDetail(r,reload){
       ${x.before?`<div><span class="muted">원래:</span> <s>${esc(x.before)}</s></div>`:""}${x.after?`<div><span class="muted">정정:</span> ${esc(x.after)}</div>`:""}
       ${x.path?`<img data-path="${esc(x.path)}" alt="" style="max-width:160px;opacity:.6">${me.role==="admin"?` <button type="button" class="mini" data-restore="${esc(x.path)}">복원</button>`:""}`:""}</div>`).join("");fill($("#chgl"));}
     catch(e){msg($("#chgl"),"err",e.message);}};
-  const draw=()=>{$("#dth").innerHTML=add.map((p,i)=>`<div class="t"><img src="${p.url}" alt=""><button type="button" data-i="${i}">×</button></div>`).join("");};
+  const draw=()=>{$("#dth").innerHTML=add.map((p,i)=>`<div class="t">${thumb(p)}<button type="button" data-i="${i}">×</button></div>`).join("");};
   $("#dth").onclick=e=>{const b=e.target.closest("button[data-i]");if(!b)return;const [p]=add.splice(+b.dataset.i,1);URL.revokeObjectURL(p.url);draw();};
   pasteTarget=async fs=>{fs=fs.slice(0,MAX_FILES-add.length);msg($("#dpm"),"info","사진 처리 중…");let bad="";for(const f of fs){try{const b=await shrink(f,2560,.9);add.push({blob:b,url:URL.createObjectURL(b),type:b.type||"image/jpeg"});}catch(err){bad=err.message;}}draw();msg($("#dpm"),bad?"err":"ok",bad||`${add.length}장 붙음 — [덧붙이기 저장]을 누르세요`);};
   $("#df").onchange=e=>{const fs=[...e.target.files];e.target.value="";pasteTarget(fs);};
   $("#ds").onclick=async()=>{const note=$("#dn").value.trim();if(!add.length&&!note) return msg($("#dm"),"err","사진이나 메모를 넣으세요");
     const b=$("#ds");b.disabled=true;
     try{const uid=jwtSub();const paths=[];
-      for(let i=0;i<add.length;i++){b.textContent=`올리는 중 ${i+1}/${add.length}`;const ty=add[i].type||"image/jpeg";const ext={"image/png":"png","image/webp":"webp"}[ty]||"jpg";const p=`${uid}/sf/${r.id}/${Date.now()}_m${i+1}.${ext}`;await upload(p,add[i].blob,ty);paths.push(p);}
+      for(let i=0;i<add.length;i++){b.textContent=`올리는 중 ${i+1}/${add.length}`;const ty=add[i].type||"image/jpeg";const ext={"image/png":"png","image/webp":"webp","image/heic":"heic","image/heif":"heif"}[ty]||"jpg";const p=`${uid}/sf/${r.id}/${Date.now()}_m${i+1}.${ext}`;await upload(p,add[i].blob,ty);paths.push(p);}
       await rpc("qms_history_attach",{p_event_id:r.id,p_paths:paths,p_note:note||null});
       add.forEach(p=>URL.revokeObjectURL(p.url));pasteTarget=null;await refresh("덧붙이기 저장 완료");}
     catch(err){msg($("#dm"),"err","저장 실패: "+err.message);b.disabled=false;b.textContent="덧붙이기 저장";}};
