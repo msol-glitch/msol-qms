@@ -39,7 +39,7 @@ h2{font-size:16px;margin:0}
 .chips button.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:700}
 .kinds{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .kinds button{font:inherit;min-height:64px;border:1px solid #C9C6B8;background:#fff;border-radius:4px;text-align:left;padding:10px 12px}
-.kinds button b{display:block;font-size:16px}.kinds button span{font-size:12px;color:var(--muted)}
+.kinds button b{display:block;font-size:16px}.kinds button span{display:block;font-size:11.5px;line-height:1.35;color:var(--muted);margin-top:3px}
 .kinds button.on{background:var(--ink);border-color:var(--ink);color:#fff}.kinds button.on span{color:#C8D2CD}
 .tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink);border-radius:4px;overflow:hidden}
 .tabs button{font:inherit;font-weight:700;min-height:46px;border:0;background:#fff;color:var(--ink)}
@@ -102,10 +102,12 @@ const ALL_LINES=Object.values(VEH).flat();
 const VEHS=[...Object.keys(VEH),"공통"];
 /* 유형: 화면 이름 → 서버 저장값. 변경점은 QMS 기존 값 '변동점(4M)'을 그대로 쓴다(같은 것은 같은 이름). */
 const KINDS=[
-  {v:"불량",label:"불량 이력",d:"증상·원인·조치·업체"},
-  {v:"경험·노하우",label:"경험·노하우",d:"머릿속에만 있는 요령·주의점"},
-  {v:"변동점(4M)",label:"변경점",d:"사람·설비·자재·방법 바뀐 것"},
-  {v:"기타",label:"기타",d:"분류가 애매하면 여기"}];
+  {v:"불량",label:"불량 이력",d:"불량 증상·원인·조치, 협력사 불량, 고객 클레임"},
+  {v:"경험·노하우",label:"경험·노하우",d:"작업 요령, 주의할 점, 문제 해결 방법"},
+  {v:"변동점(4M)",label:"변경점",d:"사람·설비·자재·방법 변경, 원청 변경점, T/O"},
+  {v:"기타",label:"기타",d:"고객 지시, 회의 결정 등 위에 안 맞는 것"}];
+const FOUR_M=["사람","설비","자재","방법"];
+const kindName=r=>(KIND_KO[r.event_category]||r.event_category)+(r.four_m?` · ${r.four_m}`:"");
 const KIND_KO=Object.fromEntries(KINDS.map(k=>[k.v,k.label]));
 const AUDIO_EXT={"audio/webm":"webm","audio/mp4":"m4a","audio/aac":"aac","audio/ogg":"ogg","audio/mpeg":"mp3"};
 const $=(s,r=document)=>r.querySelector(s);
@@ -236,15 +238,18 @@ function viewWrite(){
   const lines=veh==="공통"?ALL_LINES:VEH[veh];
   let kind=null, line=lines.includes(store.get("hist_line_"+veh))?store.get("hist_line_"+veh):lines[0], photos=[], audio=null, rec=null, timer=null;
   $("#body").innerHTML=`<form class="panel" id="fw">
-    <div class="lab">무슨 일인가요?</div>
-    <div class="kinds" id="kd">${KINDS.map(k=>`<button type="button" data-v="${esc(k.v)}"><b>${k.label}</b></button>`).join("")}</div>
+    <div class="lab">이력관리 항목</div>
+    <div class="kinds" id="kd">${KINDS.map(k=>`<button type="button" data-v="${esc(k.v)}"><b>${k.label}</b><span>${k.d}</span></button>`).join("")}</div>
+    <div id="fmbox" hidden><div class="lab" style="margin-bottom:6px">변경점 4M <span class="muted" style="font-weight:400">(무엇이 바뀌었나요?)</span></div>
+      <div class="chips" id="fm">${FOUR_M.map(m=>`<button type="button" data-v="${m}">${m}</button>`).join("")}</div></div>
     <div ${lines.length<2?"hidden":""}><div class="lab" style="margin-bottom:6px">라인</div><div class="chips" id="ln">${lines.map(l=>`<button type="button" data-v="${esc(l)}" class="${l===line?"on":""}">${esc(l)}</button>`).join("")}</div></div>
-    <label>내용 <span class="muted" style="font-weight:400">(키보드 🎤 누르고 말해도 됩니다)</span>
-      <textarea id="tx" maxlength="4900" placeholder="예) 우측 클립부 긁힘 반복. 사출 지그 모서리 닿는 것 확인, 테이프 보강 후 재발 없음"></textarea></label>
     <div class="row">
       <label>언제 일인가요? <span class="muted" style="font-weight:400">(예전 일은 그 날짜로 바꾸세요)</span><input type="date" id="pd" value="${ymd(new Date())}" max="${ymd(new Date())}" required></label>
       <label id="psbox" hidden>어디서 옮겨 왔나요?<select id="ps"><option>카톡</option><option>사진</option><option>기억</option><option>기타 문서</option></select></label>
     </div>
+    <label>내용 <span class="muted" style="font-weight:400">(키보드 🎤 누르고 말해도 됩니다)</span>
+      <textarea id="tx" maxlength="4900" placeholder="예) 우측 클립부 긁힘 반복. 사출 지그 모서리 닿는 것 확인, 테이프 보강 후 재발 없음"></textarea></label>
+    <div class="lab">사진·녹음 첨부</div>
     <div class="row">
       <label class="btn ghost" style="flex-direction:row;justify-content:center;align-items:center;color:var(--ink)">📷 촬영<input type="file" id="pc" accept="image/*" capture="environment" class="vh"></label>
       <label class="btn ghost" style="flex-direction:row;justify-content:center;align-items:center;color:var(--ink)">🖼 앨범<input type="file" id="pf" accept="image/*" multiple class="vh"></label>
@@ -255,7 +260,9 @@ function viewWrite(){
     <div id="wm"></div>
     <button class="btn" id="sv">저장</button>
   </form>`;
-  $("#kd").onclick=e=>{const b=e.target.closest("button");if(!b)return;kind=b.dataset.v;[...$("#kd").children].forEach(x=>x.classList.toggle("on",x===b));};
+  let fourM=null;
+  $("#kd").onclick=e=>{const b=e.target.closest("button");if(!b)return;kind=b.dataset.v;[...$("#kd").children].forEach(x=>x.classList.toggle("on",x===b));$("#fmbox").hidden=kind!=="변동점(4M)";};
+  $("#fm").onclick=e=>{const b=e.target.closest("button");if(!b)return;fourM=b.dataset.v;[...$("#fm").children].forEach(x=>x.classList.toggle("on",x===b));};
   $("#ln").onclick=e=>{const b=e.target.closest("button");if(!b)return;line=b.dataset.v;store.set("hist_line_"+veh,line);[...$("#ln").children].forEach(x=>x.classList.toggle("on",x===b));};
   const pastSync=()=>{const past=$("#pd").value&&$("#pd").value<ymd(new Date());$("#psbox").hidden=!past;$("#pd").classList.toggle("pastday",!!past);};
   $("#pd").onchange=pastSync;$("#pd").oninput=pastSync;
@@ -278,7 +285,8 @@ function viewWrite(){
     rec.start();b.classList.add("rec");timer=setInterval(()=>{const s=Math.round((Date.now()-t0)/1000);b.textContent=`⏹ 녹음 중 ${s}초 (누르면 끝)`;if(s>=60)rec.stop();},250);};
   $("#fw").onsubmit=async e=>{e.preventDefault();const wm=$("#wm");let text=$("#tx").value.trim();
     if(rec&&rec.state==="recording") return msg(wm,"err","녹음을 먼저 끝내세요");
-    if(!kind) return msg(wm,"err","유형을 하나 고르세요");
+    if(!kind) return msg(wm,"err","이력관리 항목을 하나 고르세요");
+    if(kind==="변동점(4M)"&&!fourM) return msg(wm,"err","변경점은 4M(사람·설비·자재·방법) 중 하나를 고르세요");
     if(!photos.length&&!audio&&text.length<2) return msg(wm,"err","내용, 사진, 녹음 중 하나는 남겨주세요");
     let occurred=null;
     const d=$("#pd").value;if(!d) return msg(wm,"err","언제 일인지 날짜를 넣어주세요");
@@ -286,14 +294,14 @@ function viewWrite(){
     if(d<ymd(new Date())){occurred=`${d}T09:00:00+09:00`; text=`[옮김:${$("#ps").value}] `+text;}
     const b=$("#sv");b.disabled=true;b.textContent="저장 중…";let id=null;
     try{
-      const r=await rpc("qms_field_report_create",{p:{line_name:line,vehicle:veh==="공통"?null:veh,event_category:kind,raw_text:text,occurred_at:occurred,
+      const r=await rpc("qms_field_report_create",{p:{line_name:line,vehicle:veh==="공통"?null:veh,event_category:kind,four_m:kind==="변동점(4M)"?fourM:null,raw_text:text,occurred_at:occurred,
         has_photo:photos.length>0,has_audio:!!audio,record_kind:$("#tst").checked?"TEST":"NORMAL"}});
       id=r.id;const paths=[];
       for(let i=0;i<photos.length;i++){b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`;const ty=photos[i].type||"image/jpeg";const ext={"image/png":"png","image/webp":"webp","image/heic":"heic","image/heif":"heif"}[ty]||"jpg";const p=`${r.uid}/sf/${id}/${Date.now()}_${i+1}.${ext}`;await upload(p,photos[i].blob,ty);paths.push(p);}
       if(audio){b.textContent="음성 올리는 중";const p=`${r.uid}/sf/${id}/${Date.now()}_voice.${AUDIO_EXT[audio.mime]||"webm"}`;await upload(p,audio.blob,audio.mime);paths.push(p);}
       if(paths.length) await rpc("qms_history_attach",{p_event_id:id,p_paths:paths});
       photos.forEach(p=>URL.revokeObjectURL(p.url));if(audio)URL.revokeObjectURL(audio.url);
-      viewWrite();msg($("#wm"),"ok",`저장 #${id} · ${occurred?occurred.slice(0,10)+" · ":""}${veh} · ${KIND_KO[kind]} · ${line}${paths.length?` · 첨부 ${paths.length}`:""}`);
+      viewWrite();msg($("#wm"),"ok",`저장 #${id} · ${occurred?occurred.slice(0,10)+" · ":""}${veh} · ${KIND_KO[kind]}${fourM&&kind==="변동점(4M)"?"("+fourM+")":""} · ${line}${paths.length?` · 첨부 ${paths.length}`:""}`);
     }catch(err){msg(wm,"err",id?`기록 #${id}은 저장됐지만 첨부 실패: ${err.message}`:"저장 실패: "+err.message);b.disabled=false;b.textContent="저장";}
   };
 }
@@ -316,11 +324,11 @@ function viewList(){
     const v=base.filter(r=>(!kf||r.event_category===kf)&&(!q||`${r.raw_text} ${r.line_name} ${r.supplier||""} ${r.defect_type||""}`.toLowerCase().includes(q)));
     if(WIDE){ $("#ls").innerHTML=v.length?`<div class="tw"><table class="ht"><thead><tr><th>번호</th><th>날짜</th><th>차종 / 라인</th><th>구분</th><th>내용</th><th class="n">자료</th><th>작성</th><th>상태</th></tr></thead><tbody>${v.map(r=>{const c=KIND_KO[r.event_category]?r.event_category:"etc";
         return `<tr class="item-row" data-id="${r.id}"><td class="mono">#${r.id}</td><td>${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"})}</td><td>${esc(r.vehicle||veh)} · ${esc(r.line_name)}</td>
-        <td><span class="pill ${esc(c)}">${esc(KIND_KO[r.event_category]||r.event_category)}</span></td><td class="ell">${esc(r.raw_text)}</td><td class="n">${r.media.length?"📎 "+r.media.length:""}${r.notes?.length?" 💬 "+r.notes.length:""}</td>
+        <td><span class="pill ${esc(c)}">${esc(kindName(r))}</span></td><td class="ell">${esc(r.raw_text)}</td><td class="n">${r.media.length?"📎 "+r.media.length:""}${r.notes?.length?" 💬 "+r.notes.length:""}</td>
         <td>${esc(r.reporter_name||r.reporter)}</td><td>${r.record_kind==="TEST"?'<span class="pill test">연습</span> ':""}${r.edited||r.corrections?'<span class="pill etc">정정됨</span>':""}</td></tr>`;}).join("")}</tbody></table></div>`:`<div class="muted">기록이 없습니다.</div>`; return; }
     $("#ls").innerHTML=v.length?v.map(r=>{const c=KIND_KO[r.event_category]?r.event_category:"etc";
       const img=r.media.filter(m=>!(m.mime||"").startsWith("audio")&&!isHeic(m.mime));
-      return `<div class="item ${esc(c)} click" data-id="${r.id}"><div class="hd"><b>#${r.id}</b>${fmt(r.occurred_at)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(KIND_KO[r.event_category]||r.event_category)}</span>${r.record_kind==="TEST"?'<span class="pill test">연습</span>':""} · ${esc(r.reporter_name||r.reporter)}</div>
+      return `<div class="item ${esc(c)} click" data-id="${r.id}"><div class="hd"><b>#${r.id}</b>${fmt(r.occurred_at)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(kindName(r))}</span>${r.record_kind==="TEST"?'<span class="pill test">연습</span>':""} · ${esc(r.reporter_name||r.reporter)}</div>
       <div style="display:flex;gap:10px">${img.length?`<div class="thumbs"><img data-path="${esc(img[0].path)}" alt="첨부"></div>`:""}<div class="tx clip">${esc(r.raw_text)}</div></div>
       <div class="muted">${r.media.length?`📎 자료 ${r.media.length}`:""}${r.notes?.length?` · 💬 덧붙임 ${r.notes.length}`:""}${r.edited||r.corrections?" · 정정됨":""} <b style="color:var(--ink)">› 열기</b></div></div>`;}).join(""):`<div class="muted">기록이 없습니다.</div>`;
     fill($("#ls"),true);};
@@ -345,7 +353,7 @@ function viewDetail(r,reload){
   const ask=t=>{const v=prompt(t+"\n정정 사유를 적어주세요 (2자 이상)");return v&&v.trim().length>=2?v.trim():null;};
   $("#body").innerHTML=`<div class="panel">
     <button type="button" class="btn ghost" id="dback">← 목록으로</button><div id="dm0"></div>
-    <div class="hd muted"><b style="color:var(--fg)">#${r.id}</b> · ${fmt(r.occurred_at)} · ${esc(r.vehicle||veh)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(KIND_KO[r.event_category]||r.event_category)}</span> · 작성 ${esc(r.reporter_name||r.reporter)}${r.edited?' <span class="pill etc">정정됨</span>':""}</div>
+    <div class="hd muted"><b style="color:var(--fg)">#${r.id}</b> · ${fmt(r.occurred_at)} · ${esc(r.vehicle||veh)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(kindName(r))}</span> · 작성 ${esc(r.reporter_name||r.reporter)}${r.edited?' <span class="pill etc">정정됨</span>':""}</div>
     <div id="tbox"><div class="tx" style="font-size:16px;white-space:pre-wrap">${esc(r.raw_text)}</div>
       ${canText?`<button type="button" class="mini" id="tedit">✏️ 본문 정정</button>`:""}</div>
     ${r.media.length?`<div class="big">${r.media.map(m=>`<div class="mwrap">${(m.mime||"").startsWith("audio")?`<audio controls data-path="${esc(m.path)}" style="width:100%"></audio>`:isHeic(m.mime)?`<a class="heic big-heic" data-path="${esc(m.path)}" data-dl="1">HEIC 사진 (이 화면에선 미리보기 불가) · 눌러서 내려받기</a>`:`<img data-path="${esc(m.path)}" alt="첨부">`}
@@ -364,13 +372,21 @@ function viewDetail(r,reload){
   fill($("#body"));window.scrollTo(0,0);
   $("#dback").onclick=()=>{pasteTarget=null;viewList();};
   // 본문 정정: 원문은 서버에 그대로 남고, 정정본이 화면에 보임
-  if($("#tedit")) $("#tedit").onclick=()=>{$("#tbox").innerHTML=`<label>정정할 내용<textarea id="tt" maxlength="5000">${esc(r.raw_text)}</textarea></label>
-      <label>유형<select id="tc">${KINDS.map(k=>`<option value="${esc(k.v)}" ${k.v===r.event_category?"selected":""}>${k.label}</option>`).join("")}</select></label>
-      <label>정정 사유<input id="tr" placeholder="예) 수치 오기, 원청 회신으로 원인 확정"></label>
+  if($("#tedit")) $("#tedit").onclick=()=>{const cv=r.vehicle||"공통";
+    const lineOpts=v=>(v==="공통"?ALL_LINES:VEH[v]).map(l=>`<option ${l===r.line_name?"selected":""}>${esc(l)}</option>`).join("");
+    $("#tbox").innerHTML=`<div class="row"><label>차종<select id="tv">${VEHS.map(v=>`<option ${v===cv?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label>라인<select id="tl">${lineOpts(cv)}</select></label></div>
+      <div class="row"><label>이력관리 항목<select id="tc">${KINDS.map(k=>`<option value="${esc(k.v)}" ${k.v===r.event_category?"selected":""}>${k.label}</option>`).join("")}</select></label>
+      <label id="t4box" ${r.event_category==="변동점(4M)"?"":"hidden"}>변경점 4M<select id="t4"><option value="">선택</option>${FOUR_M.map(m=>`<option ${m===r.four_m?"selected":""}>${m}</option>`).join("")}</select></label></div>
+      <label>정정할 내용<textarea id="tt" maxlength="5000">${esc(r.raw_text)}</textarea></label>
+      <label>정정 사유<input id="tr" placeholder="예) 차종 잘못 선택, 수치 오기, 원청 회신으로 원인 확정"></label>
       <div class="row"><button type="button" class="btn" id="tsave">정정 저장</button><button type="button" class="btn ghost" id="tcancel">취소</button></div><div id="tm"></div>`;
+    $("#tv").onchange=()=>{$("#tl").innerHTML=lineOpts($("#tv").value);};
+    $("#tc").onchange=()=>{$("#t4box").hidden=$("#tc").value!=="변동점(4M)";};
     $("#tcancel").onclick=()=>viewDetail(r,reload);
     $("#tsave").onclick=async()=>{const rs=$("#tr").value.trim();if(rs.length<2) return msg($("#tm"),"err","정정 사유를 적어주세요");
-      try{await rpc("qms_history_correct",{p:{action:"text",event_id:r.id,text:$("#tt").value,event_category:$("#tc").value,reason:rs}});await refresh("본문 정정 완료 (원래 내용은 정정 이력에 남음)");}catch(e){msg($("#tm"),"err",e.message);}};};
+      const isC=$("#tc").value==="변동점(4M)";if(isC&&!$("#t4").value) return msg($("#tm"),"err","변경점은 4M을 고르세요");
+      try{await rpc("qms_history_correct",{p:{action:"text",event_id:r.id,text:$("#tt").value,event_category:$("#tc").value,vehicle:$("#tv").value==="공통"?"":$("#tv").value,line_name:$("#tl").value,four_m:isC?$("#t4").value:"",reason:rs}});const nv=$("#tv").value;if(nv!==veh){veh=nv;store.set("hist_veh",veh);tab="list";render();return;}await refresh("정정 완료 (원래 내용은 정정 이력에 남음)");}catch(e){msg($("#tm"),"err",e.message);}};};
   $("#body").onclick=async e=>{const b=e.target.closest("button[data-hide],button[data-nhide],button[data-nedit],button[data-restore]");if(!b)return;
     try{
       if(b.dataset.hide){const rs=ask("이 자료를 화면에서 뺍니다.");if(!rs)return;await rpc("qms_history_correct",{p:{action:"hide_media",path:b.dataset.hide,reason:rs}});await refresh("자료를 뺐습니다 (정정 이력에 남음)");}
@@ -384,7 +400,7 @@ function viewDetail(r,reload){
     }catch(err){msg($("#dm0"),"err",err.message);}};
   if($("#chg")) $("#chg").onclick=async()=>{try{const L=await rpc("qms_history_changes",{p_event_id:r.id});
     $("#chgl").innerHTML=L.map(x=>`<div class="note"><div class="muted">${esc(x.kind)} · ${esc(x.by)} · ${fmt(x.at)} · 사유: ${esc(x.reason)}</div>
-      ${x.before?`<div><span class="muted">원래:</span> <s>${esc(x.before)}</s></div>`:""}${x.after?`<div><span class="muted">정정:</span> ${esc(x.after)}</div>`:""}
+      ${x.meta_before&&x.meta_before!==x.meta_after?`<div><span class="muted">구분:</span> <s>${esc(x.meta_before)}</s> → ${esc(x.meta_after)}</div>`:""}${x.before&&x.before!==x.after?`<div><span class="muted">원래:</span> <s>${esc(x.before)}</s></div>`:""}${x.after&&x.before!==x.after?`<div><span class="muted">정정:</span> ${esc(x.after)}</div>`:""}
       ${x.path?`<img data-path="${esc(x.path)}" alt="" style="max-width:160px;opacity:.6">${me.role==="admin"?` <button type="button" class="mini" data-restore="${esc(x.path)}">복원</button>`:""}`:""}</div>`).join("");fill($("#chgl"));}
     catch(e){msg($("#chgl"),"err",e.message);}};
   const draw=()=>{$("#dth").innerHTML=add.map((p,i)=>`<div class="t">${thumb(p)}<button type="button" data-i="${i}">×</button></div>`).join("");};
