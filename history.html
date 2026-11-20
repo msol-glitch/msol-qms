@@ -109,6 +109,9 @@ input.pastday{background:#FFF7E6;border-color:#E2B35A;font-weight:700}
 .cfoot{font-size:12.5px;color:var(--muted);display:flex;align-items:center}.chev{margin-left:auto;font-size:20px;color:#B9C4BE;line-height:1}
 .pill.un{background:#FFF1D6;color:#8A5A00}
 #ln.chips button{min-height:36px;font-size:13.5px;padding:5px 12px}
+.sg:empty{display:none}.sgrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#F3F7F4;border:1px solid #D5E3DA;border-radius:8px;padding:8px 10px}.sgw{font-size:12px}
+.lk{font-size:12.5px;color:#4B5E8C;margin-top:2px}
+.rchip{display:inline-flex;align-items:center;gap:4px;background:var(--paper);border:1px solid var(--rule);border-radius:999px;padding:4px 6px 4px 12px;font-size:13.5px}.rchip button{border:0;background:#E3DFD3;border-radius:50%;width:20px;height:20px;cursor:pointer;color:var(--muted)}
 .trial{background:#FFF7E6;border:1px dashed #E2B35A;color:#7A5410;padding:8px 12px;font-size:13px;border-radius:3px}
 </style>
 </head>
@@ -117,7 +120,7 @@ input.pastday{background:#FFF7E6;border-color:#E2B35A;font-weight:700}
   <div class="hb"><div class="brand"><img src="data:image/png;base64,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" alt="㈜엠솔루션"><b>이력관리 데이터센터</b></div><div class="sp"></div>
     <span id="who" class="who"></span>
     <div class="menu"><button id="mbtn" type="button" aria-label="메뉴" hidden>⋯</button>
-      <div id="mlist" class="mlist" hidden><button id="bk" type="button" hidden>💾 백업 받기</button><button id="staff" type="button" hidden>👥 직원 계정</button><button id="out" type="button">↩ 로그아웃</button></div></div></div>
+      <div id="mlist" class="mlist" hidden><button id="bk" type="button" hidden>💾 백업 받기</button><button id="staff" type="button" hidden>👥 직원 계정</button><button id="rules" type="button" hidden>🏷 분류 추천 규칙</button><button id="out" type="button">↩ 로그아웃</button></div></div></div>
   <nav id="vbar" class="vbar" hidden></nav>
 </header>
 <main id="app"></main>
@@ -139,6 +142,25 @@ const KINDS=[
   {v:"변동점(4M)",label:"변경점",d:"사람·설비·자재·방법 변경, 원청 변경점, T/O"},
   {v:"기타",label:"기타",d:"고객 지시, 회의 결정 등 위에 안 맞는 것"}];
 const FOUR_M=["사람","설비","자재","방법"];
+/* ---------- 분류 추천: 서버 규칙표(단어 → 항목·4M)로 내용에서 추천. 사람이 눌러야 확정(자동 저장 안 함) ---------- */
+let RULES=[];
+async function loadRules(){try{RULES=await rpc("qms_history_rules");}catch(e){RULES=[];}}
+function suggest(text){const t=(text||"").toLowerCase();if(t.length<2||!RULES.length)return null;
+  const sc={},hit={};for(const r of RULES){if(t.includes(r.w.toLowerCase())){const k=r.c+"|"+(r.m||"");sc[k]=(sc[k]||0)+1;(hit[r.c]=hit[r.c]||[]).push(r.w.trim());}}
+  const cat={};for(const k in sc){const c=k.split("|")[0];cat[c]=(cat[c]||0)+sc[k];}
+  const order=["불량","변동점(4M)","경험·노하우","기타"];const best=order.filter(c=>cat[c]).sort((a,b)=>cat[b]-cat[a]||order.indexOf(a)-order.indexOf(b))[0];
+  if(!best)return null;
+  const topM=c=>Object.keys(sc).filter(k=>k.startsWith(c+"|")).sort((a,b)=>sc[b]-sc[a])[0]?.split("|")[1]||null;
+  const m=best==="변동점(4M)"?topM(best):null;
+  let link=null;if(best==="불량"&&cat["변동점(4M)"])link={c:"변동점(4M)",m:topM("변동점(4M)")};else if(best==="변동점(4M)"&&cat["불량"])link={c:"불량",m:null};
+  return {c:best,m,link,words:[...new Set(hit[best]||[])]};}
+const sgName=x=>(KIND_KO[x.c]||x.c)+(x.m?` · ${x.m}`:"");
+/* 한 기록에 불량·변경점이 같이 보이면 '연계 가능' 작은 표시(저장 구조는 그대로) */
+function linkHint(r){const s=suggest(r.raw_text);if(!s)return "";const t=(r.raw_text||"").toLowerCase();
+  const has=c=>RULES.some(x=>x.c===c&&t.includes(x.w.toLowerCase()));
+  if(r.event_category==="불량"&&has("변동점(4M)"))return "🔗 변경점 연계 가능";
+  if(r.event_category==="변동점(4M)"&&has("불량"))return "🔗 불량 이력 연계 가능";return "";}
+function sgHTML(s){if(!s)return "";return `<div class="sgrow"><span class="muted">추천</span><b class="pill ${s.c==="불량"?"불량":s.c==="변동점(4M)"?"변동점(4M)":s.c==="경험·노하우"?"경험·노하우":"etc"}">${esc(sgName(s))}</b><button type="button" class="mini sgapply">적용</button>${s.words.length?`<span class="muted sgw">${esc(s.words.slice(0,3).join("·"))}</span>`:""}</div>${s.link?`<div class="lk">🔗 연계 가능: ${esc(sgName(s.link))}</div>`:""}`;}
 const kindName=r=>(KIND_KO[r.event_category]||r.event_category)+(r.four_m?` · ${r.four_m}`:"");
 const KIND_KO=Object.fromEntries(KINDS.map(k=>[k.v,k.label]));
 const AUDIO_EXT={"audio/webm":"webm","audio/mp4":"m4a","audio/aac":"aac","audio/ogg":"ogg","audio/mpeg":"mp3"};
@@ -255,7 +277,8 @@ async function boot(){
   if(!me||!me.role) return showLogin("이 계정은 QMS 사용자 등록이 안 되어 있습니다. 관리자에게 요청하세요.");
   if(!["admin","quality","production"].includes(me.role)) return showLogin("이 계정 권한으로는 이력장을 쓸 수 없습니다.");
   if(jwtMeta().must_change) return showChangePw();
-  $("#who").textContent=`${jwtMeta().name||(me.email||"").split("@")[0]}`;$("#mbtn").hidden=false;$("#staff").hidden=me.role!=="admin";$("#bk").hidden=me.role!=="admin";render();
+  await loadRules();
+  $("#who").textContent=`${jwtMeta().name||(me.email||"").split("@")[0]}`;$("#mbtn").hidden=false;$("#staff").hidden=me.role!=="admin";$("#bk").hidden=me.role!=="admin";$("#rules").hidden=!["admin","quality"].includes(me.role);render();
 }
 function render(){
   pasteTarget=null;
@@ -264,7 +287,7 @@ function render(){
   const bn=$("#bnav");bn.hidden=false;
   bn.innerHTML=[["write","✏️","기록하기"],["bulk","🖼","사진 한꺼번에"],["list","📋","이력 보기"]].map(([t,i,l])=>`<button type="button" data-t="${t}" class="${tab===t?"on":""}"><i>${i}</i>${l}</button>`).join("");
   bn.onclick=e=>{const b=e.target.closest("button");if(!b)return;tab=b.dataset.t;render();window.scrollTo(0,0);};
-  $("#app").innerHTML=`<div id="body"></div>`;
+  $("#app").onclick=null;$("#app").innerHTML=`<div id="body"></div>`;
   tab==="write"?viewWrite():tab==="bulk"?viewBulk():viewList();
 }
 
@@ -282,7 +305,7 @@ function viewWrite(){
       <div class="row"><label>날짜 <small class="muted" style="font-weight:400">예전 일은 그 날짜로</small><input type="date" id="pd" value="${ymd(new Date())}" max="${ymd(new Date())}" required></label>
         <label id="psbox" hidden>어디서 옮겨 왔나요?<select id="ps"><option>카톡</option><option>사진</option><option>기억</option><option>기타 문서</option></select></label></div></div>
     <div class="sec"><div class="st"><em>3</em>내용 <small>키보드 🎤 누르고 말해도 됩니다</small></div>
-      <textarea id="tx" maxlength="4900" placeholder="예) 우측 클립부 긁힘 반복. 사출 지그 모서리 닿는 것 확인, 테이프 보강 후 재발 없음"></textarea></div>
+      <textarea id="tx" maxlength="4900" placeholder="예) 우측 클립부 긁힘 반복. 사출 지그 모서리 닿는 것 확인, 테이프 보강 후 재발 없음"></textarea><div id="sg" class="sg"></div></div>
     <div class="sec"><div class="st"><em>4</em>사진 · 녹음 <small>선택</small></div>
       <div class="att">
         <label class="abtn">📷<span>촬영</span><input type="file" id="pc" accept="image/*" capture="environment" class="vh"></label>
@@ -295,8 +318,11 @@ function viewWrite(){
     <button class="btn" id="sv">저장</button>
   </form>`;
   let fourM=null;
+  const pick=(box,v)=>{const b=[...$(box).children].find(x=>x.dataset.v===v);if(b)b.click();};
+  let sgT=null;const sgRun=()=>{const sx=suggest($("#tx").value);$("#sg").innerHTML=sgHTML(sx);const ab=$("#sg .sgapply");if(ab)ab.onclick=()=>{pick("#kd",sx.c);if(sx.m)pick("#fm",sx.m);$("#sg").innerHTML=`<div class="muted">✓ ${esc(sgName(sx))} 적용됨 — 위 ①에서 바꿀 수 있습니다</div>`+(sx.link?`<div class="lk">🔗 연계 가능: ${esc(sgName(sx.link))}</div>`:"");};};
   $("#kd").onclick=e=>{const b=e.target.closest("button");if(!b)return;kind=b.dataset.v;[...$("#kd").children].forEach(x=>x.classList.toggle("on",x===b));$("#fmbox").hidden=kind!=="변동점(4M)";};
   $("#fm").onclick=e=>{const b=e.target.closest("button");if(!b)return;fourM=b.dataset.v;[...$("#fm").children].forEach(x=>x.classList.toggle("on",x===b));};
+  $("#tx").addEventListener("input",()=>{clearTimeout(sgT);sgT=setTimeout(sgRun,250);});
   $("#ln").onclick=e=>{const b=e.target.closest("button");if(!b)return;line=b.dataset.v;store.set("hist_line_"+veh,line);[...$("#ln").children].forEach(x=>x.classList.toggle("on",x===b));};
   const pastSync=()=>{const past=$("#pd").value&&$("#pd").value<ymd(new Date());$("#psbox").hidden=!past;$("#pd").classList.toggle("pastday",!!past);};
   $("#pd").onchange=pastSync;$("#pd").oninput=pastSync;
@@ -367,7 +393,7 @@ function viewList(){
       return `<div class="card click ${esc(c2)}" data-id="${r.id}">
         <div class="ctop"><span class="pill ${esc(c2)}">${esc(kindName(r))}</span><span class="cdate">${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"long",day:"numeric"})}</span>${r.record_kind==="TEST"?'<span class="pill test">연습</span>':""}${r.edited||r.corrections?'<span class="cflag">정정됨</span>':""}</div>
         <div class="cbody"><div class="tx clip">${esc(r.raw_text)}</div>${img.length?`<img class="cimg" data-path="${esc(img[0].path)}" alt="">`:""}</div>
-        <div class="cfoot">${esc(r.line_name)} · ${esc(r.reporter_name||r.reporter)}${r.media.length?` · 📎${r.media.length}`:""}${r.notes?.length?` · 💬${r.notes.length}`:""}<span class="chev">›</span></div></div>`;}).join(""):`<div class="muted">기록이 없습니다.</div>`;
+        ${linkHint(r)?`<div class="lk">${linkHint(r)}</div>`:""}<div class="cfoot">${esc(r.line_name)} · ${esc(r.reporter_name||r.reporter)}${r.media.length?` · 📎${r.media.length}`:""}${r.notes?.length?` · 💬${r.notes.length}`:""}<span class="chev">›</span></div></div>`;}).join(""):`<div class="muted">기록이 없습니다.</div>`;
     fill($("#ls"),true);};
   const load=async()=>{msg($("#lm"),"info","불러오는 중…");
     try{rows=await rpc("qms_history_list",{p_vehicle:veh==="공통"?null:veh,p_lines:veh==="공통"?null:VEH[veh],p_from:ymd(Date.now()-$("#per").value*864e5),p_to:ymd(new Date()),p_include_test:$("#it").checked,p_limit:1000});msg($("#lm"),"","");draw();}
@@ -390,11 +416,12 @@ function viewDetail(r,reload){
   const ask=t=>{const v=prompt(t+"\n정정 사유를 적어주세요 (2자 이상)");return v&&v.trim().length>=2?v.trim():null;};
   $("#body").innerHTML=`<div class="panel">
     <button type="button" class="btn ghost" id="dback">← 목록으로</button><div id="dm0"></div>
-    <div class="hd muted"><b style="color:var(--fg)">#${r.id}</b> · ${fmt(r.occurred_at)} · ${esc(r.vehicle||veh)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(kindName(r))}</span> · 작성 ${esc(r.reporter_name||r.reporter)}${r.edited?' <span class="pill etc">정정됨</span>':""}</div>
+    <div class="hd muted"><b style="color:var(--fg)">#${r.id}</b> · ${fmt(r.occurred_at)} · ${esc(r.vehicle||veh)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(kindName(r))}</span> · 작성 ${esc(r.reporter_name||r.reporter)}${r.edited?' <span class="pill etc">정정됨</span>':""}</div>${linkHint(r)?`<div class="lk">${linkHint(r)}</div>`:""}
     ${r.event_category==="미분류"&&canText?`<div class="panel" style="border-top-color:#E2B35A;background:#FFFBF2"><b>이 기록 분류하기</b>
       <div class="kinds" id="qk">${KINDS.map(k=>`<button type="button" data-v="${esc(k.v)}"><b>${k.label}</b><span>${k.d}</span></button>`).join("")}</div>
       <div id="qfm" hidden><div class="lab">변경점 4M</div><div class="chips" id="qf">${FOUR_M.map(m=>`<button type="button" data-v="${m}">${m}</button>`).join("")}</div></div>
       <label>내용 보태기 (선택)<textarea id="qt" maxlength="5000">${esc(r.raw_text==="[사진·음성 기록]"?"":r.raw_text)}</textarea></label>
+      <div id="qsg" class="sg"></div>
       <button type="button" class="btn" id="qsave">분류 저장</button><div id="qm"></div></div>`:""}
     <div id="tbox"><div class="tx" style="font-size:16px;white-space:pre-wrap">${esc(r.raw_text)}</div>
       ${canText?`<button type="button" class="mini" id="tedit">✏️ 본문 정정</button>`:""}</div>
@@ -416,6 +443,9 @@ function viewDetail(r,reload){
   if($("#qk")){let qk=null,qf=null;
     $("#qk").onclick=e=>{const b=e.target.closest("button");if(!b)return;qk=b.dataset.v;[...$("#qk").children].forEach(x=>x.classList.toggle("on",x===b));$("#qfm").hidden=qk!=="변동점(4M)";};
     $("#qf").onclick=e=>{const b=e.target.closest("button");if(!b)return;qf=b.dataset.v;[...$("#qf").children].forEach(x=>x.classList.toggle("on",x===b));};
+    const qpick=(box,v)=>{const b=[...$(box).children].find(x=>x.dataset.v===v);if(b)b.click();};
+    const qsg=()=>{const sx=suggest($("#qt").value);$("#qsg").innerHTML=sgHTML(sx);const ab=$("#qsg .sgapply");if(ab)ab.onclick=()=>{qpick("#qk",sx.c);if(sx.m)qpick("#qf",sx.m);};};
+    $("#qt").addEventListener("input",qsg);qsg();
     $("#qsave").onclick=async()=>{if(!qk) return msg($("#qm"),"err","항목을 고르세요");if(qk==="변동점(4M)"&&!qf) return msg($("#qm"),"err","4M을 고르세요");
       const t=$("#qt").value.trim()||r.raw_text;
       try{await rpc("qms_history_correct",{p:{action:"text",event_id:r.id,text:t.length<2?"[사진 기록]":t,event_category:qk,four_m:qk==="변동점(4M)"?qf:"",reason:"분류 지정"}});await refresh("분류 저장 완료");}catch(e){msg($("#qm"),"err",e.message);}};}
@@ -527,6 +557,23 @@ function viewBulk(){
     msg($("#bm"),fail.length?"err":"ok",`기록 ${ok}건 저장 완료${fail.length?` · 실패 ${fail.length}건: ${fail.join(" / ")}`:""} → [이력 보기 → ⚠ 미분류]에서 분류하세요`);};
 }
 $("#staff").onclick=()=>{$("#mlist").hidden=true;viewStaff();};
+$("#rules").onclick=()=>{$("#mlist").hidden=true;viewRules();};
+async function viewRules(){
+  await loadRules();
+  const groups=[["불량",null],["변동점(4M)","사람"],["변동점(4M)","설비"],["변동점(4M)","자재"],["변동점(4M)","방법"],["경험·노하우",null],["기타",null]];
+  $("#app").innerHTML=`<div class="panel"><h2>🏷 분류 추천 규칙</h2>
+    <div class="muted">내용에 이 단어가 들어 있으면 그 분류를 추천합니다. 추천은 사람이 [적용]을 눌러야 확정됩니다. 현장에서 쓰는 표현을 계속 넣어 주세요.</div>
+    <div class="row"><label>단어<input id="rw" placeholder="예) 센터 틀어짐"></label>
+      <label>분류<select id="rc">${groups.map(([c,m])=>`<option value="${esc(c)}|${m||""}">${esc(KIND_KO[c]+(m?" · "+m:""))}</option>`).join("")}</select></label></div>
+    <button class="btn" id="radd">규칙 추가</button><div id="rm"></div></div>
+    ${groups.map(([c,m])=>`<div class="panel" style="gap:8px"><div class="st">${esc(KIND_KO[c]+(m?" · "+m:""))}</div><div class="chips">${RULES.filter(x=>x.c===c&&(x.m||null)===m).map(x=>`<span class="rchip">${esc(x.w.trim())}<button type="button" data-rid="${x.id}" aria-label="빼기">×</button></span>`).join("")||'<span class="muted">없음</span>'}</div></div>`).join("")}
+    <button class="btn ghost" id="rback">← 이력장으로</button>`;
+  $("#rback").onclick=render;
+  $("#radd").onclick=async()=>{const w=$("#rw").value.trim();if(!w)return msg($("#rm"),"err","단어를 넣으세요");const [c,m]=$("#rc").value.split("|");
+    try{await rpc("qms_history_rule_set",{p_word:w,p_category:c,p_four_m:m||null});viewRules();}catch(e){msg($("#rm"),"err",e.message);}};
+  $("#app").onclick=async e=>{const b=e.target.closest("button[data-rid]");if(!b)return;if(!confirm(`'${b.parentElement.firstChild.textContent}' 규칙을 뺄까요? (기록은 남습니다)`))return;
+    try{await rpc("qms_history_rule_set",{p_word:"",p_category:"기타",p_retire_id:+b.dataset.rid});viewRules();}catch(err){alert(err.message);}};
+}
 /* 주간 백업(원칙): 대표가 매주 1회 PC에 전체 데이터를 받아 회사 보관. 받은 기록은 서버 backup_log(pc)에 남아 주간 메일 점검에 쓰임. 사진·음성 파일은 포함 안 됨 */
 $("#bk").onclick=async()=>{$("#mlist").hidden=true;const b=$("#bk");b.disabled=true;b.textContent="백업 중…";
   try{const d=await rpc("qms_backup_export");let total=0;const n=Object.keys(d.tables).length;for(const v of Object.values(d.tables)) total+=v.length;
