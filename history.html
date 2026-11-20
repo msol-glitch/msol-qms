@@ -118,6 +118,18 @@ input.pastday{background:#FFF7E6;border-color:#E2B35A;font-weight:700}
 .tli.first::before{background:var(--ink);border-color:var(--ink)}.tlh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
 .tlt{font-weight:700;color:var(--ink);background:#EEF4F0;border-radius:4px;padding:1px 8px}.tld{font-size:12px;color:#4B5E8C}
 .addp{border:1.5px dashed #B9C4BE;background:#FCFCFA}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.mcell{position:relative}.mcell img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:6px;border:1px solid var(--rule);cursor:zoom-in;display:block}
+.mcell audio{grid-column:1/-1}.xs{font:inherit;font-size:11.5px;border:0;background:none;color:var(--muted);padding:2px 4px;cursor:pointer;text-decoration:underline}
+.mcell .xs{position:absolute;right:2px;bottom:2px;background:rgba(255,255,255,.88);border-radius:4px;text-decoration:none}
+.nbtn{display:flex;gap:6px;justify-content:flex-end}
+.hbtn{font:inherit;display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1.5px solid var(--ink);border-radius:12px;padding:14px;cursor:pointer;color:var(--fg)}
+.hbi{font-size:24px}.hbt{flex:1;display:flex;flex-direction:column}.hbt small{color:var(--muted);font-size:12.5px}.hbg{font-weight:700;color:var(--ink);font-size:13.5px;white-space:nowrap}
+.sheet{position:fixed;inset:0;z-index:50;background:rgba(15,23,20,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet-in{background:var(--paper);width:100%;max-width:760px;height:92vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 30px rgba(0,0,0,.2)}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#fff;border-bottom:1px solid var(--rule)}.sheet-h b{font-size:16px}
+.sheet-h button{border:0;background:var(--paper);width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer}
+.sheet-b{overflow-y:auto;padding:12px 14px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}.sheet-sub{padding:0 2px}
+@media(min-width:900px){.sheet{align-items:center}.sheet-in{height:86vh;border-radius:16px}}
 .trial{background:#FFF7E6;border:1px dashed #E2B35A;color:#7A5410;padding:8px 12px;font-size:13px;border-radius:3px}
 </style>
 </head>
@@ -426,12 +438,12 @@ async function fill(host,noZoom){
 }
 /* ---------- 상세: 기본 내용 + 모든 사진 + 덧붙이기(매핑) + 정정 ---------- */
 /* 정정 원칙: 지우지 않는다. 화면엔 최신·유효 자료만, 원래 내용·뺀 자료는 '정정 이력'에 사유와 함께 남는다. */
-function viewDetail(r,reload){
+function viewDetail(r,reload,keepOpen){
   const c=KIND_KO[r.event_category]?r.event_category:"etc";let add=[];
   const boss=["admin","quality"].includes(me.role);
   const canText=boss||r.mine;
   const refresh=async(note)=>{const rows=await rpc("qms_history_list",{p_vehicle:veh==="공통"?null:veh,p_lines:veh==="공통"?null:VEH[veh],p_from:ymd(new Date(r.occurred_at)),p_to:ymd(new Date()),p_include_test:true,p_limit:1000});
-    viewDetail(rows.find(x=>x.id===r.id)||r,reload);if(note)msg($("#dm0"),"ok",note);};
+    const op=$("#sheet")&&!$("#sheet").hidden;viewDetail(rows.find(x=>x.id===r.id)||r,reload,op);if(note)msg(op?$("#dm"):$("#dm0"),"ok",note);};
   const ask=t=>{const v=prompt(t+"\n정정 사유를 적어주세요 (2자 이상)");return v&&v.trim().length>=2?v.trim():null;};
   /* 사건 타임라인: 최초 기록 + 이후 덧붙인 자료를 올린 사람·시각(3분 안)으로 묶어 시간 순서로 */
   const near=(x,y)=>Math.abs(new Date(x)-new Date(y))<=180000;
@@ -450,17 +462,24 @@ function viewDetail(r,reload){
       <button type="button" class="btn" id="qsave">분류 저장</button><div id="qm"></div></div>`:""}
     <div id="tbox"><div class="tx" style="font-size:16px;white-space:pre-wrap">${esc(r.raw_text)}</div>
       ${canText?`<button type="button" class="mini" id="tedit">✏️ 본문 정정</button>`:""}</div>
+    ${(g=>`${g.notes.map(n=>`<div class="note" data-nid="${n.id}"><div class="nt">${esc(stripTag(n.note))}</div><span hidden class="nraw">${esc(n.note)}</span>
+          ${boss||n.mine?`<div class="nbtn"><button type="button" class="xs" data-nedit="${n.id}">고치기</button><button type="button" class="xs" data-nhide="${n.id}">빼기</button></div>`:""}</div>`).join("")}${g.media.length?`<div class="mgrid">${g.media.map(m=>`<div class="mcell">${(m.mime||"").startsWith("audio")?`<audio controls data-path="${esc(m.path)}" style="width:100%"></audio>`:isHeic(m.mime)?`<a class="heic big-heic" data-path="${esc(m.path)}" data-dl="1">HEIC · 내려받기</a>`:`<img data-path="${esc(m.path)}" alt="첨부">`}${boss||r.mine||m.mine?`<button type="button" class="xs" data-hide="${esc(m.path)}">빼기</button>`:""}</div>`).join("")}</div>`:""}`)(tl.find(x=>x.start))}
   </div>
-  <div class="panel"><div class="st">📅 이 건의 자료 <small>시간 순서 · ${tl.length}건</small></div>
-    <div class="tl">${tl.map((g,gi)=>{const tg=g.start?{t:"최초 기록",d:null}:noteTag(g.notes[0]?.note);
+  ${(()=>{const ex=tl.filter(x=>!x.start);const tags={};ex.forEach(g=>{const t=noteTag(g.notes[0]?.note).t;tags[t]=(tags[t]||0)+1;});
+    return `<button type="button" class="hbtn" id="shopen"><span class="hbi">📂</span><span class="hbt"><b>추가 이력 ${ex.length}건</b><small>${ex.length?Object.entries(tags).map(([t,n])=>`${esc(t)} ${n}`).join(" · "):"메일·카톡 캡처·회신·조치 결과를 이 건에 이어 붙이기"}</small></span><span class="hbg">${ex.length?"보기 · 추가":"＋ 추가"} ›</span></button>`;})()}
+  <div id="sheet" class="sheet" hidden><div class="sheet-in">
+  <div class="sheet-h"><b>추가 이력 · #${r.id}</b><button type="button" id="shx" aria-label="닫기">✕</button></div>
+  <div class="sheet-b"><div class="muted sheet-sub">${esc(r.vehicle||veh)} · ${esc(kindName(r))} · ${esc((r.raw_text||"").slice(0,40))}${(r.raw_text||"").length>40?"…":""}</div>
+  <div class="panel"><div class="st">📅 시간 순서 <small>${tl.length-1}건</small></div>
+    ${tl.length>1?"":`<div class="muted">아직 추가된 자료가 없습니다. 아래에서 추가하세요.</div>`}
+    <div class="tl">${tl.filter(g=>!g.start).map((g,gi)=>{const tg=g.start?{t:"최초 기록",d:null}:noteTag(g.notes[0]?.note);
       return `<div class="tli ${g.start?"first":""}"><div class="tlh"><span class="tlt">${esc(tg.t)}</span>${tg.d?`<span class="tld">자료 날짜 ${esc(tg.d)}</span>`:""}<span class="muted">${fmt(g.at)} · ${esc(g.by||"")}</span></div>
         ${g.notes.map(n=>`<div class="note" data-nid="${n.id}"><div class="nt">${esc(stripTag(n.note))}</div><span hidden class="nraw">${esc(n.note)}</span>
-          ${boss||n.mine?`<button type="button" class="mini" data-nedit="${n.id}">✏️ 고치기</button> <button type="button" class="mini" data-nhide="${n.id}">빼기</button>`:""}</div>`).join("")}
-        ${g.media.length?`<div class="big">${g.media.map(m=>`<div class="mwrap">${(m.mime||"").startsWith("audio")?`<audio controls data-path="${esc(m.path)}" style="width:100%"></audio>`:isHeic(m.mime)?`<a class="heic big-heic" data-path="${esc(m.path)}" data-dl="1">HEIC 사진 (미리보기 불가) · 눌러서 내려받기</a>`:`<img data-path="${esc(m.path)}" alt="첨부">`}
-          ${boss||r.mine||m.mine?`<button type="button" class="mini" data-hide="${esc(m.path)}">이 자료 빼기</button>`:""}</div>`).join("")}</div>`:(g.start&&!g.notes.length?`<div class="muted">첨부 없음</div>`:"")}</div>`;}).join("")}</div>
+          ${boss||n.mine?`<div class="nbtn"><button type="button" class="xs" data-nedit="${n.id}">고치기</button><button type="button" class="xs" data-nhide="${n.id}">빼기</button></div>`:""}</div>`).join("")}
+        ${g.media.length?`<div class="mgrid">${g.media.map(m=>`<div class="mcell">${(m.mime||"").startsWith("audio")?`<audio controls data-path="${esc(m.path)}" style="width:100%"></audio>`:isHeic(m.mime)?`<a class="heic big-heic" data-path="${esc(m.path)}" data-dl="1">HEIC · 내려받기</a>`:`<img data-path="${esc(m.path)}" alt="첨부">`}${boss||r.mine||m.mine?`<button type="button" class="xs" data-hide="${esc(m.path)}">빼기</button>`:""}</div>`).join("")}</div>`:""}</div>`;}).join("")}</div>
     ${r.corrections?`<button type="button" class="mini" id="chg">🕘 정정 이력 ${r.corrections}건 보기</button><div id="chgl"></div>`:""}
   </div>
-  <div class="panel addp"><div class="st">＋ 이 건에 자료 추가 <small>나중에 나온 근거를 계속 이어 붙입니다</small></div>
+  <div class="panel addp"><div class="st" id="addh">＋ 자료 추가 <small>나중에 나온 근거를 계속 이어 붙입니다</small></div>
     <div class="chips" id="dk">${ADD_KINDS.map((k,i)=>`<button type="button" data-v="${k}" class="${i===0?"on":""}">${k}</button>`).join("")}</div>
     <div class="row"><label>자료 날짜 <small class="muted" style="font-weight:400">메일·카톡이 오간 날</small><input type="date" id="dd" value="${ymd(new Date())}" max="${ymd(new Date())}"></label></div>
     <label>내용 (선택)<textarea id="dn" maxlength="3000" placeholder="예) 원청 품질팀 회신: 귀책 재검토 회의 11/25 확정"></textarea></label>
@@ -469,9 +488,13 @@ function viewDetail(r,reload){
       <label class="abtn">🖼<span>사진·캡처 고르기</span><input type="file" id="df" accept="image/*" multiple class="vh"></label></div>
     ${IS_PC?`<div class="paste">💡 메일·카톡 화면 캡처 후 <b>Ctrl+V</b> 하면 바로 붙습니다</div>`:""}
     <div id="dpm"></div><div class="thumbs" id="dth"></div>
-    <div id="dm"></div><button class="btn" id="ds">이 건에 추가 저장</button></div>`;
-  fill($("#body"));window.scrollTo(0,0);
-  $("#dback").onclick=()=>{pasteTarget=null;viewList();};
+    <div id="dm"></div><button class="btn" id="ds">이 건에 추가 저장</button></div></div></div></div>`;
+  fill($("#body"));
+  const openSheet=v=>{$("#sheet").hidden=!v;document.body.style.overflow=v?"hidden":"";};
+  $("#shopen").onclick=()=>openSheet(true);$("#shx").onclick=()=>openSheet(false);
+  $("#sheet").onclick=e=>{if(e.target.id==="sheet")openSheet(false);};
+  if(keepOpen)openSheet(true);else window.scrollTo(0,0);
+  $("#dback").onclick=()=>{pasteTarget=null;document.body.style.overflow="";viewList();};
   if($("#qk")){let qk=null,qf=null;
     $("#qk").onclick=e=>{const b=e.target.closest("button");if(!b)return;qk=b.dataset.v;[...$("#qk").children].forEach(x=>x.classList.toggle("on",x===b));$("#qfm").hidden=qk!=="변동점(4M)";};
     $("#qf").onclick=e=>{const b=e.target.closest("button");if(!b)return;qf=b.dataset.v;[...$("#qf").children].forEach(x=>x.classList.toggle("on",x===b));};
