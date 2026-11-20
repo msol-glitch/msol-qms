@@ -136,6 +136,7 @@ input.pastday{background:#FFF7E6;border-color:#E2B35A;font-weight:700}
 .rimg span{position:absolute;right:3px;bottom:3px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;border-radius:4px;padding:0 4px}.ri0{display:grid;place-items:center;background:var(--paper);border-radius:8px;font-size:13px;color:var(--muted)}
 .tthumb{width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--rule);vertical-align:middle}
 .card{padding:12px}
+.late{font-size:11.5px;color:#8A6420}
 .trial{background:#FFF7E6;border:1px dashed #E2B35A;color:#7A5410;padding:8px 12px;font-size:13px;border-radius:3px}
 </style>
 </head>
@@ -189,6 +190,7 @@ const ADD_KINDS=["사진","카톡 캡처","메일","원청·고객 회신","조�
 const TAGRE=/^\[([^\]]+?)(?:\s+·\s+(\d{4}-\d{2}-\d{2}))?\]\s*/;
 const noteTag=t=>{const m=TAGRE.exec(t||"");return m?{t:m[1].trim(),d:m[2]||null}:{t:t&&/^우리 의견/.test(t)?"우리 의견":"메모",d:null};};
 const stripTag=t=>(t||"").replace(TAGRE,"");
+const lateReg=r=>{if(!r.created_at)return "";const c=new Date(r.created_at),o=new Date(r.occurred_at);return (c-o)>36*3600*1000?c.toLocaleDateString("ko-KR",{year:"2-digit",month:"numeric",day:"numeric"})+" 등록":"";};
 const kindName=r=>(KIND_KO[r.event_category]||r.event_category)+(r.four_m?` · ${r.four_m}`:"");
 const KIND_KO=Object.fromEntries(KINDS.map(k=>[k.v,k.label]));
 const AUDIO_EXT={"audio/webm":"webm","audio/mp4":"m4a","audio/aac":"aac","audio/ogg":"ogg","audio/mpeg":"mp3"};
@@ -425,7 +427,7 @@ function viewList(){
         return `<tr class="item-row" data-id="${r.id}"><td><span class="pill ${esc(c==="etc"&&r.event_category==="미분류"?"un":c)}">${esc(kindName(r))}</span></td>
         <td class="ell">${esc(r.raw_text)}${linkHint(r)?` <span class="lk">🔗</span>`:""}</td>
         <td>${im.length?`<img class="tthumb" data-path="${esc(im[0].path)}" alt="">${r.media.length>1?`<span class="muted"> +${r.media.length-1}</span>`:""}`:r.media.length?`📎${r.media.length}`:""}${ex?` <span class="muted">· 추가 ${ex}</span>`:""}</td>
-        <td>${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"})}</td><td>${esc(r.vehicle||veh)} · ${esc(r.line_name)}</td>
+        <td>${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"})}${lateReg(r)?`<div class="late">${lateReg(r)}</div>`:""}</td><td>${esc(r.vehicle||veh)} · ${esc(r.line_name)}</td>
         <td>${esc(r.reporter_name||r.reporter)}</td><td>${r.record_kind==="TEST"?'<span class="pill test">연습</span> ':""}${r.edited||r.corrections?'<span class="pill etc">정정됨</span>':""}</td></tr>`;}).join("")}</tbody></table></div>`:`<div class="muted">기록이 없습니다.</div>`; fill($("#ls"),true); return; }
     $("#ls").innerHTML=v.length?v.map(r=>{const c=KIND_KO[r.event_category]?r.event_category:"etc";
       const img=r.media.filter(m=>!(m.mime||"").startsWith("audio")&&!isHeic(m.mime));
@@ -434,7 +436,7 @@ function viewList(){
       return `<div class="card click ${esc(c2)}" data-id="${r.id}">
         <div class="rc"><span class="rtag pill ${esc(c2)}">${esc(kindName(r)).replace(" · ","<br>")}</span>
           <div class="rcm"><div class="tx clip">${esc(r.raw_text)}</div>
-            <div class="rcmeta">${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"numeric",day:"numeric"})} · ${esc(r.line_name)} · ${esc(r.reporter_name||r.reporter)}${ex?` · 📂${ex}`:""}${r.record_kind==="TEST"?" · 연습":""}${r.edited||r.corrections?" · 정정됨":""}</div>
+            <div class="rcmeta">${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"numeric",day:"numeric"})}${lateReg(r)?`<span class="late"> (${lateReg(r)})</span>`:""} · ${esc(r.line_name)} · ${esc(r.reporter_name||r.reporter)}${ex?` · 📂${ex}`:""}${r.record_kind==="TEST"?" · 연습":""}${r.edited||r.corrections?" · 정정됨":""}</div>
             ${linkHint(r)?`<div class="lk">${linkHint(r)}</div>`:""}</div>
           ${img.length?`<div class="rimg"><img data-path="${esc(img[0].path)}" alt="">${r.media.length>1?`<span>+${r.media.length-1}</span>`:""}</div>`:r.media.length?`<div class="rimg ri0">📎${r.media.length}</div>`:""}</div></div>`;}).join(""):`<div class="muted">기록이 없습니다.</div>`;
     fill($("#ls"),true);};
@@ -465,7 +467,7 @@ function viewDetail(r,reload,keepOpen){
   tl.sort((x,y)=>new Date(x.at)-new Date(y.at));
   $("#body").innerHTML=`<div class="panel">
     <button type="button" class="btn ghost" id="dback">← 목록으로</button><div id="dm0"></div>
-    <div class="hd muted"><b style="color:var(--fg)">#${r.id}</b> · ${fmt(r.occurred_at)} · ${esc(r.vehicle||veh)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(kindName(r))}</span> · 작성 ${esc(r.reporter_name||r.reporter)}${r.edited?' <span class="pill etc">정정됨</span>':""}</div>${linkHint(r)?`<div class="lk">${linkHint(r)}</div>`:""}${r.directive_by||r.our_opinion?`<div class="dop">${r.directive_by?`결정: <b>${esc(r.directive_by)}</b>`:""}${r.our_opinion?`${r.directive_by?" · ":""}우리 의견: <b>${esc(r.our_opinion)}</b>`:""}</div>`:""}
+    <div class="hd muted"><b style="color:var(--fg)">#${r.id}</b> · ${fmt(r.occurred_at)}${lateReg(r)?` <span class="late">(${lateReg(r)})</span>`:""} · ${esc(r.vehicle||veh)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(kindName(r))}</span> · 작성 ${esc(r.reporter_name||r.reporter)}${r.edited?' <span class="pill etc">정정됨</span>':""}</div>${linkHint(r)?`<div class="lk">${linkHint(r)}</div>`:""}${r.directive_by||r.our_opinion?`<div class="dop">${r.directive_by?`결정: <b>${esc(r.directive_by)}</b>`:""}${r.our_opinion?`${r.directive_by?" · ":""}우리 의견: <b>${esc(r.our_opinion)}</b>`:""}</div>`:""}
     ${r.event_category==="미분류"&&canText?`<div class="panel" style="border-top-color:#E2B35A;background:#FFFBF2"><b>이 기록 분류하기</b>
       <div class="kinds" id="qk">${KINDS.map(k=>`<button type="button" data-v="${esc(k.v)}"><b>${k.label}</b><span>${k.d}</span></button>`).join("")}</div>
       <div id="qfm" hidden><div class="lab">변경점 4M</div><div class="chips" id="qf">${FOUR_M.map(m=>`<button type="button" data-v="${m}">${m}</button>`).join("")}</div></div>
