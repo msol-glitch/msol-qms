@@ -41,7 +41,7 @@ h2{font-size:16px;margin:0}
 .kinds button{font:inherit;min-height:64px;border:1px solid #C9C6B8;background:#fff;border-radius:4px;text-align:left;padding:10px 12px}
 .kinds button b{display:block;font-size:16px}.kinds button span{display:block;font-size:11.5px;line-height:1.35;color:var(--muted);margin-top:3px}
 .kinds button.on{background:var(--ink);border-color:var(--ink);color:#fff}.kinds button.on span{color:#C8D2CD}
-.tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink);border-radius:4px;overflow:hidden}
+.tabs{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid var(--ink);border-radius:4px;overflow:hidden}
 .tabs button{font:inherit;font-weight:700;min-height:46px;border:0;background:#fff;color:var(--ink)}
 .tabs button.on{background:var(--ink);color:#fff}
 input,select,textarea{font:inherit;font-size:16px;color:var(--fg);background:#fff;border:1px solid #B9C4BE;border-radius:4px;padding:10px 12px;width:100%;min-height:46px}
@@ -226,11 +226,11 @@ async function boot(){
 function render(){
   pasteTarget=null;
   $("#app").innerHTML=`<div class="panel" style="gap:8px"><div class="lab">차종</div><div class="chips" id="vc">${VEHS.map(v=>`<button type="button" data-v="${esc(v)}" class="${v===veh?"on":""}">${esc(v)}</button>`).join("")}</div></div>
-  <div class="tabs"><button type="button" data-t="write" class="${tab==="write"?"on":""}">기록하기</button><button type="button" data-t="list" class="${tab==="list"?"on":""}">이력 보기</button></div>
+  <div class="tabs"><button type="button" data-t="write" class="${tab==="write"?"on":""}">기록하기</button><button type="button" data-t="bulk" class="${tab==="bulk"?"on":""}">사진 한꺼번에</button><button type="button" data-t="list" class="${tab==="list"?"on":""}">이력 보기</button></div>
   <div id="body"></div>`;
   $("#vc").onclick=e=>{const b=e.target.closest("button");if(!b)return;veh=b.dataset.v;store.set("hist_veh",veh);render();};
   document.querySelector(".tabs").onclick=e=>{const b=e.target.closest("button");if(!b)return;tab=b.dataset.t;render();};
-  tab==="write"?viewWrite():viewList();
+  tab==="write"?viewWrite():tab==="bulk"?viewBulk():viewList();
 }
 
 /* ---------- 기록하기: 차종 → 유형 → 말하거나 쳐서 저장 ---------- */
@@ -315,12 +315,12 @@ function viewList(){
       <label>검색<input id="q" placeholder="단어로 찾기 (예: 긁힘, 지그)"></label></div>
     <label class="check"><input type="checkbox" id="it"> 연습용 기록도 보기</label>
     <div class="kpis" id="kp"></div>
-    <div class="chips" id="kf"><button type="button" data-v="" class="on">전체</button>${KINDS.map(k=>`<button type="button" data-v="${esc(k.v)}">${k.label}</button>`).join("")}</div>
+    <div class="chips" id="kf"><button type="button" data-v="" class="on">전체</button>${KINDS.map(k=>`<button type="button" data-v="${esc(k.v)}">${k.label}</button>`).join("")}<button type="button" data-v="미분류">⚠ 미분류</button></div>
     <div id="lm"></div><div id="ls" style="display:flex;flex-direction:column;gap:8px"></div></div>`;
   const mine=()=>true; /* 차종 거르기는 서버(qms_history_list)에서 */
   const draw=()=>{const q=$("#q").value.trim().toLowerCase();
-    const base=rows.filter(mine);const cnt=k=>base.filter(r=>k?r.event_category===k:true).length;
-    $("#kp").innerHTML=`<div class="kpi hl"><div class="k">${esc(veh)} 전체</div><div class="v">${cnt("").toLocaleString("ko-KR")}건</div></div>`+KINDS.map(k=>`<div class="kpi"><div class="k">${k.label}</div><div class="v">${cnt(k.v).toLocaleString("ko-KR")}</div></div>`).join("");
+    const base=rows.filter(mine);const cnt=k=>base.filter(r=>k?r.event_category===k:true).length;const un=cnt("미분류");
+    $("#kp").innerHTML=(un?`<div class="kpi" style="grid-column:1/-1;background:#FFF7E6"><div class="k">분류 기다리는 기록</div><div class="v">${un}건 · ⚠ 미분류를 눌러 하나씩 분류</div></div>`:"")+`<div class="kpi hl"><div class="k">${esc(veh)} 전체</div><div class="v">${cnt("").toLocaleString("ko-KR")}건</div></div>`+KINDS.map(k=>`<div class="kpi"><div class="k">${k.label}</div><div class="v">${cnt(k.v).toLocaleString("ko-KR")}</div></div>`).join("");
     const v=base.filter(r=>(!kf||r.event_category===kf)&&(!q||`${r.raw_text} ${r.line_name} ${r.supplier||""} ${r.defect_type||""}`.toLowerCase().includes(q)));
     if(WIDE){ $("#ls").innerHTML=v.length?`<div class="tw"><table class="ht"><thead><tr><th>번호</th><th>날짜</th><th>차종 / 라인</th><th>구분</th><th>내용</th><th class="n">자료</th><th>작성</th><th>상태</th></tr></thead><tbody>${v.map(r=>{const c=KIND_KO[r.event_category]?r.event_category:"etc";
         return `<tr class="item-row" data-id="${r.id}"><td class="mono">#${r.id}</td><td>${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"})}</td><td>${esc(r.vehicle||veh)} · ${esc(r.line_name)}</td>
@@ -354,6 +354,11 @@ function viewDetail(r,reload){
   $("#body").innerHTML=`<div class="panel">
     <button type="button" class="btn ghost" id="dback">← 목록으로</button><div id="dm0"></div>
     <div class="hd muted"><b style="color:var(--fg)">#${r.id}</b> · ${fmt(r.occurred_at)} · ${esc(r.vehicle||veh)} · ${esc(r.line_name)} <span class="pill ${esc(c)}">${esc(kindName(r))}</span> · 작성 ${esc(r.reporter_name||r.reporter)}${r.edited?' <span class="pill etc">정정됨</span>':""}</div>
+    ${r.event_category==="미분류"&&canText?`<div class="panel" style="border-top-color:#E2B35A;background:#FFFBF2"><b>이 기록 분류하기</b>
+      <div class="kinds" id="qk">${KINDS.map(k=>`<button type="button" data-v="${esc(k.v)}"><b>${k.label}</b><span>${k.d}</span></button>`).join("")}</div>
+      <div id="qfm" hidden><div class="lab">변경점 4M</div><div class="chips" id="qf">${FOUR_M.map(m=>`<button type="button" data-v="${m}">${m}</button>`).join("")}</div></div>
+      <label>내용 보태기 (선택)<textarea id="qt" maxlength="5000">${esc(r.raw_text==="[사진·음성 기록]"?"":r.raw_text)}</textarea></label>
+      <button type="button" class="btn" id="qsave">분류 저장</button><div id="qm"></div></div>`:""}
     <div id="tbox"><div class="tx" style="font-size:16px;white-space:pre-wrap">${esc(r.raw_text)}</div>
       ${canText?`<button type="button" class="mini" id="tedit">✏️ 본문 정정</button>`:""}</div>
     ${r.media.length?`<div class="big">${r.media.map(m=>`<div class="mwrap">${(m.mime||"").startsWith("audio")?`<audio controls data-path="${esc(m.path)}" style="width:100%"></audio>`:isHeic(m.mime)?`<a class="heic big-heic" data-path="${esc(m.path)}" data-dl="1">HEIC 사진 (이 화면에선 미리보기 불가) · 눌러서 내려받기</a>`:`<img data-path="${esc(m.path)}" alt="첨부">`}
@@ -371,6 +376,12 @@ function viewDetail(r,reload){
     <div id="dm"></div><button class="btn" id="ds">덧붙이기 저장</button></div>`;
   fill($("#body"));window.scrollTo(0,0);
   $("#dback").onclick=()=>{pasteTarget=null;viewList();};
+  if($("#qk")){let qk=null,qf=null;
+    $("#qk").onclick=e=>{const b=e.target.closest("button");if(!b)return;qk=b.dataset.v;[...$("#qk").children].forEach(x=>x.classList.toggle("on",x===b));$("#qfm").hidden=qk!=="변동점(4M)";};
+    $("#qf").onclick=e=>{const b=e.target.closest("button");if(!b)return;qf=b.dataset.v;[...$("#qf").children].forEach(x=>x.classList.toggle("on",x===b));};
+    $("#qsave").onclick=async()=>{if(!qk) return msg($("#qm"),"err","항목을 고르세요");if(qk==="변동점(4M)"&&!qf) return msg($("#qm"),"err","4M을 고르세요");
+      const t=$("#qt").value.trim()||r.raw_text;
+      try{await rpc("qms_history_correct",{p:{action:"text",event_id:r.id,text:t.length<2?"[사진 기록]":t,event_category:qk,four_m:qk==="변동점(4M)"?qf:"",reason:"분류 지정"}});await refresh("분류 저장 완료");}catch(e){msg($("#qm"),"err",e.message);}};}
   // 본문 정정: 원문은 서버에 그대로 남고, 정정본이 화면에 보임
   if($("#tedit")) $("#tedit").onclick=()=>{const cv=r.vehicle||"공통";
     const lineOpts=v=>(v==="공통"?ALL_LINES:VEH[v]).map(l=>`<option ${l===r.line_name?"selected":""}>${esc(l)}</option>`).join("");
@@ -414,6 +425,69 @@ function viewDetail(r,reload){
       await rpc("qms_history_attach",{p_event_id:r.id,p_paths:paths,p_note:note||null});
       add.forEach(p=>URL.revokeObjectURL(p.url));pasteTarget=null;await refresh("덧붙이기 저장 완료");}
     catch(err){msg($("#dm"),"err","저장 실패: "+err.message);b.disabled=false;b.textContent="덧붙이기 저장";}};
+}
+/* ---------- 사진 한꺼번에: 여러 장 고르면 날짜를 자동으로 읽어 기록으로 만들고, 분류는 나중에(이력 보기 → ⚠ 미분류) ---------- */
+/* 날짜 읽는 순서: ① 사진 속 촬영일(EXIF, HEIC 포함) ② 파일 이름 ③ 파일 수정일. 오늘 날짜로 읽히면 ⚠ 확인 표시 */
+async function photoDate(f){
+  let r=null;
+  // ① 사진 속 촬영 정보(EXIF, HEIC 포함) — 카톡에서 저장한 사진은 없을 수 있음
+  try{const buf=new Uint8Array(await f.slice(0,524288).arrayBuffer());let txt="";for(let i=0;i<buf.length;i++)txt+=String.fromCharCode(buf[i]);
+    const all=[...txt.matchAll(/(20\d{2}):(0[1-9]|1[0-2]):([0-2]\d|3[01]) ([01]\d|2[0-3]):([0-5]\d):([0-5]\d)/g)];
+    if(all.length){const x=all.map(a=>a[0]).sort()[0].split(/[: ]/);r={d:`${x[0]}-${x[1]}-${x[2]}`,t:`${x[3]}:${x[4]}:${x[5]}`,src:"촬영 정보"};}}catch(e){}
+  // ② 파일 이름(KakaoTalk_20241105…, Screenshot_20241105…, 20241105_123456) — 카톡 이름은 '저장한 날'일 수 있음
+  if(!r){const m=/(20\d{2})[-_.]?(0[1-9]|1[0-2])[-_.]?([0-2]\d|3[01])(?:[-_ ]?([01]\d|2[0-3])[-_.]?([0-5]\d)[-_.]?([0-5]\d))?/.exec(f.name||"");
+    if(m) r={d:`${m[1]}-${m[2]}-${m[3]}`,t:m[4]?`${m[4]}:${m[5]}:${m[6]||"00"}`:null,src:/kakao/i.test(f.name)?"카톡 파일 이름(저장한 날일 수 있음 — 확인 필요)":"파일 이름"};}
+  // ③ 파일 날짜
+  if(!r&&f.lastModified){const d=new Date(f.lastModified);r={d:ymd(d),t:d.toTimeString().slice(0,8),src:"파일 날짜(확인 필요)"};}
+  if(!r) r={d:ymd(new Date()),t:null,src:"모름(확인 필요)"};
+  if(r.d===ymd(new Date())&&!/확인/.test(r.src)) r.src+="(오늘 날짜 — 확인 필요)";
+  return r;
+}
+function viewBulk(){
+  const lines=veh==="공통"?ALL_LINES:VEH[veh];let items=[];
+  $("#body").innerHTML=`<div class="panel">
+    <h2>사진 한꺼번에 올리기 · ${esc(veh)}</h2>
+    <div class="muted">휴대폰 앨범·카톡에 쌓인 예전 사진을 여러 장 한 번에 고르세요. <b>날짜는 사진에서 자동으로 읽고</b>, 분류는 나중에 [이력 보기 → ⚠ 미분류]에서 하나씩 하면 됩니다.</div>
+    <div class="row"><label>라인<select id="bl">${lines.map(l=>`<option>${esc(l)}</option>`).join("")}</select></label>
+      <label>어디서 가져왔나요?<select id="bs"><option>사진</option><option>카톡</option><option>기타 문서</option></select></label></div>
+    <label class="check"><input type="checkbox" id="bg" checked> 같은 날 사진은 한 기록으로 묶기</label>
+    <label class="btn ghost" style="flex-direction:row;justify-content:center;align-items:center;color:var(--ink)">🖼 사진 여러 장 고르기<input type="file" id="bf" accept="image/*" multiple class="vh"></label>
+    ${IS_PC?`<div class="paste">💡 PC: 폴더에서 사진 여러 장을 여기로 끌어놓아도 됩니다</div>`:""}
+    <div id="bm"></div><div id="bv"></div></div>`;
+  const groups=()=>{const g=new Map();for(const it of items){const k=$("#bg").checked?it.d:it.d+"#"+items.indexOf(it);if(!g.has(k))g.set(k,[]);g.get(k).push(it);}
+    return [...g.values()].sort((a,b)=>a[0].d<b[0].d?-1:1);};
+  const draw=()=>{const G=groups();
+    $("#bv").innerHTML=items.length?`<div class="muted">사진 ${items.length}장 → 기록 <b>${G.length}건</b>으로 저장됩니다. 날짜가 틀리면 고치세요.</div>
+      ${G.map((g,gi)=>`<div class="item" style="border-left-color:#E2B35A"><div class="row"><label>날짜<input type="date" data-g="${gi}" value="${g[0].d}" max="${ymd(new Date())}"></label>
+        <label>메모 (선택)<input data-gm="${gi}" value="${esc(g[0].memo||"")}" placeholder="예) SP3k 클립 긁힘"></label></div>
+        <div class="thumbs">${g.map(it=>`<div class="t">${thumb(it)}<button type="button" data-x="${items.indexOf(it)}">×</button></div>`).join("")}</div>
+        <div class="muted">${[...new Set(g.map(it=>it.src))].join(", ")}에서 읽은 날짜${g.some(it=>/확인/.test(it.src))?" ⚠":""}</div></div>`).join("")}
+      <button class="btn" id="bsave">기록 ${G.length}건 저장</button>`:"";
+    $("#bv").querySelectorAll("input[data-g]").forEach(inp=>inp.onchange=()=>{groups()[+inp.dataset.g].forEach(it=>{it.d=inp.value;it.src="직접 입력";});draw();});
+    $("#bv").querySelectorAll("input[data-gm]").forEach(inp=>inp.oninput=()=>{groups()[+inp.dataset.gm].forEach(it=>it.memo=inp.value);});
+    const sv=$("#bsave");if(sv)sv.onclick=save;};
+  $("#bv").onclick=e=>{const b=e.target.closest("button[data-x]");if(!b)return;const [it]=items.splice(+b.dataset.x,1);URL.revokeObjectURL(it.url);draw();};
+  $("#bg").onchange=draw;
+  const add=async fs=>{fs=fs.slice(0,200-items.length);msg($("#bm"),"info",`사진 ${fs.length}장 읽는 중…`);let bad=0,i=0;
+    for(const f of fs){i++;if(i%5===0)msg($("#bm"),"info",`사진 읽는 중… ${i}/${fs.length}`);
+      try{const dt=await photoDate(f);const b=await shrink(f,2560,.9);items.push({blob:b,url:URL.createObjectURL(b),type:b.type||"image/jpeg",d:dt.d,t:dt.t,src:dt.src,memo:""});}catch(e){bad++;}}
+    msg($("#bm"),bad?"err":"ok",`${items.length}장 준비됨${bad?` · ${bad}장은 열 수 없어 뺐습니다(10MB 초과 등)`:""}`);draw();};
+  pasteTarget=add;
+  $("#bf").onchange=e=>{const fs=[...e.target.files];e.target.value="";add(fs);};
+  const save=async()=>{const G=groups();const b=$("#bsave");b.disabled=true;const uid=jwtSub();let ok=0,fail=[];
+    for(let gi=0;gi<G.length;gi++){const g=G[gi];b.textContent=`저장 중 ${gi+1}/${G.length}`;
+      if(g[0].d>ymd(new Date())){fail.push(g[0].d+" (앞날짜)");continue;}
+      const t0=g.map(x=>x.t).filter(Boolean).sort()[0];
+      const memo=(g[0].memo||"").trim();
+      try{const r=await rpc("qms_field_report_create",{p:{line_name:$("#bl").value,vehicle:veh==="공통"?null:veh,event_category:"미분류",
+          raw_text:`[옮김:${$("#bs").value}] ${memo||"사진 기록"}`,occurred_at:`${g[0].d}T${t0||"09:00:00"}+09:00`,has_photo:true,record_kind:"NORMAL"}});
+        for(let c=0;c<g.length;c+=30){const paths=[];
+          for(let i=c;i<Math.min(c+30,g.length);i++){const it=g[i];const ext={"image/png":"png","image/webp":"webp","image/heic":"heic","image/heif":"heif"}[it.type]||"jpg";
+            const p=`${uid}/sf/${r.id}/${Date.now()}_b${i+1}.${ext}`;await upload(p,it.blob,it.type);paths.push(p);}
+          await rpc("qms_history_attach",{p_event_id:r.id,p_paths:paths});}
+        ok++;}catch(e){fail.push(`${g[0].d}: ${e.message}`);}}
+    items.forEach(it=>URL.revokeObjectURL(it.url));items=[];draw();
+    msg($("#bm"),fail.length?"err":"ok",`기록 ${ok}건 저장 완료${fail.length?` · 실패 ${fail.length}건: ${fail.join(" / ")}`:""} → [이력 보기 → ⚠ 미분류]에서 분류하세요`);};
 }
 $("#staff").onclick=viewStaff;
 /* 주간 백업(원칙): 대표가 매주 1회 PC에 전체 데이터를 받아 회사 보관. 받은 기록은 서버 backup_log(pc)에 남아 주간 메일 점검에 쓰임. 사진·음성 파일은 포함 안 됨 */
