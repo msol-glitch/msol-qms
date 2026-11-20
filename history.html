@@ -130,6 +130,12 @@ input.pastday{background:#FFF7E6;border-color:#E2B35A;font-weight:700}
 .sheet-h button{border:0;background:var(--paper);width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer}
 .sheet-b{overflow-y:auto;padding:12px 14px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}.sheet-sub{padding:0 2px}
 @media(min-width:900px){.sheet{align-items:center}.sheet-in{height:86vh;border-radius:16px}}
+.rc{display:flex;gap:10px;align-items:flex-start}.rtag{flex:none;width:62px;text-align:center;line-height:1.35;padding:5px 2px;font-size:12px}
+.rcm{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}.rcm .tx{font-size:15px}.rcmeta{font-size:12px;color:var(--muted)}
+.rimg{flex:none;position:relative;width:58px;height:58px}.rimg img{width:58px;height:58px;object-fit:cover;border-radius:8px;border:1px solid var(--rule)}
+.rimg span{position:absolute;right:3px;bottom:3px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;border-radius:4px;padding:0 4px}.ri0{display:grid;place-items:center;background:var(--paper);border-radius:8px;font-size:13px;color:var(--muted)}
+.tthumb{width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--rule);vertical-align:middle}
+.card{padding:12px}
 .trial{background:#FFF7E6;border:1px dashed #E2B35A;color:#7A5410;padding:8px 12px;font-size:13px;border-radius:3px}
 </style>
 </head>
@@ -402,7 +408,7 @@ function viewList(){
   $("#body").onclick=null;
   let kf="", rows=[];
   $("#body").innerHTML=`<div class="panel" style="gap:10px">
-    <div class="row" style="grid-template-columns:auto 1fr"><select id="per" style="width:auto"><option value="90">3개월</option><option value="365" selected>1년</option><option value="1825">5년</option><option value="10950">전체</option></select>
+    <div class="row" style="grid-template-columns:auto 1fr"><select id="per" style="width:auto"><option value="10950" selected>전체</option><option value="365">1년</option><option value="1825">5년</option><option value="90">3개월</option></select>
       <input id="q" placeholder="🔍 단어로 찾기 (긁힘, 지그…)"></div>
     <div class="fchips" id="kf"></div>
     <label class="check muted" style="min-height:28px;font-size:12.5px"><input type="checkbox" id="it" style="width:16px;height:16px"> 연습용 기록도 보기</label>
@@ -414,17 +420,23 @@ function viewList(){
     const F=[["","전체"],...KINDS.map(x=>[x.v,x.label]),["미분류","⚠ 미분류"]].filter(([v])=>v!=="미분류"||cnt("미분류"));
     $("#kf").innerHTML=F.map(([v,l])=>`<button type="button" data-v="${esc(v)}" class="${v===kf?"on":""} ${v==="미분류"?"warn":""}">${l}<b>${cnt(v)}</b></button>`).join("");
     const v=base.filter(r=>(!kf||r.event_category===kf)&&(!q||`${r.raw_text} ${r.line_name} ${r.supplier||""} ${r.defect_type||""}`.toLowerCase().includes(q)));
-    if(WIDE){ $("#ls").innerHTML=v.length?`<div class="tw"><table class="ht"><thead><tr><th>번호</th><th>날짜</th><th>차종 / 라인</th><th>구분</th><th>내용</th><th class="n">자료</th><th>작성</th><th>상태</th></tr></thead><tbody>${v.map(r=>{const c=KIND_KO[r.event_category]?r.event_category:"etc";
-        return `<tr class="item-row" data-id="${r.id}"><td class="mono">#${r.id}</td><td>${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"})}</td><td>${esc(r.vehicle||veh)} · ${esc(r.line_name)}</td>
-        <td><span class="pill ${esc(c)}">${esc(kindName(r))}</span></td><td class="ell">${esc(r.raw_text)}</td><td class="n">${r.media.length?"📎 "+r.media.length:""}${r.notes?.length?" 💬 "+r.notes.length:""}</td>
-        <td>${esc(r.reporter_name||r.reporter)}</td><td>${r.record_kind==="TEST"?'<span class="pill test">연습</span> ':""}${r.edited||r.corrections?'<span class="pill etc">정정됨</span>':""}</td></tr>`;}).join("")}</tbody></table></div>`:`<div class="muted">기록이 없습니다.</div>`; return; }
+    if(WIDE){ $("#ls").innerHTML=v.length?`<div class="tw"><table class="ht"><thead><tr><th>구분</th><th>내용</th><th>사진</th><th>날짜</th><th>차종 / 라인</th><th>작성</th><th>상태</th></tr></thead><tbody>${v.map(r=>{const c=KIND_KO[r.event_category]?r.event_category:"etc";
+        const im=r.media.filter(m=>!(m.mime||"").startsWith("audio")&&!isHeic(m.mime));const ex=r.notes?.length||0;
+        return `<tr class="item-row" data-id="${r.id}"><td><span class="pill ${esc(c==="etc"&&r.event_category==="미분류"?"un":c)}">${esc(kindName(r))}</span></td>
+        <td class="ell">${esc(r.raw_text)}${linkHint(r)?` <span class="lk">🔗</span>`:""}</td>
+        <td>${im.length?`<img class="tthumb" data-path="${esc(im[0].path)}" alt="">${r.media.length>1?`<span class="muted"> +${r.media.length-1}</span>`:""}`:r.media.length?`📎${r.media.length}`:""}${ex?` <span class="muted">· 추가 ${ex}</span>`:""}</td>
+        <td>${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit"})}</td><td>${esc(r.vehicle||veh)} · ${esc(r.line_name)}</td>
+        <td>${esc(r.reporter_name||r.reporter)}</td><td>${r.record_kind==="TEST"?'<span class="pill test">연습</span> ':""}${r.edited||r.corrections?'<span class="pill etc">정정됨</span>':""}</td></tr>`;}).join("")}</tbody></table></div>`:`<div class="muted">기록이 없습니다.</div>`; fill($("#ls"),true); return; }
     $("#ls").innerHTML=v.length?v.map(r=>{const c=KIND_KO[r.event_category]?r.event_category:"etc";
       const img=r.media.filter(m=>!(m.mime||"").startsWith("audio")&&!isHeic(m.mime));
       const c2=c==="etc"&&r.event_category==="미분류"?"un":c;
+      const ex=r.notes?.length||0;
       return `<div class="card click ${esc(c2)}" data-id="${r.id}">
-        <div class="ctop"><span class="pill ${esc(c2)}">${esc(kindName(r))}</span><span class="cdate">${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"long",day:"numeric"})}</span>${r.record_kind==="TEST"?'<span class="pill test">연습</span>':""}${r.edited||r.corrections?'<span class="cflag">정정됨</span>':""}</div>
-        <div class="cbody"><div class="tx clip">${esc(r.raw_text)}</div>${img.length?`<img class="cimg" data-path="${esc(img[0].path)}" alt="">`:""}</div>
-        ${linkHint(r)?`<div class="lk">${linkHint(r)}</div>`:""}${r.directive_by||r.our_opinion?`<div class="dop">${r.directive_by?`결정: <b>${esc(r.directive_by)}</b>`:""}${r.our_opinion?`${r.directive_by?" · ":""}우리 의견: <b>${esc(r.our_opinion)}</b>`:""}</div>`:""}<div class="cfoot">${esc(r.line_name)} · ${esc(r.reporter_name||r.reporter)}${r.media.length?` · 📎${r.media.length}`:""}${r.notes?.length?` · 💬${r.notes.length}`:""}<span class="chev">›</span></div></div>`;}).join(""):`<div class="muted">기록이 없습니다.</div>`;
+        <div class="rc"><span class="rtag pill ${esc(c2)}">${esc(kindName(r)).replace(" · ","<br>")}</span>
+          <div class="rcm"><div class="tx clip">${esc(r.raw_text)}</div>
+            <div class="rcmeta">${new Date(r.occurred_at).toLocaleDateString("ko-KR",{year:"2-digit",month:"numeric",day:"numeric"})} · ${esc(r.line_name)} · ${esc(r.reporter_name||r.reporter)}${ex?` · 📂${ex}`:""}${r.record_kind==="TEST"?" · 연습":""}${r.edited||r.corrections?" · 정정됨":""}</div>
+            ${linkHint(r)?`<div class="lk">${linkHint(r)}</div>`:""}</div>
+          ${img.length?`<div class="rimg"><img data-path="${esc(img[0].path)}" alt="">${r.media.length>1?`<span>+${r.media.length-1}</span>`:""}</div>`:r.media.length?`<div class="rimg ri0">📎${r.media.length}</div>`:""}</div></div>`;}).join(""):`<div class="muted">기록이 없습니다.</div>`;
     fill($("#ls"),true);};
   const load=async()=>{msg($("#lm"),"info","불러오는 중…");
     try{rows=await rpc("qms_history_list",{p_vehicle:veh==="공통"?null:veh,p_lines:veh==="공통"?null:VEH[veh],p_from:ymd(Date.now()-$("#per").value*864e5),p_to:ymd(new Date()),p_include_test:$("#it").checked,p_limit:1000});msg($("#lm"),"","");draw();}
