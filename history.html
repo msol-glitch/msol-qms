@@ -159,7 +159,18 @@ input.pastday{background:#FFF7E6;border-color:#E2B35A;font-weight:700}
 .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.kpi div{background:#F8FAFC;border:1px solid var(--rule);border-radius:10px;padding:10px;text-align:center}.kpi b{display:block;font-size:22px}.kpi .ng b{color:var(--ng)}
 .lgmeta{width:100%;border-collapse:collapse;font-size:13px}.lgmeta td{border:1px solid #cfd3d6;padding:5px 8px}.lgmeta td:nth-child(odd){background:#F8FAFC;font-weight:700;width:16%}
 .print-only{display:none}
-@media print{header,#hstat,#bnav,.noprint{display:none!important}body{background:#fff}.panel{box-shadow:none;border:0;padding:0}.print-only{display:block}.lg{font-size:10.5px}.lg img{width:56px;height:42px}@page{size:A4 landscape;margin:10mm}}
+.sfb{border:2px solid #B91C1C!important;background:#FEF2F2!important}.sfh{color:#991B1B!important}.sfi{border-color:#F87171!important;background:#fff!important}.sfi.done{border-style:solid!important;border-color:#86B79C!important}
+#kd button[data-v="안전부품 점검"]{border:2px solid #B91C1C;background:#FEF2F2}#kd button[data-v="안전부품 점검"] b{color:#991B1B}
+.rpop{position:fixed;inset:0;z-index:60;background:rgba(70,0,0,.6);display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:10px}
+.rp{background:#FEF2F2;border:3px solid #B91C1C;border-radius:14px;width:min(100%,560px);margin:auto 0;box-shadow:0 12px 40px rgba(0,0,0,.4)}.rp.wide{width:min(100%,1180px)}
+.rp-h{background:#B91C1C;color:#fff;padding:12px 14px;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:800;font-size:17px;position:sticky;top:0;z-index:2}
+.rp-h small{display:block;font-weight:400;font-size:12px;opacity:.9}.rp-h button{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:8px;min-height:38px;padding:0 12px;font-size:15px;flex:none}
+.rp-b{padding:12px;display:flex;flex-direction:column;gap:10px}.rp-b .sec{background:#fff;border:1px solid #FCA5A5;border-radius:10px;padding:10px}
+.rp-b .chips button.on{background:#B91C1C;border-color:#B91C1C;color:#fff}.rp .btn{background:#B91C1C;border-color:#B91C1C}.rp .btn.ghost{background:#fff;color:#B91C1C}
+.rp .warnline{background:#B91C1C;color:#fff;border-radius:8px;padding:8px 10px;font-size:12.5px;font-weight:700}
+.mesnote{font-size:12px;color:#7F1D1D;background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;padding:8px 10px;margin-top:8px}
+body.rpo{overflow:hidden}
+@media print{body.rpo>*:not(.rpop){display:none!important}.rpop.under{display:none!important}body.rpo{overflow:visible}.rpop{position:static;background:none;padding:0;display:block;overflow:visible}.rp,.rp.wide{width:100%;border:0;box-shadow:none;background:#fff}.rp-h{position:static;-webkit-print-color-adjust:exact;print-color-adjust:exact}.rp-h button{display:none}header,#hstat,#bnav,.noprint{display:none!important}body{background:#fff}.panel{box-shadow:none;border:0;padding:0}.print-only{display:block}.lg{font-size:10.5px}.lg img{width:56px;height:42px}@page{size:A4 landscape;margin:10mm}}
 </style>
 </head>
 <body>
@@ -394,7 +405,7 @@ function viewWrite(preset){
   let fourM=null;
   const pick=(box,v)=>{const b=[...$(box).children].find(x=>x.dataset.v===v);if(b)b.click();};
   let sgT=null;const sgRun=()=>{const sx=suggest($("#tx").value);$("#sg").innerHTML=sgHTML(sx);const ab=$("#sg .sgapply");if(ab)ab.onclick=()=>{pick("#kd",sx.c);if(sx.m)pick("#fm",sx.m);$("#sg").innerHTML=`<div class="muted">✓ ${esc(sgName(sx))} 적용됨 — 위 ①에서 바꿀 수 있습니다</div>`+(sx.link?`<div class="lk">🔗 연계 가능: ${esc(sgName(sx.link))}</div>`:"");};};
-  $("#kd").onclick=e=>{const b=e.target.closest("button");if(!b)return;kind=b.dataset.v;[...$("#kd").children].forEach(x=>x.classList.toggle("on",x===b));$("#fmbox").hidden=kind!=="변동점(4M)";$("#sfbox").hidden=kind!=="안전부품 점검";drawLines();};
+  $("#kd").onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.v==="안전부품 점검")return openSafety();kind=b.dataset.v;[...$("#kd").children].forEach(x=>x.classList.toggle("on",x===b));$("#fmbox").hidden=kind!=="변동점(4M)";$("#sfbox").hidden=kind!=="안전부품 점검";drawLines();};
   $("#fm").onclick=e=>{const b=e.target.closest("button");if(!b)return;fourM=b.dataset.v;[...$("#fm").children].forEach(x=>x.classList.toggle("on",x===b));};
   $("#tx").addEventListener("input",()=>{clearTimeout(sgT);sgT=setTimeout(sgRun,250);});
   let dby=null,opk=null;
@@ -422,7 +433,7 @@ function viewWrite(preset){
   $("#ln").onclick=e=>{const b=e.target.closest("button");if(!b)return;line=b.dataset.v;if(kind!=="안전부품 점검")store.set("hist_line_"+veh,line);[...$("#ln").children].forEach(x=>x.classList.toggle("on",x===b));if(kind==="안전부품 점검")loadStd();};
   $("#jg").onclick=e=>{const b=e.target.closest("button");if(!b)return;judge=b.dataset.v;[...$("#jg").children].forEach(x=>x.classList.toggle("on",x===b));};
   drawSafety($("#safetybar"));
-  $("#safetybar").onclick=e=>{const b=e.target.closest("[data-sl]");if(!b)return;const k=[...$("#kd").children].find(x=>x.dataset.v==="안전부품 점검");k.click();line=b.dataset.sl;drawLines();$("#fw").scrollIntoView({behavior:"smooth"});};
+  $("#safetybar").onclick=e=>{const b=e.target.closest("[data-sl]");if(b)openSafety(b.dataset.sl);};
   const pastSync=()=>{const past=$("#pd").value&&$("#pd").value<ymd(new Date());$("#psbox").hidden=!past;$("#pd").classList.toggle("pastday",!!past);};
   $("#pd").onchange=pastSync;$("#pd").oninput=pastSync;
   const drawTh=()=>{$("#th").innerHTML=photos.map((p,i)=>`<div class="t">${thumb(p)}<button type="button" data-i="${i}" aria-label="삭제">×</button></div>`).join("");};
@@ -478,7 +489,7 @@ function viewWrite(preset){
 function viewList(){
   $("#body").onclick=null;
   let kf="", rows=[];
-  $("#body").innerHTML=`<button type="button" class="btn ghost" id="lgopen" style="margin-bottom:10px;border-color:var(--ok);color:var(--ok)">🛡 안전부품 점검 대장 <small style="font-weight:400">(감사 제출용 · 날짜순 전체 · 인쇄/엑셀)</small></button><div class="panel" style="gap:10px">
+  $("#body").innerHTML=`<button type="button" class="btn ghost" id="lgopen" style="margin-bottom:10px;border:2px solid #B91C1C;color:#B91C1C;background:#FEF2F2">🛡 안전부품 점검 대장 <small style="font-weight:400">(감사 제출용 · 날짜순 전체 · 인쇄/엑셀)</small></button><div class="panel" style="gap:10px">
     <div class="vchips" id="lv" style="grid-template-columns:repeat(7,1fr)">${["*",...VEHS].map(v=>`<button type="button" data-v="${esc(v)}" class="${v===listVeh?"on":""}">${v==="*"?"전체":esc(v)}</button>`).join("")}</div>
     <div class="row" style="grid-template-columns:auto 1fr"><select id="per" style="width:auto"><option value="10950" selected>전체</option><option value="365">1년</option><option value="1825">5년</option><option value="90">3개월</option></select>
       <input id="q" placeholder="🔍 단어로 찾기 (긁힘, 지그…)"></div>
@@ -707,20 +718,74 @@ function viewBulk(){
 $("#staff").onclick=()=>{$("#mlist").hidden=true;viewStaff();};
 $("#rules").onclick=()=>{$("#mlist").hidden=true;viewRules();};
 $("#stdm").onclick=()=>{$("#mlist").hidden=true;viewStd();};
+/* ---------- 안전부품: 빨간 별도 팝업 (일반 기록과 구분, 강하게) ---------- */
+function redPop(title,sub,wide){const o=document.createElement("div");o.className="rpop";o.innerHTML=`<div class="rp ${wide?"wide":""}" role="dialog" aria-modal="true"><div class="rp-h"><div>${title}<small>${sub||""}</small></div><button type="button" class="rpx">✕ 닫기</button></div><div class="rp-b"></div></div>`;
+  document.querySelectorAll(".rpop").forEach(x=>x.classList.add("under"));document.body.appendChild(o);document.body.classList.add("rpo");
+  const close=()=>{o.remove();const all=document.querySelectorAll(".rpop");if(!all.length)document.body.classList.remove("rpo");else all[all.length-1].classList.remove("under");};
+  o.querySelector(".rpx").onclick=close;return {el:o,body:o.querySelector(".rp-b"),close};}
+/* 점검은 '오늘' 날짜로만 저장(뒤 날짜 입력 불가) — 안전부품 증빙은 그날 기록이어야 효력이 있음 */
+function openSafety(startLine){
+  const P=redPop("🛡 안전부품 점검","매일 1회 · 조건 화면 숫자 입력 → 자동 판정 · 사진 필수");const B=P.body;
+  let line=SAFETY_LINES.includes(startLine)?startLine:SAFETY_LINES[0],stds=[],judge=null,photos=[];const prevPaste=pasteTarget;
+  B.innerHTML=`<div class="warnline">⚠ 안전규제 부품 — 기준 벗어나면 즉시 NG. 오늘 날짜로만 저장됩니다.</div>
+    <div class="sec"><div class="st" style="font-size:13px">라인</div><div class="chips" id="xl">${SAFETY_LINES.map(l=>`<button type="button" data-v="${esc(l)}">${esc(l)}</button>`).join("")}</div><div id="xt" class="muted" style="font-size:12.5px;margin-top:6px"></div></div>
+    <div class="sec" id="xv"></div>
+    <div class="sec" id="xm" hidden><div class="st" style="font-size:13px">판정 <small>기준값이 없어 사람이 판정</small></div><div class="chips" id="xj"><button type="button" data-v="정상">✅ 정상</button><button type="button" data-v="이상">⚠ 이상</button></div></div>
+    <div class="sec"><div class="st" style="font-size:13px">조건 화면 사진 <small>필수 · 숫자가 보이게</small></div>
+      <div class="row" style="grid-template-columns:1fr 1fr"><label class="btn ghost" style="display:flex;align-items:center;justify-content:center">📷 촬영<input type="file" accept="image/*" capture="environment" id="xpc" class="vh"></label><label class="btn ghost" style="display:flex;align-items:center;justify-content:center">🖼 앨범<input type="file" accept="image/*" multiple id="xpf" class="vh"></label></div>
+      <div class="thumbs" id="xth"></div><div id="xpm"></div></div>
+    <div class="sec"><div class="st" style="font-size:13px">내용 / 조치 <small>NG·이상이면 필수</small></div><textarea id="xtx" style="min-height:70px" placeholder="예) 팁 교체 후 재측정 0.80mm OK"></textarea></div>
+    <label class="check muted" style="min-height:28px;font-size:12.5px"><input type="checkbox" id="xtst" style="width:16px;height:16px"> 연습용 기록</label>
+    <button class="btn" id="xsv">저장</button><div id="xmsg"></div>
+    <button class="btn ghost" id="xlg">📋 안전부품 점검 대장 보기</button>`;
+  const sel=()=>{[...B.querySelectorAll("#xl button")].forEach(b=>b.classList.toggle("on",b.dataset.v===line));const t=STATS?.safety_today?.[line];
+    $("#xt").innerHTML=t?`✅ 오늘 ${new Date(t.at).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})}에 이미 점검했습니다 (재측정이면 그대로 저장)`:"⬜ 오늘 아직 점검 안 함";load();};
+  const live=()=>{let ng=0,miss=0;B.querySelectorAll("input[data-sid]").forEach(inp=>{const st=stds.find(x=>x.id==inp.dataset.sid);const b=inp.parentElement.querySelector(".jb");const v=inp.value.trim();
+      if(v===""||isNaN(+v)){b.className="jb";b.textContent="—";miss++;return;}const bad=(st.lo!=null&&+v<st.lo)||(st.hi!=null&&+v>st.hi);if(bad)ng++;b.className="jb "+(bad?"ng":"ok");b.textContent=bad?"NG":"OK";});
+    const a=$("#xall");if(a){a.className="sfall"+(miss?"":ng?" ng":" ok");a.textContent=miss?"값을 모두 넣으면 자동 판정됩니다":ng?`⚠ NG — ${ng}개 항목 기준 이탈. 조치 내용을 적어주세요`:"✅ 정상 — 모든 항목 기준 안";}return {ng,miss};};
+  const load=async()=>{const ln=line;$("#xv").innerHTML=`<div class="muted">기준 불러오는 중…</div>`;try{stds=await rpc("qms_safety_standards",{p_line:ln});}catch(e){stds=[];}if(ln!==line)return;
+    $("#xm").hidden=stds.length>0;
+    $("#xv").innerHTML=stds.length?`<div class="st" style="font-size:13px">측정값 <small>조건 화면 숫자 입력 → 자동 판정</small></div>${stds.map(x=>`<div class="sv"><div><b>${esc(x.item)}</b><small>기준 ${esc(x.nominal||[x.lo,x.hi].filter(v=>v!=null).join("~"))} ${esc(x.unit||"")}${x.doc?` · ${esc(x.doc)}`:""}</small></div><input type="number" inputmode="decimal" step="any" data-sid="${x.id}" placeholder="${esc(x.unit||"값")}"><span class="jb">—</span></div>`).join("")}<div id="xall" class="sfall">값을 모두 넣으면 자동 판정됩니다</div>`
+      :`<div class="muted" style="font-size:12.5px">📏 ${esc(ln)}은 등록된 기준값이 없습니다 → 아래에서 정상/이상 판정</div>`;
+    B.querySelectorAll("input[data-sid]").forEach(i=>i.oninput=live);};
+  $("#xl").onclick=e=>{const b=e.target.closest("button");if(!b)return;line=b.dataset.v;sel();};
+  $("#xj").onclick=e=>{const b=e.target.closest("button");if(!b)return;judge=b.dataset.v;[...$("#xj").children].forEach(x=>x.classList.toggle("on",x===b));};
+  const drawTh=()=>{$("#xth").innerHTML=photos.map((p,i)=>`<div class="t">${thumb(p)}<button type="button" data-i="${i}" aria-label="삭제">×</button></div>`).join("");};
+  $("#xth").onclick=e=>{const b=e.target.closest("button[data-i]");if(!b)return;const [p]=photos.splice(+b.dataset.i,1);URL.revokeObjectURL(p.url);drawTh();};
+  const addFiles=async fs=>{fs=fs.slice(0,MAX_FILES-photos.length);if(!fs.length)return;msg($("#xpm"),"info","사진 처리 중…");let bad="";
+    for(const f of fs){try{const b=await shrink(f,2560,.9);photos.push({blob:b,url:URL.createObjectURL(b),type:b.type||"image/jpeg"});}catch(err){bad=err.message;}}drawTh();msg($("#xpm"),bad?"err":"ok",bad||`사진 ${photos.length}장`);};
+  pasteTarget=addFiles;
+  const fin=()=>{photos.forEach(p=>URL.revokeObjectURL(p.url));pasteTarget=prevPaste;P.close();};
+  P.el.querySelector(".rpx").onclick=fin;
+  $("#xpf").onchange=e=>{const fs=[...e.target.files];e.target.value="";addFiles(fs);};$("#xpc").onchange=e=>{const fs=[...e.target.files];e.target.value="";addFiles(fs);};
+  $("#xlg").onclick=()=>viewLedger(line);
+  $("#xsv").onclick=async()=>{const m=$("#xmsg");const text=$("#xtx").value.trim();let vals=[];
+    if(stds.length){for(const inp of B.querySelectorAll("input[data-sid]")){const v=inp.value.trim();const st=stds.find(x=>x.id==inp.dataset.sid);if(v===""||isNaN(+v))return msg(m,"err",`${st.item} 값을 넣어주세요`);vals.push({standard_id:+inp.dataset.sid,value:+v});}
+      if(live().ng&&text.length<2)return msg(m,"err","NG입니다. 조치 내용을 적어주세요 (감사 대응)");}
+    else{if(!judge)return msg(m,"err","판정(정상/이상)을 고르세요");if(judge==="이상"&&text.length<2)return msg(m,"err","이상이면 어떤 조건이 벗어났는지 적어주세요");}
+    if(!photos.length)return msg(m,"err","조건 화면 사진이 꼭 필요합니다 (증빙)");
+    const b=$("#xsv");b.disabled=true;b.textContent="저장 중…";let id=null;
+    try{const r=await rpc("qms_safety_check_create",{p:{line_name:line,values:vals,manual_judge:stds.length?null:judge,memo:text,occurred_at:null,record_kind:$("#xtst").checked?"TEST":"NORMAL"}});id=r.id;const paths=[];
+      for(let i=0;i<photos.length;i++){b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`;const ty=photos[i].type||"image/jpeg";const ext={"image/png":"png","image/webp":"webp","image/heic":"heic","image/heif":"heif"}[ty]||"jpg";const p=`${r.uid}/sf/${id}/${Date.now()}_${i+1}.${ext}`;await upload(p,photos[i].blob,ty);paths.push(p);}
+      await rpc("qms_history_attach",{p_event_id:id,p_paths:paths,p_note:null});
+      fin();loadStats();const T=redPop(r.judge==="NG"?"⚠ NG 저장됨":"✅ 정상 저장됨",`#${id} · ${line}`);
+      T.body.innerHTML=`<div class="sfall ${r.judge==="NG"?"ng":"ok"}" style="font-size:16px">${esc(r.text||"")}</div>${r.judge==="NG"?`<div class="warnline">NG 건은 조치 결과(재측정 값·사진)를 이력 보기 → 해당 건 → 📂 추가 이력에 이어서 남겨주세요.</div>`:""}<button class="btn" id="tok">확인</button>`;T.body.querySelector("#tok").onclick=T.close;
+    }catch(err){msg(m,"err",id?`기록 #${id}은 저장됐지만 사진 첨부 실패: ${err.message} (이력 보기에서 사진 덧붙이기)`:"저장 실패: "+err.message);b.disabled=false;b.textContent="저장";}};
+  sel();
+}
 /* ---------- 안전부품 점검 대장: 감사 제출용. 날짜 오름차순 전체, 기준값은 점검 당시 값(스냅샷) ---------- */
-async function viewLedger(){
-  pasteTarget=null;const now=new Date();const m0=ymd(now).slice(0,7);
-  $("#app").onclick=null;
-  $("#app").innerHTML=`<div class="panel" style="gap:10px">
-    <h2 style="margin:0">🛡 안전부품 점검 대장</h2>
+async function viewLedger(startLine){
+  const now=new Date();const m0=ymd(now).slice(0,7);
+  const P=redPop("🛡 안전부품 점검 대장","감사 제출용 · 날짜순 전체 · 인쇄 / 엑셀",true);const $=q=>P.el.querySelector(q);
+  P.body.innerHTML=`<div style="display:flex;flex-direction:column;gap:10px">
     <div class="row noprint" style="grid-template-columns:1fr 1fr 1fr"><label>시작<input type="date" id="gf" value="${m0}-01"></label><label>끝<input type="date" id="gt" value="${ymd(now)}"></label>
       <label>라인<select id="gl"><option value="">전체</option>${SAFETY_LINES.map(l=>`<option>${esc(l)}</option>`).join("")}</select></label></div>
     <div class="chips noprint" id="gq"><button type="button" data-q="m0">이번 달</button><button type="button" data-q="m1">지난 달</button><button type="button" data-q="y">올해</button><button type="button" data-q="all">전체</button></div>
     <label class="check muted noprint" style="min-height:28px;font-size:12.5px"><input type="checkbox" id="gtst" style="width:16px;height:16px"> 연습용 기록도 보기</label>
     <div class="row noprint"><button class="btn" id="gpr">🖨 인쇄 / PDF</button><button class="btn ghost" id="gcsv">⬇ 엑셀(CSV)</button></div>
     <div id="gm"></div><div id="gb"></div>
-    <button class="btn ghost noprint" id="gback">← 이력 보기로</button></div>`;
-  $("#gback").onclick=()=>{tab="list";render();};
+    <button class="btn ghost noprint" id="gback">✕ 닫기</button></div>`;
+  $("#gback").onclick=P.close;if(startLine)$("#gl").value=startLine;
   let rows=[];
   const iso=d=>ymd(d);
   $("#gq").onclick=e=>{const b=e.target.closest("button");if(!b)return;const y=now.getFullYear(),mo=now.getMonth();let f,t=iso(now);
@@ -739,6 +804,7 @@ async function viewLedger(){
       <tr><td>대상 라인</td><td>${esc(L.join(", "))}</td><td>출력일</td><td>${new Date().toLocaleString("ko-KR")} · ${esc(jwtMeta().name||"")}</td></tr></table>
       <div class="kpi" style="margin-top:8px"><div><b>${rows.length.toLocaleString("ko-KR")}</b>점검 기록(건)</div><div><b>${cd.toLocaleString("ko-KR")}</b>점검한 날(라인×일)</div><div class="${ng?"ng":""}"><b>${ng}</b>NG(건)</div><div class="${miss.some(m=>m[1].length)?"ng":""}"><b>${miss.reduce((a,m)=>a+m[1].length,0)}</b>미점검일(일요일 제외)</div></div>
       ${miss.some(m=>m[1].length)?`<div class="muted" style="font-size:12px;margin-top:6px">${miss.filter(m=>m[1].length).map(([l,d])=>`<b>${esc(l)}</b> 미점검: ${d.map(x=>x.slice(5)).join(", ")}`).join("<br>")}<br>※ 휴무·비가동일이면 사유를 해당 날짜 기록으로 남겨두세요.</div>`:""}
+      <div class="mesnote">📌 원본 측정 기록: <b>MES</b> (금형교환 시 확인 포함) · 본 대장: <b>일 1회 일상 점검 증빙</b> (조건 화면 사진 + 측정값, 서버 자동 판정)</div>
       <div class="tw" style="margin-top:10px"><table class="lg"><thead><tr><th>No</th><th>점검일시</th><th>라인</th><th>측정값 (기준)</th><th>판정</th><th>조건 화면 사진</th><th>점검자</th><th>비고</th></tr></thead><tbody>
       ${rows.length?rows.map((r,i)=>{const im=r.media.filter(m=>!(m.mime||"").startsWith("audio")&&!isHeic(m.mime));const memo=(r.text.split(" · ").slice(1).join(" · ")||(r.values.length?"":r.text.replace(/^판정:\s*\S+\s*(—\s*)?/,"")));
         return `<tr class="${r.judge==="NG"?"ng":""}"><td class="c">${i+1}</td><td>${new Date(r.occurred_at).toLocaleString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}${r.record_kind==="TEST"?' <span class="pill test">연습</span>':""}</td>
