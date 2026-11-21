@@ -200,7 +200,7 @@ const KINDS=[
   {v:"변동점(4M)",label:"변경점",d:"사람·설비·자재·방법 변경, 원청 변경점, T/O"},
   {v:"기타",label:"기타",d:"고객 지시, 회의 결정 등 위에 안 맞는 것"},
   {v:"안전부품 점검",label:"🛡 안전부품 점검",d:"밀링스코어링·SP3k PAB융착 — 매일 1회 조건 화면 사진"}];
-const SAFETY_PRODUCTS=["SP3k 전용","MV1·CV1PE"]; /* 11-21 대표: 안전부품 대상은 이 두 가지뿐. PAB융착=금형교체, 밀링=엔드밀 교체 */
+const SAFETY_PRODUCTS=["SP3k 단독","MV1/CV1 PE"]; /* 11-21 대표: PAB융착은 SP3k 전용(LHD·RHD 2종, 금형교체). 밀링은 SP3k·MV1·CV1 PE 3차종을 엔드밀 2그룹(SP3k 단독 / MV1/CV1 PE)으로 관리 */
 const SAFETY_TOOL={"SP3k PAB융착":"금형교체","밀링스코어링":"엔드밀 교체"};
 const SAFETY_LINES=["밀링스코어링","SP3k PAB융착"];
 const FOUR_M=["사람","설비","자재","방법"];
@@ -731,7 +731,7 @@ function openSafety(startLine){
   let line=SAFETY_LINES.includes(startLine)?startLine:SAFETY_LINES[0],stds=[],judge=null,photos=[],prod=null;const prevPaste=pasteTarget;
   B.innerHTML=`<div class="warnline">⚠ 안전규제 부품 — 기준 벗어나면 즉시 NG. 오늘 날짜로만 저장됩니다.</div>
     <div class="sec"><div class="st" style="font-size:13px">라인</div><div class="chips" id="xl">${SAFETY_LINES.map(l=>`<button type="button" data-v="${esc(l)}">${esc(l)}</button>`).join("")}</div><div id="xt" class="muted" style="font-size:12.5px;margin-top:6px"></div>
-      <div class="st" style="font-size:13px;margin-top:10px">제품 <small>오늘 돌리는 것</small></div><div class="chips" id="xp">${SAFETY_PRODUCTS.map(v=>`<button type="button" data-v="${esc(v)}">${esc(v)}</button>`).join("")}</div></div>
+      <div id="xpw" hidden><div class="st" style="font-size:13px;margin-top:10px">엔드밀 <small>오늘 점검한 엔드밀 그룹</small></div><div class="chips" id="xp">${SAFETY_PRODUCTS.map(v=>`<button type="button" data-v="${esc(v)}">${esc(v)}</button>`).join("")}</div></div></div>
     <div class="sec" id="xv"></div>
     <div class="sec" id="xm" hidden><div class="st" style="font-size:13px">판정 <small>기준값이 없어 사람이 판정</small></div><div class="chips" id="xj"><button type="button" data-v="정상">✅ 정상</button><button type="button" data-v="이상">⚠ 이상</button></div></div>
     <div class="sec"><div class="st" style="font-size:13px">조건 화면 사진 <small>필수 · 숫자가 보이게</small></div>
@@ -742,6 +742,7 @@ function openSafety(startLine){
     <button class="btn" id="xsv">저장</button><div id="xmsg"></div>
     <button class="btn ghost" id="xlg">📋 안전부품 점검 대장 보기</button>`;
   const sel=()=>{[...B.querySelectorAll("#xl button")].forEach(b=>b.classList.toggle("on",b.dataset.v===line));
+    $("#xpw").hidden=line!=="밀링스코어링";if(line!=="밀링스코어링"){prod=null;[...$("#xp").children].forEach(x=>x.classList.remove("on"));}
     $("#xtx").placeholder=line==="SP3k PAB융착"?"예) 금형교체 후 재측정 0.80mm OK":"예) 엔드밀 교체 후 재확인 이상 없음";const t=STATS?.safety_today?.[line];
     $("#xt").innerHTML=t?`✅ 오늘 ${new Date(t.at).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})}에 이미 점검했습니다 (재측정이면 그대로 저장)`:"⬜ 오늘 아직 점검 안 함";load();};
   const live=()=>{let ng=0,miss=0;B.querySelectorAll("input[data-sid]").forEach(inp=>{const st=stds.find(x=>x.id==inp.dataset.sid);const b=inp.parentElement.querySelector(".jb");const v=inp.value.trim();
@@ -765,7 +766,7 @@ function openSafety(startLine){
   $("#xpf").onchange=e=>{const fs=[...e.target.files];e.target.value="";addFiles(fs);};$("#xpc").onchange=e=>{const fs=[...e.target.files];e.target.value="";addFiles(fs);};
   $("#xlg").onclick=()=>viewLedger(line);
   $("#xsv").onclick=async()=>{const m=$("#xmsg");const text=$("#xtx").value.trim();let vals=[];
-    if(!prod)return msg(m,"err","제품(SP3k 전용 / MV1·CV1PE)을 고르세요");
+    if(line==="밀링스코어링"&&!prod)return msg(m,"err","엔드밀(SP3k 단독 / MV1/CV1 PE)을 고르세요");
     if(stds.length){for(const inp of B.querySelectorAll("input[data-sid]")){const v=inp.value.trim();const st=stds.find(x=>x.id==inp.dataset.sid);if(v===""||isNaN(+v))return msg(m,"err",`${st.item} 값을 넣어주세요`);vals.push({standard_id:+inp.dataset.sid,value:+v});}
       if(live().ng&&text.length<2)return msg(m,"err","NG입니다. 조치 내용을 적어주세요 (감사 대응)");}
     else{if(!judge)return msg(m,"err","판정(정상/이상)을 고르세요");if(judge==="이상"&&text.length<2)return msg(m,"err","이상이면 어떤 조건이 벗어났는지 적어주세요");}
@@ -812,7 +813,7 @@ async function viewLedger(startLine){
       <div class="kpi" style="margin-top:8px"><div><b>${rows.length.toLocaleString("ko-KR")}</b>점검 기록(건)</div><div><b>${cd.toLocaleString("ko-KR")}</b>점검한 날(라인×일)</div><div class="${ng?"ng":""}"><b>${ng}</b>NG(건)</div><div class="${miss.some(m=>m[1].length)?"ng":""}"><b>${miss.reduce((a,m)=>a+m[1].length,0)}</b>미점검일(일요일 제외)</div></div>
       ${miss.some(m=>m[1].length)?`<div class="muted" style="font-size:12px;margin-top:6px">${miss.filter(m=>m[1].length).map(([l,d])=>`<b>${esc(l)}</b> 미점검: ${d.map(x=>x.slice(5)).join(", ")}`).join("<br>")}<br>※ 휴무·비가동일이면 사유를 해당 날짜 기록으로 남겨두세요.</div>`:""}
       <div class="mesnote">📌 원본 측정 기록: <b>MES</b> (금형교환 시 확인 포함) · 본 대장: <b>일 1회 일상 점검 증빙</b> (조건 화면 사진 + 측정값, 서버 자동 판정)</div>
-      <div class="tw" style="margin-top:10px"><table class="lg"><thead><tr><th>No</th><th>점검일시</th><th>라인</th><th>제품</th><th>측정값 (기준)</th><th>판정</th><th>조건 화면 사진</th><th>점검자</th><th>비고</th></tr></thead><tbody>
+      <div class="tw" style="margin-top:10px"><table class="lg"><thead><tr><th>No</th><th>점검일시</th><th>라인</th><th>구분</th><th>측정값 (기준)</th><th>판정</th><th>조건 화면 사진</th><th>점검자</th><th>비고</th></tr></thead><tbody>
       ${rows.length?rows.map((r,i)=>{const im=r.media.filter(m=>!(m.mime||"").startsWith("audio")&&!isHeic(m.mime));const memo=(r.text.split(" · ").slice(1).join(" · ")||(r.values.length?"":r.text.replace(/^판정:\s*\S+\s*(\[[^\]]*\]\s*)?(—\s*)?/,"")));
         return `<tr class="${r.judge==="NG"?"ng":""}"><td class="c">${i+1}</td><td>${new Date(r.occurred_at).toLocaleString("ko-KR",{year:"2-digit",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}${r.record_kind==="TEST"?' <span class="pill test">연습</span>':""}</td>
         <td>${esc(r.line)}</td><td>${esc(prodOf(r))}</td><td>${r.values.length?r.values.map(v=>`${esc(v.item)} <b>${v.value}${esc(v.unit||"")}</b> <span class="muted">(${esc(std(v))})</span>${v.judge==="NG"?' <b style="color:var(--ng)">NG</b>':""}`).join("<br>"):'<span class="muted">육안 판정</span>'}</td>
@@ -824,7 +825,7 @@ async function viewLedger(startLine){
     fill($("#gb"));};
   $("#gf").onchange=load;$("#gt").onchange=load;$("#gl").onchange=load;$("#gtst").onchange=load;
   $("#gpr").onclick=()=>window.print();
-  $("#gcsv").onclick=()=>{const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const H=["No","점검일시","라인","제품","항목","측정값","단위","기준","항목판정","종합판정","사진수","점검자","내용","기준문서"];const out=[H];
+  $("#gcsv").onclick=()=>{const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const H=["No","점검일시","라인","구분(엔드밀)","항목","측정값","단위","기준","항목판정","종합판정","사진수","점검자","내용","기준문서"];const out=[H];
     rows.forEach((r,i)=>{const dt=new Date(r.occurred_at).toLocaleString("ko-KR");const base=[i+1,dt,r.line,prodOf(r)];
       if(r.values.length)r.values.forEach(v=>out.push([...base,v.item,v.value,v.unit,std(v),v.judge,r.judge,r.media.length,r.by,r.text,v.doc]));else out.push([...base,"육안","","","",r.judge,r.judge,r.media.length,r.by,r.text,""]);});
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+out.map(x=>x.map(q).join(",")).join("\r\n")],{type:"text/csv"}));a.download=`안전부품_점검대장_${$("#gf").value}_${$("#gt").value}.csv`;document.body.appendChild(a);a.click();a.remove();};
