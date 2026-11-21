@@ -137,6 +137,17 @@ input.pastday{background:#FFF7E6;border-color:#E2B35A;font-weight:700}
 .tthumb{width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--rule);vertical-align:middle}
 .card{padding:12px}
 .late{font-size:11.5px;color:#8A6420}
+.hstat{border-top:1px solid var(--rule);background:#F3F7F4}.hs-in{max-width:880px;margin:0 auto;padding:6px 14px;font-size:11.5px;color:#3D5A4E;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+.wide-only{display:none}@media(min-width:600px){.wide-only{display:inline}.hs-in{font-size:12.5px}}
+.hs-sep{color:#A9B8B0}.live{width:8px;height:8px;border-radius:50%;background:#22A06B;box-shadow:0 0 0 0 rgba(34,160,107,.6);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,160,107,.55)}70%{box-shadow:0 0 0 7px rgba(34,160,107,0)}100%{box-shadow:0 0 0 0 rgba(34,160,107,0)}}
+.vchips{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}.vchips button{font:inherit;font-size:13px;font-weight:700;padding:9px 0;border-radius:8px;border:1px solid var(--rule);background:#fff;color:var(--muted);white-space:nowrap;letter-spacing:-.02em;cursor:pointer}
+.vchips button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.kinds button:last-child:nth-child(odd){grid-column:1/-1;border-color:#9BB8AA;background:#F3F8F5}.kinds button.on:last-child:nth-child(odd){background:var(--ink);border-color:var(--ink);color:#fff}
+.sfb{background:#fff;border:1px solid #9BB8AA;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}.sfh{font-weight:700;color:var(--ink);font-size:14px}.sfh small{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+.sfl{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sfi{font:inherit;text-align:left;border:1px dashed #E2B35A;background:#FFFBF2;border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+.sfi b{font-size:13.5px}.sfi span{font-size:12px;color:#8A5A00}.sfi.done{border:1px solid #9BC9AF;background:#EEF7F1}.sfi.done span{color:var(--ok)}
+.pill.안전부품{background:#E7F0F7;color:#1F4E79}.card.안전부품{border-left-color:#1F4E79}
 .trial{background:#FFF7E6;border:1px dashed #E2B35A;color:#7A5410;padding:8px 12px;font-size:13px;border-radius:3px}
 </style>
 </head>
@@ -146,7 +157,7 @@ input.pastday{background:#FFF7E6;border-color:#E2B35A;font-weight:700}
     <span id="who" class="who"></span>
     <div class="menu"><button id="mbtn" type="button" aria-label="메뉴" hidden>⋯</button>
       <div id="mlist" class="mlist" hidden><button id="bk" type="button" hidden>💾 백업 받기</button><button id="staff" type="button" hidden>👥 직원 계정</button><button id="rules" type="button" hidden>🏷 분류 추천 규칙</button><button id="out" type="button">↩ 로그아웃</button></div></div></div>
-  <nav id="vbar" class="vbar" hidden></nav>
+  <div id="hstat" class="hstat" hidden></div>
 </header>
 <main id="app"></main>
 <nav id="bnav" class="bnav" hidden></nav>
@@ -165,7 +176,9 @@ const KINDS=[
   {v:"불량",label:"불량 이력",d:"불량 증상·원인·조치, 협력사 불량, 고객 클레임"},
   {v:"경험·노하우",label:"경험·노하우",d:"작업 요령, 주의할 점, 문제 해결 방법"},
   {v:"변동점(4M)",label:"변경점",d:"사람·설비·자재·방법 변경, 원청 변경점, T/O"},
-  {v:"기타",label:"기타",d:"고객 지시, 회의 결정 등 위에 안 맞는 것"}];
+  {v:"기타",label:"기타",d:"고객 지시, 회의 결정 등 위에 안 맞는 것"},
+  {v:"안전부품 점검",label:"🛡 안전부품 점검",d:"밀링스코어링·SP3k PAB융착 — 매일 1회 조건 화면 사진"}];
+const SAFETY_LINES=["밀링스코어링","SP3k PAB융착"];
 const FOUR_M=["사람","설비","자재","방법"];
 /* ---------- 분류 추천: 서버 규칙표(단어 → 항목·4M)로 내용에서 추천. 사람이 눌러야 확정(자동 저장 안 함) ---------- */
 let RULES=[];
@@ -252,7 +265,7 @@ async function staff(body,auth){
   const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||`오류 ${r.status}`);return j;
 }
 function showLogin(note){
-  me=null;$("#mbtn").hidden=true;$("#mlist").hidden=true;$("#vbar").hidden=true;$("#bnav").hidden=true;$("#who").textContent="";
+  me=null;$("#mbtn").hidden=true;$("#mlist").hidden=true;$("#hstat").hidden=true;$("#bnav").hidden=true;$("#who").textContent="";
   $("#app").innerHTML=`<form class="panel" id="fl"><h2>로그인</h2><div id="lm">${note?`<div class="msg info">${esc(note)}</div>`:""}</div>
   <label>이름<input id="li" autocomplete="username" autocapitalize="none" placeholder="예) 홍길동" required></label>
   <label>비밀번호<input id="lp" type="password" autocomplete="current-password" required></label>
@@ -310,10 +323,19 @@ async function boot(){
   await loadRules();
   $("#who").textContent=`${jwtMeta().name||(me.email||"").split("@")[0]}`;$("#mbtn").hidden=false;$("#staff").hidden=me.role!=="admin";$("#bk").hidden=me.role!=="admin";$("#rules").hidden=!["admin","quality"].includes(me.role);render();
 }
+let STATS=null;
+let listVeh=store.get("hist_lveh")||"*";
+const vq=v=>({p_vehicle:v==="*"?"*":v==="공통"?null:v,p_lines:v==="*"||v==="공통"?null:VEH[v]});
+async function loadStats(){try{STATS=await rpc("qms_history_stats");}catch(e){STATS=null;}
+  const h=$("#hstat");h.hidden=false;
+  h.innerHTML=`<div class="hs-in"><span class="live"></span><b>기록 관리 중</b><span class="hs-sep">|</span><span>엠솔루션 전용 서버<span class="wide-only">(Supabase)</span></span>${STATS?`<span class="hs-sep">|</span><span>누적 <b>${STATS.records.toLocaleString("ko-KR")}</b>건 · 자료 <b>${(STATS.files+STATS.notes).toLocaleString("ko-KR")}</b></span>`:""}</div>`;
+  const sb=$("#safetybar");if(sb)drawSafety(sb);}
+function drawSafety(el){const t=STATS?.safety_today||{};
+  el.innerHTML=`<div class="sfb"><div class="sfh">🛡 오늘 안전부품 점검 <small>매일 1회 조건 화면 사진</small></div><div class="sfl">${SAFETY_LINES.map(l=>{const x=t[l];
+    return `<button type="button" class="sfi ${x?"done":""}" data-sl="${esc(l)}"><b>${esc(l)}</b><span>${x?`✅ ${new Date(x.at).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})} 완료`:"⬜ 미점검 · 누르면 점검"}</span></button>`;}).join("")}</div></div>`;}
 function render(){
   pasteTarget=null;
-  const vb=$("#vbar");vb.hidden=false;vb.innerHTML=VEHS.map(v=>`<button type="button" data-v="${esc(v)}" class="${v===veh?"on":""}">${esc(v)}</button>`).join("");
-  vb.onclick=e=>{const b=e.target.closest("button");if(!b)return;veh=b.dataset.v;store.set("hist_veh",veh);render();};
+  loadStats();
   const bn=$("#bnav");bn.hidden=false;
   bn.innerHTML=[["write","✏️","기록하기"],["bulk","🖼","사진 한꺼번에"],["list","📋","이력 보기"]].map(([t,i,l])=>`<button type="button" data-t="${t}" class="${tab===t?"on":""}"><i>${i}</i>${l}</button>`).join("");
   bn.onclick=e=>{const b=e.target.closest("button");if(!b)return;tab=b.dataset.t;render();window.scrollTo(0,0);};
@@ -322,10 +344,12 @@ function render(){
 }
 
 /* ---------- 기록하기: 차종 → 유형 → 말하거나 쳐서 저장 ---------- */
-function viewWrite(){
-  const lines=veh==="공통"?ALL_LINES:VEH[veh];
-  let kind=null, line=lines.includes(store.get("hist_line_"+veh))?store.get("hist_line_"+veh):lines[0], photos=[], audio=null, rec=null, timer=null;
-  $("#body").innerHTML=`<form class="panel" id="fw">
+function viewWrite(preset){
+  if(!VEHS.includes(veh))veh="KA4";
+  const linesOf=v=>v==="공통"?ALL_LINES:VEH[v];
+  let lines=linesOf(veh);
+  let kind=null, line=lines.includes(store.get("hist_line_"+veh))?store.get("hist_line_"+veh):lines[0], photos=[], audio=null, rec=null, timer=null, judge=null;
+  $("#body").innerHTML=`<div id="safetybar"></div><form class="panel" id="fw">
     <div class="sec"><div class="st"><em>1</em>이력관리 항목</div>
       <div class="kinds" id="kd">${KINDS.map(k=>`<button type="button" data-v="${esc(k.v)}"><b>${k.label}</b><span>${k.d}</span></button>`).join("")}</div>
       <div id="fmbox" hidden><div class="st" style="font-size:13px">변경점 4M <small>무엇이 바뀌었나요?</small></div>
@@ -335,8 +359,11 @@ function viewWrite(){
         <div class="st" style="font-size:13px;margin-top:6px">우리 의견 <small>선택</small></div>
         <div class="chips" id="opk">${["동의","우려","반대"].map(m=>`<button type="button" data-v="${m}">${m}</button>`).join("")}</div>
         <input id="opt" maxlength="300" placeholder="예) KA4·CE1 이탈 선례로 보호랩 방식 이탈 위험 고지" hidden></div></div>
-    <div class="sec"><div class="st"><em>2</em>언제 · 어디서</div>
-      <div class="chips" id="ln" ${lines.length<2?"hidden":""}>${lines.map(l=>`<button type="button" data-v="${esc(l)}" class="${l===line?"on":""}">${esc(l)}</button>`).join("")}</div>
+    <div id="sfbox" hidden class="sec"><div class="st" style="font-size:13px">판정 <small>조건 화면이 기준 안인가요?</small></div>
+      <div class="chips" id="jg"><button type="button" data-v="정상">✅ 정상</button><button type="button" data-v="이상">⚠ 이상</button></div></div>
+    <div class="sec"><div class="st"><em>2</em>차종 · 라인 · 날짜</div>
+      <div class="vchips" id="wv">${VEHS.map(v=>`<button type="button" data-v="${esc(v)}" class="${v===veh?"on":""}">${esc(v)}</button>`).join("")}</div>
+      <div class="chips" id="ln"></div>
       <div class="row"><label>날짜 <small class="muted" style="font-weight:400">예전 일은 그 날짜로</small><input type="date" id="pd" value="${ymd(new Date())}" max="${ymd(new Date())}" required></label>
         <label id="psbox" hidden>어디서 옮겨 왔나요?<select id="ps"><option>카톡</option><option>사진</option><option>기억</option><option>기타 문서</option></select></label></div></div>
     <div class="sec"><div class="st"><em>3</em>내용 <small>키보드 🎤 누르고 말해도 됩니다</small></div>
@@ -355,13 +382,22 @@ function viewWrite(){
   let fourM=null;
   const pick=(box,v)=>{const b=[...$(box).children].find(x=>x.dataset.v===v);if(b)b.click();};
   let sgT=null;const sgRun=()=>{const sx=suggest($("#tx").value);$("#sg").innerHTML=sgHTML(sx);const ab=$("#sg .sgapply");if(ab)ab.onclick=()=>{pick("#kd",sx.c);if(sx.m)pick("#fm",sx.m);$("#sg").innerHTML=`<div class="muted">✓ ${esc(sgName(sx))} 적용됨 — 위 ①에서 바꿀 수 있습니다</div>`+(sx.link?`<div class="lk">🔗 연계 가능: ${esc(sgName(sx.link))}</div>`:"");};};
-  $("#kd").onclick=e=>{const b=e.target.closest("button");if(!b)return;kind=b.dataset.v;[...$("#kd").children].forEach(x=>x.classList.toggle("on",x===b));$("#fmbox").hidden=kind!=="변동점(4M)";};
+  $("#kd").onclick=e=>{const b=e.target.closest("button");if(!b)return;kind=b.dataset.v;[...$("#kd").children].forEach(x=>x.classList.toggle("on",x===b));$("#fmbox").hidden=kind!=="변동점(4M)";$("#sfbox").hidden=kind!=="안전부품 점검";drawLines();};
   $("#fm").onclick=e=>{const b=e.target.closest("button");if(!b)return;fourM=b.dataset.v;[...$("#fm").children].forEach(x=>x.classList.toggle("on",x===b));};
   $("#tx").addEventListener("input",()=>{clearTimeout(sgT);sgT=setTimeout(sgRun,250);});
   let dby=null,opk=null;
   const tog=(id,set)=>$(id).onclick=e=>{const b=e.target.closest("button");if(!b)return;const on=!b.classList.contains("on");[...$(id).children].forEach(x=>x.classList.toggle("on",x===b&&on));set(on?b.dataset.v:null);};
   tog("#dby",v=>dby=v);tog("#opk",v=>{opk=v;$("#opt").hidden=!v||v==="동의";});
-  $("#ln").onclick=e=>{const b=e.target.closest("button");if(!b)return;line=b.dataset.v;store.set("hist_line_"+veh,line);[...$("#ln").children].forEach(x=>x.classList.toggle("on",x===b));};
+  const drawLines=()=>{const L=kind==="안전부품 점검"?SAFETY_LINES:linesOf(veh);if(!L.includes(line))line=L[0];
+    $("#ln").innerHTML=L.map(l=>`<button type="button" data-v="${esc(l)}" class="${l===line?"on":""}">${esc(l)}</button>`).join("");$("#ln").hidden=L.length<2;
+    $("#wv").hidden=kind==="안전부품 점검";};
+  drawLines();
+  $("#wv").onclick=e=>{const b=e.target.closest("button");if(!b)return;veh=b.dataset.v;store.set("hist_veh",veh);[...$("#wv").children].forEach(x=>x.classList.toggle("on",x===b));
+    const L=linesOf(veh);line=L.includes(store.get("hist_line_"+veh))?store.get("hist_line_"+veh):L[0];drawLines();};
+  $("#ln").onclick=e=>{const b=e.target.closest("button");if(!b)return;line=b.dataset.v;if(kind!=="안전부품 점검")store.set("hist_line_"+veh,line);[...$("#ln").children].forEach(x=>x.classList.toggle("on",x===b));};
+  $("#jg").onclick=e=>{const b=e.target.closest("button");if(!b)return;judge=b.dataset.v;[...$("#jg").children].forEach(x=>x.classList.toggle("on",x===b));};
+  drawSafety($("#safetybar"));
+  $("#safetybar").onclick=e=>{const b=e.target.closest("[data-sl]");if(!b)return;const k=[...$("#kd").children].find(x=>x.dataset.v==="안전부품 점검");k.click();line=b.dataset.sl;drawLines();$("#fw").scrollIntoView({behavior:"smooth"});};
   const pastSync=()=>{const past=$("#pd").value&&$("#pd").value<ymd(new Date());$("#psbox").hidden=!past;$("#pd").classList.toggle("pastday",!!past);};
   $("#pd").onchange=pastSync;$("#pd").oninput=pastSync;
   const drawTh=()=>{$("#th").innerHTML=photos.map((p,i)=>`<div class="t">${thumb(p)}<button type="button" data-i="${i}" aria-label="삭제">×</button></div>`).join("");};
@@ -385,6 +421,8 @@ function viewWrite(){
     if(rec&&rec.state==="recording") return msg(wm,"err","녹음을 먼저 끝내세요");
     if(!kind) return msg(wm,"err","이력관리 항목을 하나 고르세요");
     if(kind==="변동점(4M)"&&!fourM) return msg(wm,"err","변경점은 4M(사람·설비·자재·방법) 중 하나를 고르세요");
+    if(kind==="안전부품 점검"){if(!judge) return msg(wm,"err","판정(정상/이상)을 고르세요");if(!photos.length) return msg(wm,"err","안전부품 점검은 조건 화면 사진이 꼭 필요합니다");
+      if(judge==="이상"&&text.length<2) return msg(wm,"err","이상이면 어떤 조건이 벗어났는지 내용을 적어주세요");text=`판정: ${judge}${text?" — "+text:""}`;}
     if(!photos.length&&!audio&&text.length<2) return msg(wm,"err","내용, 사진, 녹음 중 하나는 남겨주세요");
     let occurred=null;
     const d=$("#pd").value;if(!d) return msg(wm,"err","언제 일인지 날짜를 넣어주세요");
@@ -392,7 +430,7 @@ function viewWrite(){
     if(d<ymd(new Date())){occurred=`${d}T09:00:00+09:00`; text=`[옮김:${$("#ps").value}] `+text;}
     const b=$("#sv");b.disabled=true;b.textContent="저장 중…";let id=null;
     try{
-      const r=await rpc("qms_field_report_create",{p:{line_name:line,vehicle:veh==="공통"?null:veh,event_category:kind,four_m:kind==="변동점(4M)"?fourM:null,directive_by:kind==="변동점(4M)"?dby:null,our_opinion:kind==="변동점(4M)"?opk:null,raw_text:text,occurred_at:occurred,
+      const r=await rpc("qms_field_report_create",{p:{line_name:line,vehicle:kind==="안전부품 점검"||veh==="공통"?null:veh,event_category:kind,four_m:kind==="변동점(4M)"?fourM:null,directive_by:kind==="변동점(4M)"?dby:null,our_opinion:kind==="변동점(4M)"?opk:null,raw_text:text,occurred_at:occurred,
         has_photo:photos.length>0,has_audio:!!audio,record_kind:$("#tst").checked?"TEST":"NORMAL"}});
       id=r.id;const paths=[];
       for(let i=0;i<photos.length;i++){b.textContent=`사진 올리는 중 ${i+1}/${photos.length}`;const ty=photos[i].type||"image/jpeg";const ext={"image/png":"png","image/webp":"webp","image/heic":"heic","image/heif":"heif"}[ty]||"jpg";const p=`${r.uid}/sf/${id}/${Date.now()}_${i+1}.${ext}`;await upload(p,photos[i].blob,ty);paths.push(p);}
@@ -400,7 +438,7 @@ function viewWrite(){
       const opNote=kind==="변동점(4M)"&&opk&&opk!=="동의"&&$("#opt").value.trim()?`우리 의견(${opk}): ${$("#opt").value.trim()}`:null;
       if(paths.length||opNote) await rpc("qms_history_attach",{p_event_id:id,p_paths:paths,p_note:opNote});
       photos.forEach(p=>URL.revokeObjectURL(p.url));if(audio)URL.revokeObjectURL(audio.url);
-      viewWrite();msg($("#wm"),"ok",`저장 #${id} · ${occurred?occurred.slice(0,10)+" · ":""}${veh} · ${KIND_KO[kind]}${fourM&&kind==="변동점(4M)"?"("+fourM+")":""} · ${line}${paths.length?` · 첨부 ${paths.length}`:""}`);
+      viewWrite();loadStats();msg($("#wm"),"ok",`저장 #${id} · ${occurred?occurred.slice(0,10)+" · ":""}${kind==="안전부품 점검"?"":veh+" · "}${KIND_KO[kind]}${fourM&&kind==="변동점(4M)"?"("+fourM+")":""} · ${line}${paths.length?` · 첨부 ${paths.length}`:""}`);
     }catch(err){msg(wm,"err",id?`기록 #${id}은 저장됐지만 첨부 실패: ${err.message}`:"저장 실패: "+err.message);b.disabled=false;b.textContent="저장";}
   };
 }
@@ -410,6 +448,7 @@ function viewList(){
   $("#body").onclick=null;
   let kf="", rows=[];
   $("#body").innerHTML=`<div class="panel" style="gap:10px">
+    <div class="vchips" id="lv" style="grid-template-columns:repeat(7,1fr)">${["*",...VEHS].map(v=>`<button type="button" data-v="${esc(v)}" class="${v===listVeh?"on":""}">${v==="*"?"전체":esc(v)}</button>`).join("")}</div>
     <div class="row" style="grid-template-columns:auto 1fr"><select id="per" style="width:auto"><option value="10950" selected>전체</option><option value="365">1년</option><option value="1825">5년</option><option value="90">3개월</option></select>
       <input id="q" placeholder="🔍 단어로 찾기 (긁힘, 지그…)"></div>
     <div class="fchips" id="kf"></div>
@@ -441,11 +480,12 @@ function viewList(){
           ${img.length?`<div class="rimg"><img data-path="${esc(img[0].path)}" alt="">${r.media.length>1?`<span>+${r.media.length-1}</span>`:""}</div>`:r.media.length?`<div class="rimg ri0">📎${r.media.length}</div>`:""}</div></div>`;}).join(""):`<div class="muted">기록이 없습니다.</div>`;
     fill($("#ls"),true);};
   const load=async()=>{msg($("#lm"),"info","불러오는 중…");
-    try{rows=await rpc("qms_history_list",{p_vehicle:veh==="공통"?null:veh,p_lines:veh==="공통"?null:VEH[veh],p_from:ymd(Date.now()-$("#per").value*864e5),p_to:ymd(new Date()),p_include_test:$("#it").checked,p_limit:1000});msg($("#lm"),"","");draw();}
+    try{rows=await rpc("qms_history_list",{...vq(listVeh),p_from:ymd(Date.now()-$("#per").value*864e5),p_to:ymd(new Date()),p_include_test:$("#it").checked,p_limit:1000});msg($("#lm"),"","");draw();}
     catch(e){msg($("#lm"),"err",e.message);}};
   $("#kf").onclick=e=>{const b=e.target.closest("button");if(!b)return;kf=b.dataset.v;draw();};
   $("#ls").onclick=e=>{const it=e.target.closest(".card[data-id],tr[data-id]");if(!it)return;const r=rows.find(x=>x.id==it.dataset.id);if(r)viewDetail(r,load);};
-  $("#q").oninput=draw;$("#per").onchange=load;$("#it").onchange=load;load();
+  $("#q").oninput=draw;
+  $("#lv").onclick=e=>{const b=e.target.closest("button");if(!b)return;listVeh=b.dataset.v;store.set("hist_lveh",listVeh);[...$("#lv").children].forEach(x=>x.classList.toggle("on",x===b));load();};$("#per").onchange=load;$("#it").onchange=load;load();
 }
 async function fill(host,noZoom){
   for(const el of host.querySelectorAll("[data-path]")){try{if(el.dataset.dl){el.href=await fileUrl(el.dataset.path);el.download=el.dataset.path.split("/").pop();continue;}el.src=await fileUrl(el.dataset.path);if(el.tagName==="IMG"&&!noZoom)el.onclick=()=>{const d=document.createElement("div");d.id="lightbox";d.innerHTML=`<img src="${el.src}" alt="">`;d.onclick=()=>d.remove();document.body.appendChild(d);};}catch(e){el.replaceWith(Object.assign(document.createElement("span"),{className:"muted",textContent:"열람 불가"}));}}
@@ -456,7 +496,7 @@ function viewDetail(r,reload,keepOpen){
   const c=KIND_KO[r.event_category]?r.event_category:"etc";let add=[];
   const boss=["admin","quality"].includes(me.role);
   const canText=boss||r.mine;
-  const refresh=async(note)=>{const rows=await rpc("qms_history_list",{p_vehicle:veh==="공통"?null:veh,p_lines:veh==="공통"?null:VEH[veh],p_from:ymd(new Date(r.occurred_at)),p_to:ymd(new Date()),p_include_test:true,p_limit:1000});
+  const refresh=async(note)=>{const rows=await rpc("qms_history_list",{...vq(listVeh),p_from:ymd(new Date(r.occurred_at)),p_to:ymd(new Date()),p_include_test:true,p_limit:1000});
     const op=$("#sheet")&&!$("#sheet").hidden;viewDetail(rows.find(x=>x.id===r.id)||r,reload,op);if(note)msg(op?$("#dm"):$("#dm0"),"ok",note);};
   const ask=t=>{const v=prompt(t+"\n정정 사유를 적어주세요 (2자 이상)");return v&&v.trim().length>=2?v.trim():null;};
   /* 사건 타임라인: 최초 기록 + 이후 덧붙인 자료를 올린 사람·시각(3분 안)으로 묶어 시간 순서로 */
@@ -533,7 +573,7 @@ function viewDetail(r,reload,keepOpen){
     $("#tcancel").onclick=()=>viewDetail(r,reload);
     $("#tsave").onclick=async()=>{const rs=$("#tr").value.trim();if(rs.length<2) return msg($("#tm"),"err","정정 사유를 적어주세요");
       const isC=$("#tc").value==="변동점(4M)";if(isC&&!$("#t4").value) return msg($("#tm"),"err","변경점은 4M을 고르세요");
-      try{await rpc("qms_history_correct",{p:{action:"text",event_id:r.id,text:$("#tt").value,event_category:$("#tc").value,vehicle:$("#tv").value==="공통"?"":$("#tv").value,line_name:$("#tl").value,four_m:isC?$("#t4").value:"",reason:rs}});const nv=$("#tv").value;if(nv!==veh){veh=nv;store.set("hist_veh",veh);tab="list";render();return;}await refresh("정정 완료 (원래 내용은 정정 이력에 남음)");}catch(e){msg($("#tm"),"err",e.message);}};};
+      try{await rpc("qms_history_correct",{p:{action:"text",event_id:r.id,text:$("#tt").value,event_category:$("#tc").value,vehicle:$("#tv").value==="공통"?"":$("#tv").value,line_name:$("#tl").value,four_m:isC?$("#t4").value:"",reason:rs}});const nv=$("#tv").value;if(listVeh!=="*"&&nv!==listVeh){listVeh=nv;store.set("hist_lveh",listVeh);tab="list";render();return;}await refresh("정정 완료 (원래 내용은 정정 이력에 남음)");}catch(e){msg($("#tm"),"err",e.message);}};};
   $("#body").onclick=async e=>{const b=e.target.closest("button[data-hide],button[data-nhide],button[data-nedit],button[data-restore]");if(!b)return;
     try{
       if(b.dataset.hide){const rs=ask("이 자료를 화면에서 뺍니다.");if(!rs)return;await rpc("qms_history_correct",{p:{action:"hide_media",path:b.dataset.hide,reason:rs}});await refresh("자료를 뺐습니다 (정정 이력에 남음)");}
@@ -583,9 +623,11 @@ async function photoDate(f){
   return r;
 }
 function viewBulk(){
+  if(!VEHS.includes(veh))veh="KA4";
   const lines=veh==="공통"?ALL_LINES:VEH[veh];let items=[];
   $("#body").innerHTML=`<div class="panel">
-    <h2>사진 한꺼번에 올리기 · ${esc(veh)}</h2>
+    <h2>사진 한꺼번에 올리기</h2>
+    <div class="vchips" id="bvv">${VEHS.map(v=>`<button type="button" data-v="${esc(v)}" class="${v===veh?"on":""}">${esc(v)}</button>`).join("")}</div>
     <div class="muted">휴대폰 앨범·카톡에 쌓인 예전 사진을 여러 장 한 번에 고르세요. <b>날짜는 사진에서 자동으로 읽고</b>, 분류는 나중에 [이력 보기 → ⚠ 미분류]에서 하나씩 하면 됩니다.</div>
     <div class="row"><label>라인<select id="bl">${lines.map(l=>`<option>${esc(l)}</option>`).join("")}</select></label>
       <label>어디서 가져왔나요?<select id="bs"><option>사진</option><option>카톡</option><option>기타 문서</option></select></label></div>
@@ -607,6 +649,8 @@ function viewBulk(){
     const sv=$("#bsave");if(sv)sv.onclick=save;};
   $("#bv").onclick=e=>{const b=e.target.closest("button[data-x]");if(!b)return;const [it]=items.splice(+b.dataset.x,1);URL.revokeObjectURL(it.url);draw();};
   $("#bg").onchange=draw;
+  $("#bvv").onclick=e=>{const b=e.target.closest("button");if(!b)return;veh=b.dataset.v;store.set("hist_veh",veh);[...$("#bvv").children].forEach(x=>x.classList.toggle("on",x===b));
+    $("#bl").innerHTML=(veh==="공통"?ALL_LINES:VEH[veh]).map(l=>`<option>${esc(l)}</option>`).join("");};
   const add=async fs=>{fs=fs.slice(0,200-items.length);msg($("#bm"),"info",`사진 ${fs.length}장 읽는 중…`);let bad=0,i=0;
     for(const f of fs){i++;if(i%5===0)msg($("#bm"),"info",`사진 읽는 중… ${i}/${fs.length}`);
       try{const dt=await photoDate(f);const b=await shrink(f,2560,.9);items.push({blob:b,url:URL.createObjectURL(b),type:b.type||"image/jpeg",d:dt.d,t:dt.t,src:dt.src,memo:""});}catch(e){bad++;}}
